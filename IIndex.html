@@ -1793,6 +1793,8 @@ async function initBodyHeatmap() {
     return;
   }
 
+  console.log('initBodyHeatmap called, DemoBodyHeatmap:', typeof DemoBodyHeatmap);
+
   try {
     // Wait for ES module to be loaded (demo-body-heatmap-simple.js is type="module")
     // Poll for up to 3 seconds for the module to initialize
@@ -1800,11 +1802,16 @@ async function initBodyHeatmap() {
     while (typeof DemoBodyHeatmap === 'undefined' && waitCount < 30) {
       await new Promise(resolve => setTimeout(resolve, 100));
       waitCount++;
+      if (waitCount % 5 === 0) {
+        console.log(`Waiting for DemoBodyHeatmap... ${waitCount}/30`);
+      }
     }
 
     if (typeof DemoBodyHeatmap === 'undefined') {
       throw new Error('DemoBodyHeatmap module failed to load within 3 seconds');
     }
+
+    console.log('DemoBodyHeatmap loaded successfully');
 
     // Load saved selections from localStorage
     let savedSelections = [];

@@ -532,3 +532,16 @@ class DemoBodyHeatmap {
 
 // Export to window for global access
 window.DemoBodyHeatmap = DemoBodyHeatmap;
+
+// Auto-initialize when DOM is ready
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', function() {
+    // Check if the container exists and if initBodyHeatmap is defined
+    const container = document.getElementById('body-heatmap-container');
+    if (container && typeof window.initBodyHeatmap === 'function') {
+      console.log('DemoBodyHeatmap module loaded, waiting for initBodyHeatmap...');
+    } else if (container) {
+      console.log('DemoBodyHeatmap module loaded, but initBodyHeatmap not found');
+    }
+  });
+}
