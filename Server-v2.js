@@ -642,6 +642,11 @@ app.post('/api/chat', async (req, res) => {
   res.json({ reply: randomReply, modelUsed: 'demo' });
 });
 
+// ===== ROOT ROUTE - Serve main HTML file =====
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'IIndex.html'));
+});
+
 // ===== HEALTH CHECK =====
 app.get('/api/health', (req, res) => {
   res.json({
