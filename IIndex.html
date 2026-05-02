@@ -1374,14 +1374,12 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 </div>
 
 <!-- Body Heatmap Components - Using Demo Body Heatmap -->
-<script type="module">
-  import { DemoBodyHeatmap } from './modules/demo-body-heatmap-simple.js?v=20260502';
-  window.DemoBodyHeatmap = DemoBodyHeatmap;
-</script>
+<script src="./modules/demo-body-heatmap-simple.js?v=20260502"></script>
 
 <script>
-const SERVER_URL = 'http://localhost:3000/api/analyze';
-const CHAT_URL   = 'http://localhost:3000/api/chat';
+// Use relative URLs for API calls (works on both localhost and Vercel)
+const SERVER_URL = '/api/analyze';
+const CHAT_URL   = '/api/chat';
 
 // Body heatmap state - using DemoBodyHeatmap
 let bodyHeatmap = null; // Will be DemoBodyHeatmap instance

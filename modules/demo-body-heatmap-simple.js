@@ -1,7 +1,7 @@
 // Demo Body Heatmap - Reference Image Based
 // This module provides a body heatmap using reference images with precise region coordinates
 
-export class DemoBodyHeatmap {
+class DemoBodyHeatmap {
   constructor(containerId, options = {}) {
     this.container = document.getElementById(containerId);
     if (!this.container) {
@@ -530,7 +530,5 @@ export class DemoBodyHeatmap {
   }
 }
 
-// Export to window for global access (needed for IIndex.html)
-if (typeof window !== 'undefined') {
-  window.DemoBodyHeatmap = DemoBodyHeatmap;
-}
+// Export to window for global access
+window.DemoBodyHeatmap = DemoBodyHeatmap;
