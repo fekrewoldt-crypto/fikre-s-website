@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediScan - Body Heatmap with Reference Images</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .heatmap-container {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .body-view {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            min-width: 350px;
+            position: relative;
+        }
+
+        .body-view h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3rem;
+        }
+
+        .body-image-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .body-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+        }
+
+        .region-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .region-overlay svg {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+
+        .body-region {
+            fill: transparent;
+            stroke: rgba(102, 126, 234, 0.3);
+            stroke-width: 1;
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.2s ease;
+        }
+
+        .body-region:hover {
+            stroke: rgba(102, 126, 234, 0.8);
+            stroke-width: 2;
+        }
+
+        .body-region.selected {
+            stroke: rgba(102, 126, 234, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .body-region.pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .info-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .info-panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .selected-regions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .region-tag {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .region-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .region-tag .remove:hover {
+            opacity: 1;
+        }
+
+        .instructions {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            color: #555;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .instructions h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MediScan - Body Heatmap with Reference Images</h1>
+
+        <div class="controls">
+            <button class="btn active" id="btn-male">Male</button>
+            <button class="btn" id="btn-female">Female</button>
+            <button class="btn active" id="btn-front">Front View</button>
+            <button class="btn" id="btn-back">Back View</button>
+            <button class="btn" id="btn-clear">Clear All</button>
+        </div>
+
+        <div class="heatmap-container">
+            <div class="body-view">
+                <h3 id="view-title">Male - Front</h3>
+                <div class="body-image-container" id="body-container">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Selected Regions</h3>
+            <div class="selected-regions" id="selected-regions">
+                <span style="color: #999;">Click on body regions to select them</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h4>How to use:</h4>
+            <ul>
+                <li><strong>Click</strong> on any body region to select it (starts at intensity 1)</li>
+                <li><strong>Hold</strong> the mouse button to gradually increase intensity (up to 10)</li>
+                <li><strong>Shift + Click</strong> to decrease intensity</li>
+                <li><strong>Click again</strong> on a selected region to deselect it</li>
+                <li>Use the buttons above to switch between male/female and front/back views</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // State management
+        const state = {
+            gender: 'male',
+            view: 'front',
+            selectedRegions: new Map(),
+            holdInterval: null,
+            holdRegion: null,
+            imagesLoaded: false
+        };
+
+        // Region definitions with names
+        const regionNames = {
+            'head': 'Head',
+            'neck': 'Neck',
+            'chest': 'Chest',
+            'abdomen': 'Abdomen',
+            'pelvis': 'Pelvis',
+            'left-shoulder': 'Left Shoulder',
+            'right-shoulder': 'Right Shoulder',
+            'left-upper-arm': 'Left Upper Arm',
+            'right-upper-arm': 'Right Upper Arm',
+            'left-elbow': 'Left Elbow',
+            'right-elbow': 'Right Elbow',
+            'left-forearm': 'Left Forearm',
+            'right-forearm': 'Right Forearm',
+            'left-wrist': 'Left Wrist',
+            'right-wrist': 'Right Wrist',
+            'left-hand': 'Left Hand',
+            'right-hand': 'Right Hand',
+            'left-upper-leg': 'Left Upper Leg',
+            'right-upper-leg': 'Right Upper Leg',
+            'left-knee': 'Left Knee',
+            'right-knee': 'Right Knee',
+            'left-lower-leg': 'Left Lower Leg',
+            'right-lower-leg': 'Right Lower Leg',
+            'left-ankle': 'Left Ankle',
+            'right-ankle': 'Right Ankle',
+            'left-foot': 'Left Foot',
+            'right-foot': 'Right Foot',
+            'upper-back': 'Upper Back',
+            'lower-back': 'Lower Back',
+            'buttocks': 'Buttocks',
+            'left-hip': 'Left Hip',
+            'right-hip': 'Right Hip',
+            'groin': 'Groin'
+        };
+
+        // Medical pain gradient colors (0-10 intensity)
+        function getPainColor(intensity) {
+            const colors = [
+                { intensity: 0, color: [59, 130, 246] },
+                { intensity: 2.5, color: [6, 182, 212] },
+                { intensity: 5, color: [34, 197, 94] },
+                { intensity: 7.5, color: [234, 179, 8] },
+                { intensity: 10, color: [239, 68, 68] }
+            ];
+
+            let lower = colors[0];
+            let upper = colors[colors.length - 1];
+
+            for (let i = 0; i < colors.length - 1; i++) {
+                if (intensity >= colors[i].intensity && intensity <= colors[i + 1].intensity) {
+                    lower = colors[i];
+                    upper = colors[i + 1];
+                    break;
+                }
+            }
+
+            const range = upper.intensity - lower.intensity;
+            const progress = (intensity - lower.intensity) / range;
+
+            const r = Math.round(lower.color[0] + (upper.color[0] - lower.color[0]) * progress);
+            const g = Math.round(lower.color[1] + (upper.color[1] - lower.color[1]) * progress);
+            const b = Math.round(lower.color[2] + (upper.color[2] - lower.color[2]) * progress);
+
+            return `rgba(${r}, ${g}, ${b}, 0.75)`;
+        }
+
+        // Image sources - using separated images
+        const imageSources = {
+            male: {
+                front: 'male-front.png',
+                back: 'male-back.png'
+            },
+            female: {
+                front: 'female-front.png',
+                back: 'female-back.png'
+            }
+        };
+
+        // Region coordinates (normalized 0-1) for each view
+        // Precise coordinates based on actual image analysis
+        const regionCoordinates = {
+            male: {
+                front: {
+                    'head': { x: 0.35, y: 0.02, width: 0.30, height: 0.12 },
+                    'neck': { x: 0.40, y: 0.14, width: 0.20, height: 0.06 },
+                    'chest': { x: 0.32, y: 0.20, width: 0.36, height: 0.14 },
+                    'abdomen': { x: 0.34, y: 0.34, width: 0.32, height: 0.12 },
+                    'pelvis': { x: 0.33, y: 0.46, width: 0.34, height: 0.10 },
+                    'groin': { x: 0.40, y: 0.56, width: 0.20, height: 0.06 },
+                    'left-shoulder': { x: 0.22, y: 0.20, width: 0.10, height: 0.08 },
+                    'right-shoulder': { x: 0.68, y: 0.20, width: 0.10, height: 0.08 },
+                    'left-upper-arm': { x: 0.18, y: 0.28, width: 0.08, height: 0.14 },
+                    'right-upper-arm': { x: 0.74, y: 0.28, width: 0.08, height: 0.14 },
+                    'left-elbow': { x: 0.16, y: 0.42, width: 0.08, height: 0.08 },
+                    'right-elbow': { x: 0.76, y: 0.42, width: 0.08, height: 0.08 },
+                    'left-forearm': { x: 0.14, y: 0.50, width: 0.08, height: 0.14 },
+                    'right-forearm': { x: 0.78, y: 0.50, width: 0.08, height: 0.14 },
+                    'left-wrist': { x: 0.12, y: 0.64, width: 0.08, height: 0.06 },
+                    'right-wrist': { x: 0.80, y: 0.64, width: 0.08, height: 0.06 },
+                    'left-hand': { x: 0.10, y: 0.70, width: 0.10, height: 0.08 },
+                    'right-hand': { x: 0.80, y: 0.70, width: 0.10, height: 0.08 },
+                    'left-upper-leg': { x: 0.35, y: 0.62, width: 0.12, height: 0.16 },
+                    'right-upper-leg': { x: 0.53, y: 0.62, width: 0.12, height: 0.16 },
+                    'left-knee': { x: 0.35, y: 0.78, width: 0.12, height: 0.08 },
+                    'right-knee': { x: 0.53, y: 0.78, width: 0.12, height: 0.08 },
+                    'left-lower-leg': { x: 0.35, y: 0.86, width: 0.12, height: 0.12 },
+                    'right-lower-leg': { x: 0.53, y: 0.86, width: 0.12, height: 0.12 },
+                    'left-ankle': { x: 0.35, y: 0.98, width: 0.12, height: 0.06 },
+                    'right-ankle': { x: 0.53, y: 0.98, width: 0.12, height: 0.06 },
+                    'left-foot': { x: 0.32, y: 1.02, width: 0.18, height: 0.04 },
+                    'right-foot': { x: 0.50, y: 1.02, width: 0.18, height: 0.04 }
+                },
+                back: {
+                    'head': { x: 0.35, y: 0.02, width: 0.30, height: 0.12 },
+                    'neck': { x: 0.40, y: 0.14, width: 0.20, height: 0.06 },
+                    'upper-back': { x: 0.32, y: 0.20, width: 0.36, height: 0.14 },
+                    'lower-back': { x: 0.34, y: 0.34, width: 0.32, height: 0.12 },
+                    'buttocks': { x: 0.30, y: 0.46, width: 0.40, height: 0.12 },
+                    'left-shoulder': { x: 0.22, y: 0.20, width: 0.10, height: 0.08 },
+                    'right-shoulder': { x: 0.68, y: 0.20, width: 0.10, height: 0.08 },
+                    'left-upper-arm': { x: 0.18, y: 0.28, width: 0.08, height: 0.14 },
+                    'right-upper-arm': { x: 0.74, y: 0.28, width: 0.08, height: 0.14 },
+                    'left-elbow': { x: 0.16, y: 0.42, width: 0.08, height: 0.08 },
+                    'right-elbow': { x: 0.76, y: 0.42, width: 0.08, height: 0.08 },
+                    'left-forearm': { x: 0.14, y: 0.50, width: 0.08, height: 0.14 },
+                    'right-forearm': { x: 0.78, y: 0.50, width: 0.08, height: 0.14 },
+                    'left-wrist': { x: 0.12, y: 0.64, width: 0.08, height: 0.06 },
+                    'right-wrist': { x: 0.80, y: 0.64, width: 0.08, height: 0.06 },
+                    'left-hand': { x: 0.10, y: 0.70, width: 0.10, height: 0.08 },
+                    'right-hand': { x: 0.80, y: 0.70, width: 0.10, height: 0.08 },
+                    'left-upper-leg': { x: 0.32, y: 0.58, width: 0.12, height: 0.16 },
+                    'right-upper-leg': { x: 0.56, y: 0.58, width: 0.12, height: 0.16 },
+                    'left-knee': { x: 0.32, y: 0.74, width: 0.12, height: 0.08 },
+                    'right-knee': { x: 0.56, y: 0.74, width: 0.12, height: 0.08 },
+                    'left-lower-leg': { x: 0.32, y: 0.82, width: 0.12, height: 0.12 },
+                    'right-lower-leg': { x: 0.56, y: 0.82, width: 0.12, height: 0.12 },
+                    'left-ankle': { x: 0.32, y: 0.94, width: 0.12, height: 0.06 },
+                    'right-ankle': { x: 0.56, y: 0.94, width: 0.12, height: 0.06 },
+                    'left-foot': { x: 0.28, y: 0.98, width: 0.18, height: 0.04 },
+                    'right-foot': { x: 0.54, y: 0.98, width: 0.18, height: 0.04 }
+                }
+            },
+            female: {
+                front: {
+                    'head': { x: 0.38, y: 0.02, width: 0.24, height: 0.10 },
+                    'neck': { x: 0.42, y: 0.12, width: 0.16, height: 0.04 },
+                    'chest': { x: 0.35, y: 0.16, width: 0.30, height: 0.14 },
+                    'abdomen': { x: 0.36, y: 0.30, width: 0.28, height: 0.12 },
+                    'pelvis': { x: 0.34, y: 0.42, width: 0.32, height: 0.10 },
+                    'groin': { x: 0.40, y: 0.52, width: 0.20, height: 0.04 },
+                    'left-shoulder': { x: 0.28, y: 0.16, width: 0.12, height: 0.06 },
+                    'right-shoulder': { x: 0.60, y: 0.16, width: 0.12, height: 0.06 },
+                    'left-upper-arm': { x: 0.18, y: 0.22, width: 0.12, height: 0.16 },
+                    'right-upper-arm': { x: 0.70, y: 0.22, width: 0.12, height: 0.16 },
+                    'left-elbow': { x: 0.16, y: 0.38, width: 0.08, height: 0.04 },
+                    'right-elbow': { x: 0.76, y: 0.38, width: 0.08, height: 0.04 },
+                    'left-forearm': { x: 0.12, y: 0.42, width: 0.10, height: 0.13 },
+                    'right-forearm': { x: 0.78, y: 0.42, width: 0.10, height: 0.13 },
+                    'left-wrist': { x: 0.10, y: 0.55, width: 0.08, height: 0.03 },
+                    'right-wrist': { x: 0.82, y: 0.55, width: 0.08, height: 0.03 },
+                    'left-hand': { x: 0.06, y: 0.58, width: 0.10, height: 0.07 },
+                    'right-hand': { x: 0.84, y: 0.58, width: 0.10, height: 0.07 },
+                    'left-upper-leg': { x: 0.35, y: 0.56, width: 0.12, height: 0.14 },
+                    'right-upper-leg': { x: 0.53, y: 0.56, width: 0.12, height: 0.14 },
+                    'left-knee': { x: 0.32, y: 0.70, width: 0.10, height: 0.04 },
+                    'right-knee': { x: 0.58, y: 0.70, width: 0.10, height: 0.04 },
+                    'left-lower-leg': { x: 0.30, y: 0.74, width: 0.10, height: 0.14 },
+                    'right-lower-leg': { x: 0.60, y: 0.74, width: 0.10, height: 0.14 },
+                    'left-ankle': { x: 0.28, y: 0.88, width: 0.08, height: 0.03 },
+                    'right-ankle': { x: 0.64, y: 0.88, width: 0.08, height: 0.03 },
+                    'left-foot': { x: 0.25, y: 0.91, width: 0.12, height: 0.07 },
+                    'right-foot': { x: 0.63, y: 0.91, width: 0.12, height: 0.07 }
+                },
+                back: {
+                    'head': { x: 0.38, y: 0.02, width: 0.24, height: 0.10 },
+                    'neck': { x: 0.42, y: 0.12, width: 0.16, height: 0.04 },
+                    'upper-back': { x: 0.35, y: 0.16, width: 0.30, height: 0.14 },
+                    'lower-back': { x: 0.36, y: 0.30, width: 0.28, height: 0.12 },
+                    'buttocks': { x: 0.28, y: 0.42, width: 0.44, height: 0.14 },
+                    'left-shoulder': { x: 0.28, y: 0.16, width: 0.12, height: 0.06 },
+                    'right-shoulder': { x: 0.60, y: 0.16, width: 0.12, height: 0.06 },
+                    'left-upper-arm': { x: 0.18, y: 0.22, width: 0.12, height: 0.16 },
+                    'right-upper-arm': { x: 0.70, y: 0.22, width: 0.12, height: 0.16 },
+                    'left-elbow': { x: 0.16, y: 0.38, width: 0.08, height: 0.04 },
+                    'right-elbow': { x: 0.76, y: 0.38, width: 0.08, height: 0.04 },
+                    'left-forearm': { x: 0.12, y: 0.42, width: 0.10, height: 0.13 },
+                    'right-forearm': { x: 0.78, y: 0.42, width: 0.10, height: 0.13 },
+                    'left-wrist': { x: 0.10, y: 0.55, width: 0.08, height: 0.03 },
+                    'right-wrist': { x: 0.82, y: 0.55, width: 0.08, height: 0.03 },
+                    'left-hand': { x: 0.06, y: 0.58, width: 0.10, height: 0.07 },
+                    'right-hand': { x: 0.84, y: 0.58, width: 0.10, height: 0.07 },
+                    'left-upper-leg': { x: 0.30, y: 0.56, width: 0.12, height: 0.14 },
+                    'right-upper-leg': { x: 0.58, y: 0.56, width: 0.12, height: 0.14 },
+                    'left-knee': { x: 0.28, y: 0.70, width: 0.10, height: 0.04 },
+                    'right-knee': { x: 0.62, y: 0.70, width: 0.10, height: 0.04 },
+                    'left-lower-leg': { x: 0.26, y: 0.74, width: 0.10, height: 0.14 },
+                    'right-lower-leg': { x: 0.64, y: 0.74, width: 0.10, height: 0.14 },
+                    'left-ankle': { x: 0.24, y: 0.88, width: 0.08, height: 0.03 },
+                    'right-ankle': { x: 0.68, y: 0.88, width: 0.08, height: 0.03 },
+                    'left-foot': { x: 0.20, y: 0.91, width: 0.12, height: 0.07 },
+                    'right-foot': { x: 0.68, y: 0.91, width: 0.12, height: 0.07 }
+                }
+            }
+        };
+
+        // DOM elements
+        const bodyContainer = document.getElementById('body-container');
+        const tooltip = document.getElementById('tooltip');
+        const selectedRegionsContainer = document.getElementById('selected-regions');
+        const viewTitle = document.getElementById('view-title');
+
+        // Render the body heatmap
+        function renderBody() {
+            const imageSrc = imageSources[state.gender][state.view];
+            const coords = regionCoordinates[state.gender][state.view];
+
+            bodyContainer.innerHTML = `
+                <img class="body-image" src="${imageSrc}" alt="${state.gender} ${state.view}" onerror="showError()">
+                <div class="region-overlay">
+                    <svg viewBox="0 0 100 200" preserveAspectRatio="none">
+                        ${Object.entries(coords).map(([regionId, coord]) => {
+                            const isSelected = state.selectedRegions.has(regionId);
+                            const intensity = isSelected ? state.selectedRegions.get(regionId) : 0;
+                            const fill = isSelected ? getPainColor(intensity) : 'transparent';
+                            const pulseClass = intensity >= 7 ? 'pulse' : '';
+                            const selectedClass = isSelected ? 'selected' : '';
+
+                            return `<rect
+                                class="body-region ${selectedClass} ${pulseClass}"
+                                data-region="${regionId}"
+                                x="${coord.x * 100}"
+                                y="${coord.y * 200}"
+                                width="${coord.width * 100}"
+                                height="${coord.height * 200}"
+                                fill="${fill}"
+                            />`;
+                        }).join('')}
+                    </svg>
+                </div>
+            `;
+
+            viewTitle.textContent = `${state.gender.charAt(0).toUpperCase() + state.gender.slice(1)} - ${state.view.charAt(0).toUpperCase() + state.view.slice(1)}`;
+
+            // Add event listeners to regions
+            const regions = bodyContainer.querySelectorAll('.body-region');
+            regions.forEach(region => {
+                const regionId = region.getAttribute('data-region');
+                region.addEventListener('click', (e) => handleRegionClick(e, regionId));
+                region.addEventListener('mousedown', (e) => handleRegionMouseDown(e, regionId));
+                region.addEventListener('mouseup', handleRegionMouseUp);
+                region.addEventListener('mouseleave', handleRegionMouseUp);
+                region.addEventListener('mouseenter', (e) => showTooltip(e, regionId));
+                region.addEventListener('mousemove', (e) => moveTooltip(e));
+                region.addEventListener('mouseleave', hideTooltip);
+            });
+
+            updateSelectedRegionsDisplay();
+        }
+
+        function showError() {
+            bodyContainer.innerHTML = `
+                <div class="error">
+                    <p>Failed to load image: ${imageSources[state.gender][state.view]}</p>
+                    <p>Please make sure the reference images are in the project folder.</p>
+                </div>
+            `;
+        }
+
+        // Handle region click
+        function handleRegionClick(e, regionId) {
+            e.preventDefault();
+
+            if (state.selectedRegions.has(regionId)) {
+                if (e.shiftKey) {
+                    let intensity = state.selectedRegions.get(regionId);
+                    intensity = Math.max(0, intensity - 1);
+                    if (intensity === 0) {
+                        state.selectedRegions.delete(regionId);
+                    } else {
+                        state.selectedRegions.set(regionId, intensity);
+                    }
+                } else {
+                    state.selectedRegions.delete(regionId);
+                }
+            } else {
+                // Start at intensity 1 instead of 5
+                state.selectedRegions.set(regionId, 1);
+            }
+
+            renderBody();
+        }
+
+        // Handle mouse down for hold-to-increase
+        function handleRegionMouseDown(e, regionId) {
+            if (e.button !== 0) return;
+
+            state.holdRegion = regionId;
+            state.holdStartTime = Date.now();
+
+            // Start increasing immediately with smaller increments for smoother visual feedback
+            state.holdTimeout = setTimeout(() => {
+                state.holdInterval = setInterval(() => {
+                    if (state.selectedRegions.has(state.holdRegion)) {
+                        let intensity = state.selectedRegions.get(state.holdRegion);
+                        intensity = Math.min(10, intensity + 0.2); // Smaller increment for smoother changes
+                        state.selectedRegions.set(state.holdRegion, intensity);
+                        renderBody();
+                    }
+                }, 50); // Faster updates for smoother visual feedback
+            }, 100); // Shorter delay before starting
+        }
+
+        // Handle mouse up
+        function handleRegionMouseUp() {
+            if (state.holdTimeout) {
+                clearTimeout(state.holdTimeout);
+                state.holdTimeout = null;
+            }
+            if (state.holdInterval) {
+                clearInterval(state.holdInterval);
+                state.holdInterval = null;
+            }
+            state.holdRegion = null;
+        }
+
+        // Show tooltip
+        function showTooltip(e, regionId) {
+            const regionName = regionNames[regionId] || regionId;
+            let tooltipText = regionName;
+
+            if (state.selectedRegions.has(regionId)) {
+                const intensity = state.selectedRegions.get(regionId);
+                tooltipText += ` (Intensity: ${intensity.toFixed(1)})`;
+            }
+
+            tooltip.textContent = tooltipText;
+            tooltip.style.display = 'block';
+            moveTooltip(e);
+        }
+
+        // Move tooltip
+        function moveTooltip(e) {
+            tooltip.style.left = (e.clientX + 15) + 'px';
+            tooltip.style.top = (e.clientY + 15) + 'px';
+        }
+
+        // Hide tooltip
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
+        // Update selected regions display
+        function updateSelectedRegionsDisplay() {
+            if (state.selectedRegions.size === 0) {
+                selectedRegionsContainer.innerHTML = '<span style="color: #999;">Click on body regions to select them</span>';
+                return;
+            }
+
+            selectedRegionsContainer.innerHTML = '';
+
+            for (const [regionId, intensity] of state.selectedRegions) {
+                const regionName = regionNames[regionId] || regionId;
+                const tag = document.createElement('div');
+                tag.className = 'region-tag';
+                tag.style.background = getPainColor(intensity);
+                tag.innerHTML = `
+                    ${regionName} (${intensity.toFixed(1)})
+                    <span class="remove" data-region="${regionId}">✕</span>
+                `;
+                selectedRegionsContainer.appendChild(tag);
+            }
+
+            // Add remove button listeners
+            document.querySelectorAll('.region-tag .remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const regionId = e.target.getAttribute('data-region');
+                    state.selectedRegions.delete(regionId);
+                    renderBody();
+                });
+            });
+        }
+
+        // Button event listeners
+        document.getElementById('btn-male').addEventListener('click', () => {
+            state.gender = 'male';
+            document.getElementById('btn-male').classList.add('active');
+            document.getElementById('btn-female').classList.remove('active');
+            renderBody();
+        });
+
+        document.getElementById('btn-female').addEventListener('click', () => {
+            state.gender = 'female';
+            document.getElementById('btn-female').classList.add('active');
+            document.getElementById('btn-male').classList.remove('active');
+            renderBody();
+        });
+
+        document.getElementById('btn-front').addEventListener('click', () => {
+            state.view = 'front';
+            document.getElementById('btn-front').classList.add('active');
+            document.getElementById('btn-back').classList.remove('active');
+            renderBody();
+        });
+
+        document.getElementById('btn-back').addEventListener('click', () => {
+            state.view = 'back';
+            document.getElementById('btn-back').classList.add('active');
+            document.getElementById('btn-front').classList.remove('active');
+            renderBody();
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            state.selectedRegions.clear();
+            renderBody();
+        });
+
+        // Initial render
+        renderBody();
+    </script>
+</body>
+</html>

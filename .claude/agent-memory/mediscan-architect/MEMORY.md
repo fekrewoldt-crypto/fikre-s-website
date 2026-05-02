@@ -1,0 +1,3 @@
+- [Interactive Body Heatmap Feature](project_body_heatmap.md) — Interactive body visualization with gender toggle, intensity levels, and heatmap overlay for pain location selection
+- [Phase 1 Critical Fixes](project_phase1_fixes.md) — Critical fixes applied 2026-04-25: package.json main, .gitignore, Three.js importmap, voice language codes, module paths
+- [Phase 2 Critical Fixes](project_phase2_fixes.md) — High-priority fixes 2026-04-25: hospital JSON loading, heatmap sync, chat history bounding, error handling
