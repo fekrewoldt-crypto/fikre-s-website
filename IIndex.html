@@ -900,12 +900,32 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   }
   .logo { font-size: 1.3rem; }
   .nav-right { gap: 6px; }
+  .nav-right {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: calc(100vw - 120px);
+  }
+  .nav-right::-webkit-scrollbar {
+    display: none;
+  }
   .nav-tab {
-    padding: 6px 10px;
-    font-size: 0.75rem;
+    padding: 6px 8px;
+    font-size: 0.7rem;
     border-radius: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-tab[data-page="facilities"] {
+    font-size: 0.65rem;
+    padding: 6px 8px;
   }
   .nav-badge { display: none; }
+  #theme-toggle {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
 
   /* Hero Section */
   .hero {
@@ -1118,11 +1138,30 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   }
   .logo { font-size: 1.4rem; }
   .nav-right { gap: 8px; }
+  .nav-right {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-right::-webkit-scrollbar {
+    display: none;
+  }
   .nav-tab {
-    padding: 7px 12px;
-    font-size: 0.8rem;
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-tab[data-page="facilities"] {
+    font-size: 0.7rem;
+    padding: 7px 10px;
   }
   .nav-badge { display: none; }
+  #theme-toggle {
+    padding: 7px 10px;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
 
   /* Hero Section */
   .hero {
@@ -1216,9 +1255,23 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     padding: 0 1.5rem;
   }
   .nav-right { gap: 8px; }
+  .nav-right {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-right::-webkit-scrollbar {
+    display: none;
+  }
   .nav-tab {
-    padding: 8px 14px;
-    font-size: 0.82rem;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-tab[data-page="facilities"] {
+    font-size: 0.75rem;
+    padding: 8px 12px;
   }
 
   /* Hero Section */
