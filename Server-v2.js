@@ -76,13 +76,15 @@ const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GE
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const groq = process.env.GROQ_API_KEY ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' }) : null;
+const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({ apiKey: process.env.NVIDIA_API_KEY, baseURL: 'https://integrate.api.nvidia.com/v1' }) : null;
 
 // Model priority order
-const MODEL_PRIORITY = ['gemini', 'groq', 'ollama', 'demo'];
+const MODEL_PRIORITY = ['gemini', 'nvidia', 'groq', 'ollama', 'demo'];
 
 // Model capabilities - which models support image input
 const MODEL_CAPABILITIES = {
   gemini: { supportsImages: true },
+  nvidia: { supportsImages: false },  // NVIDIA uses text-only Llama
   groq: { supportsImages: false },  // Groq uses text-only Llama
   ollama: { supportsImages: false }, // Ollama in this config is text-only
   demo: { supportsImages: false }    // Demo uses keyword matching
@@ -94,6 +96,7 @@ const MODEL_CAPABILITIES = {
 
 const DAILY_LIMITS = {
   gemini: 1500,
+  nvidia: 10000,
   groq: 14400,
   demo: Infinity
 };
@@ -102,6 +105,7 @@ const DAILY_LIMITS = {
 let rateLimits = {
   resetTime: getNextMidnight(),
   gemini: 0,
+  nvidia: 0,
   groq: 0,
   demo: 0
 };
@@ -480,6 +484,90 @@ async function analyzeWithGroq(prompt) {
   }
 }
 
+// ===== NVIDIA (Secondary) - fast, powerful, no images =====
+async function analyzeWithNvidia(prompt) {
+  if (!nvidia) throw new Error('NVIDIA not configured');
+
+  // DEBUG: Log request details
+  console.log('NVIDIA Request:', {
+    model: 'meta/llama-3.1-405b-instruct',
+    promptLength: prompt?.length
+  });
+
+  try {
+    const response = await nvidia.chat.completions.create({
+      model: 'meta/llama-3.1-405b-instruct',
+      temperature: 0.2,
+      max_tokens: 4096,
+      messages: [
+        { role: 'system', content: 'You are a medical AI assistant. Respond ONLY with valid JSON. No markdown formatting, no backticks, no explanations.' },
+        { role: 'user', content: prompt }
+      ]
+    });
+
+    const responseText = response.choices[0].message.content;
+    console.log('NVIDIA Response preview:', responseText.slice(0, 100));
+
+    return extractJSON(responseText);
+  } catch (error) {
+    console.error('NVIDIA Error Details:', {
+      message: error.message,
+      status: error.status,
+      details: error.cause
+    });
+    throw error;
+  }
+}
+
+// ===== FACILITY RECOMMENDATION =====
+function recommendFacilities(severity, condition) {
+  // Load hospital data
+  let hospitals = [];
+  try {
+    const hospitalData = fs.readFileSync(path.join(__dirname, 'hospitals-gondar.json'), 'utf8');
+    hospitals = JSON.parse(hospitalData);
+  } catch (error) {
+    console.error('Failed to load hospital data:', error);
+    return [];
+  }
+
+  // Filter and rank facilities based on severity and condition
+  const severityPriority = {
+    high: ['hospital', 'health_center', 'clinic', 'pharmacy'],
+    medium: ['health_center', 'hospital', 'clinic', 'pharmacy'],
+    low: ['clinic', 'health_center', 'hospital', 'pharmacy']
+  };
+
+  const priorityOrder = severityPriority[severity] || severityPriority.low;
+
+  // Sort hospitals by priority and 24/7 availability
+  const sorted = hospitals.sort((a, b) => {
+    const aPriority = priorityOrder.indexOf(a.type);
+    const bPriority = priorityOrder.indexOf(b.type);
+    if (aPriority !== bPriority) return aPriority - bPriority;
+
+    // Prioritize 24/7 facilities
+    const a247 = a.hours === '24/7';
+    const b247 = b.hours === '24/7';
+    if (a247 && !b247) return -1;
+    if (!a247 && b247) return 1;
+
+    return 0;
+  });
+
+  // Return top 3 recommendations
+  return sorted.slice(0, 3).map(h => ({
+    name: h.name,
+    type: h.type,
+    address: h.address,
+    phone: h.phone,
+    hours: h.hours,
+    specialties: h.specialties,
+    lat: h.lat,
+    lng: h.lng
+  }));
+}
+
 // ===== MAIN ANALYZE ENDPOINT =====
 app.post('/api/analyze', async (req, res) => {
   const { prompt, imageBase64, imageMimeType, symptoms, bodyArea } = req.body;
@@ -525,6 +613,11 @@ app.post('/api/analyze', async (req, res) => {
           result = await analyzeWithGemini(prompt, imageBase64, imageMimeType);
           incrementModel('gemini');
           break;
+        case 'nvidia':
+          if (!process.env.NVIDIA_API_KEY) continue;
+          result = await analyzeWithNvidia(prompt);
+          incrementModel('nvidia');
+          break;
         case 'groq':
           if (!process.env.GROQ_API_KEY) continue;
           result = await analyzeWithGroq(prompt);
@@ -544,12 +637,16 @@ app.post('/api/analyze', async (req, res) => {
       const duration = Date.now() - startTime;
       console.log(`✅ Used ${modelName} (${duration}ms)`);
 
+      // Add facility recommendations
+      const recommendedFacilities = recommendFacilities(result.severity, result.primaryCondition);
+
       const response = {
         ...result,
         modelUsed: modelName,
         modelsAttempted: usedModels,
         responseTimeMs: duration,
-        demoMode: modelName === 'demo'
+        demoMode: modelName === 'demo',
+        recommendedFacilities: recommendedFacilities
       };
 
       // Cache the response (skip for demo with images)
@@ -573,13 +670,15 @@ app.post('/api/analyze', async (req, res) => {
   // Final fallback: if all AI models failed, use demo mode
   console.log('All AI models failed, using demo mode as final fallback');
   const demoResult = getMockDiagnosis(symptoms, bodyArea);
+  const recommendedFacilities = recommendFacilities(demoResult.severity, demoResult.primaryCondition);
   res.json({
     ...demoResult,
     modelUsed: 'demo',
     modelsAttempted: usedModels,
     responseTimeMs: 0,
     demoMode: true,
-    fallbackReason: 'All AI models unavailable, using demo data'
+    fallbackReason: 'All AI models unavailable, using demo data',
+    recommendedFacilities: recommendedFacilities
   });
 });
 
@@ -668,6 +767,13 @@ app.get('/api/status', (req, res) => {
         hasKey: !!process.env.GEMINI_API_KEY,
         supportsImages: true
       },
+      nvidia: {
+        available: isModelAvailable('nvidia'),
+        usedToday: rateLimits.nvidia,
+        dailyLimit: DAILY_LIMITS.nvidia,
+        hasKey: !!process.env.NVIDIA_API_KEY,
+        supportsImages: false
+      },
       groq: {
         available: isModelAvailable('groq'),
         usedToday: rateLimits.groq,
@@ -687,7 +793,7 @@ app.get('/api/status', (req, res) => {
       openai: { available: false, supportsImages: true }
     },
     rateLimitResetsAt: new Date(rateLimits.resetTime).toISOString(),
-    demoMode: !process.env.GEMINI_API_KEY && !ollamaAvailable && !process.env.GROQ_API_KEY
+    demoMode: !process.env.GEMINI_API_KEY && !ollamaAvailable && !process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY
   });
 });
 

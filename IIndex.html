@@ -749,6 +749,47 @@ textarea::placeholder { color:#aaa; }
 .chart-card-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 1rem; color: var(--text); }
 .dash-empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.95rem; }
 
+/* Health News Section */
+.news-item {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+.news-item:hover {
+  border-color: var(--green);
+  transform: translateX(4px);
+}
+.news-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-light);
+  border-radius: 10px;
+}
+.news-content { flex: 1; }
+.news-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; color: var(--text); }
+.news-meta { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.news-tag {
+  background: var(--green-light);
+  color: var(--green);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.news-tag.alert { background: #fde8e6; color: var(--red); }
+.news-tag.info { background: #e8f4ef; color: var(--green); }
+.news-tag.warning { background: #fef3e2; color: var(--amber); }
+
 .modal-bg {
   display: none;
   position: fixed;
@@ -869,6 +910,73 @@ textarea::placeholder { color:#aaa; }
 .hospital-phone:hover { background: var(--green-mid); transform: scale(1.05); }
 .emergency-btn { background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%); color: white; border: none; border-radius: 12px; padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 1rem 0; transition: all 0.3s ease; box-shadow: 0 4px 14px rgba(192, 57, 43, 0.3); }
 .emergency-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4); }
+
+/* Recommended Facilities */
+.recommended-facility {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+.recommended-facility:hover {
+  border-color: var(--green);
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.8);
+}
+[data-theme="dark"] .recommended-facility:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.facility-icon {
+  font-size: 1.8rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-light);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.facility-details { flex: 1; }
+.facility-name { font-weight: 600; font-size: 0.95rem; color: var(--text); margin-bottom: 4px; }
+.facility-meta { font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.facility-type { font-weight: 500; color: var(--green); }
+.facility-hours { display: flex; align-items: center; gap: 4px; }
+.facility-hours::before { content: '🕐'; }
+.facility-actions { display: flex; gap: 8px; margin-top: 8px; }
+.facility-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.facility-call-btn {
+  background: var(--green);
+  color: white;
+  border: none;
+}
+.facility-call-btn:hover {
+  background: var(--green-mid);
+  transform: scale(1.05);
+}
+.facility-directions-btn {
+  background: var(--green-light);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+.facility-directions-btn:hover {
+  background: var(--green);
+  color: white;
+}
 
 /* Language Selector */
 .lang-selector { position: relative; }
@@ -2120,6 +2228,16 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
           <span>View Nearby Hospitals</span>
         </button>
       </div>
+
+      <div class="result-section" id="facilities-section" style="display:none;">
+        <div class="section-label">📍 Recommended Healthcare Facilities</div>
+        <p style="font-size:0.9rem;color:var(--muted);margin-bottom:14px;">
+          Based on your condition, these facilities in Gondar are best suited for your needs.
+        </p>
+        <div id="recommended-facilities-list" style="display:flex;flex-direction:column;gap:12px;">
+          <!-- Facilities will be rendered here -->
+        </div>
+      </div>
     </div>
     <div class="result-footer">
       <div class="cta-row">
@@ -2179,6 +2297,15 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <div class="chart-card-title">Scans over time (last 7 days)</div>
     <div style="height:220px;position:relative"><canvas id="time-chart"></canvas></div>
   </div>
+
+  <!-- Health News Section -->
+  <div class="chart-card" style="margin-top: 1.5rem;">
+    <div class="chart-card-title">📰 Health News & Alerts</div>
+    <div id="health-news-container" style="display: flex; flex-direction: column; gap: 12px;">
+      <!-- News items will be rendered here -->
+    </div>
+  </div>
+
   <div id="dash-empty" class="dash-empty" style="display:none">No scan data yet. Run your first scan to populate the dashboard.</div>
 </div>
 
@@ -3104,6 +3231,42 @@ function showResults(r) {
     }
   }
 
+  // Render recommended facilities
+  const facilitiesSection = document.getElementById('facilities-section');
+  const facilitiesList = document.getElementById('recommended-facilities-list');
+  if (facilitiesSection && facilitiesList) {
+    if (r.recommendedFacilities && r.recommendedFacilities.length > 0) {
+      facilitiesSection.style.display = 'block';
+      facilitiesList.innerHTML = r.recommendedFacilities.map((f, i) => {
+        const iconMap = { hospital: '🏥', health_center: '🏨', clinic: '🩺', pharmacy: '💊' };
+        const icon = iconMap[f.type] || '🏥';
+        return `
+          <div class="recommended-facility" style="animation: fadeUp 0.3s ease ${i * 0.1}s both;">
+            <div class="facility-icon">${icon}</div>
+            <div class="facility-details">
+              <div class="facility-name">${f.name}</div>
+              <div class="facility-meta">
+                <span class="facility-type">${f.type.replace('_', ' ').toUpperCase()}</span>
+                <span class="facility-hours">${f.hours}</span>
+                <span>📍 ${f.address}</span>
+              </div>
+              <div class="facility-actions">
+                <a href="tel:${f.phone.replace(/\s/g, '')}" class="facility-action-btn facility-call-btn">
+                  📞 Call
+                </a>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lng}" target="_blank" class="facility-action-btn facility-directions-btn">
+                  🗺️ Directions
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      facilitiesSection.style.display = 'none';
+    }
+  }
+
   document.getElementById('results').style.display = 'block';
   window.scrollTo({ top:0, behavior:'smooth' });
 }
@@ -3276,6 +3439,63 @@ function renderDashboard() {
     data:{ labels:days, datasets:[{ label:'Scans', data:counts, borderColor:'#1a6b4a', backgroundColor:'rgba(26,107,74,0.08)', borderWidth:2, pointBackgroundColor:'#1a6b4a', pointRadius:5, fill:true, tension:0.4 }] },
     options:{ responsive:true, maintainAspectRatio:false, animation:{duration:800}, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},ticks:{font:{size:11,family:'DM Sans'},color:'#6b6b60'}}, y:{beginAtZero:true,ticks:{stepSize:1,font:{size:11,family:'DM Sans'},color:'#6b6b60'},grid:{color:'#ddddd0'}} } }
   });
+
+  // Render health news
+  renderHealthNews();
+}
+
+// ── HEALTH NEWS ──
+const HEALTH_NEWS = [
+  {
+    icon: '🦠',
+    title: 'Malaria Prevention Alert',
+    tag: 'alert',
+    tagName: 'Alert',
+    date: 'May 5, 2026',
+    content: 'Increased malaria cases reported in Amhara region. Use mosquito nets and seek early treatment for fever symptoms.'
+  },
+  {
+    icon: '💉',
+    title: 'Vaccination Campaign Update',
+    tag: 'info',
+    tagName: 'Update',
+    date: 'May 4, 2026',
+    content: 'Free vaccination clinics available at Gondar University Hospital for children under 5 years.'
+  },
+  {
+    icon: '🌡️',
+    title: 'Seasonal Flu Advisory',
+    tag: 'warning',
+    tagName: 'Advisory',
+    date: 'May 3, 2026',
+    content: 'Flu season approaching. Practice good hygiene and consider getting vaccinated if at high risk.'
+  },
+  {
+    icon: '🏥',
+    title: 'New Health Center Opening',
+    tag: 'info',
+    tagName: 'News',
+    date: 'May 2, 2026',
+    content: 'A new health center opening in Azezo next week, expanding healthcare access for the community.'
+  }
+];
+
+function renderHealthNews() {
+  const container = document.getElementById('health-news-container');
+  if (!container) return;
+
+  container.innerHTML = HEALTH_NEWS.map(news => `
+    <div class="news-item">
+      <div class="news-icon">${news.icon}</div>
+      <div class="news-content">
+        <div class="news-title">${news.title}</div>
+        <div class="news-meta">
+          <span class="news-tag ${news.tag}">${news.tagName}</span>
+          <span>${news.date}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
 // ── MODAL ──
