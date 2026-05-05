@@ -724,6 +724,7 @@
 
 .map-view {
   display: block;
+  min-height: 500px;
 }
 
 .list-view {

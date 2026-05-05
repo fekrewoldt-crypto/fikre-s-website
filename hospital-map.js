@@ -40,6 +40,14 @@ const facilityIcons = {
  */
 async function initHospitalMap() {
   try {
+    console.log('Initializing hospital map...');
+
+    // Show loading state
+    const container = document.getElementById('hospital-map-container');
+    if (container) {
+      container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);">Loading map...</div>';
+    }
+
     // Load hospital data
     await loadHospitalData();
 
@@ -223,6 +231,13 @@ function createMap() {
     existingMap.innerHTML = '';
   }
 
+  // Ensure the container has a height before creating the map
+  const container = document.getElementById('hospital-map-container');
+  if (container) {
+    container.style.height = '500px';
+    container.style.width = '100%';
+  }
+
   // Create map centered on Gondar (12.6°N, 37.47°E)
   map = L.map('hospital-map-container', {
     zoomControl: true,
@@ -241,6 +256,8 @@ function createMap() {
     metric: true,
     position: 'bottomright'
   }).addTo(map);
+
+  console.log('Map created successfully');
 }
 
 /**
@@ -739,11 +756,34 @@ function showEmergencyHospitals() {
  * Initialize when the facilities page is shown
  */
 function onFacilitiesPageShow() {
-  if (!map) {
-    initHospitalMap();
-  } else {
-    setTimeout(() => map.invalidateSize(), 100);
+  console.log('Facilities page shown, initializing map...');
+
+  // Check if the container exists
+  const container = document.getElementById('hospital-map-container');
+  if (!container) {
+    console.error('Hospital map container not found!');
+    return;
   }
+
+  console.log('Container found, dimensions:', {
+    width: container.offsetWidth,
+    height: container.offsetHeight,
+    display: window.getComputedStyle(container).display
+  });
+
+  // Small delay to ensure the page is fully visible
+  setTimeout(() => {
+    if (!map) {
+      console.log('Map not initialized, creating new map...');
+      initHospitalMap();
+    } else {
+      console.log('Map already exists, invalidating size...');
+      map.invalidateSize();
+
+      // Re-render markers to ensure they're visible
+      renderMarkers();
+    }
+  }, 200);
 }
 
 // Export functions for global access
