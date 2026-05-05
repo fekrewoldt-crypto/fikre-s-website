@@ -886,17 +886,824 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 /* Ethiopian colors accent */
 .ethiopian-accent { background: linear-gradient(90deg, #009639 33%, #FEDD00 33%, #FEDD00 66%, #DA020E 66%); height: 3px; width: 100%; position: fixed; top: 0; left: 0; z-index: 1000; }
 
-/* Responsive */
-@media (max-width: 640px) {
-  .card { margin-left: 1rem; margin-right: 1rem; }
-  #results, #chat-section { margin-left: 1rem; margin-right: 1rem; }
-  .result-header, .result-body, .result-footer, .stats-row { padding-left: 1.25rem; padding-right: 1.25rem; }
-  .cta-row { flex-direction: column; }
-  .dash-cards { grid-template-columns: repeat(2, 1fr); }
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
+/* Responsive - Mobile First Approach */
+
+/* Small phones (iPhone SE, etc.) */
+@media (max-width: 480px) {
+  /* Navigation */
+  nav {
+    height: 56px;
+    padding: 0 1rem;
+  }
+  .logo { font-size: 1.3rem; }
+  .nav-right { gap: 6px; }
+  .nav-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 8px;
+  }
   .nav-badge { display: none; }
-  .camera-container { width: 95%; padding: 15px; }
-  .camera-controls { flex-direction: column; align-items: center; }
+
+  /* Hero Section */
+  .hero {
+    padding: 2.5rem 1rem 2rem;
+    max-width: 100%;
+  }
+  .hero-tag {
+    font-size: 0.6rem;
+    padding: 8px 14px;
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+  }
+  .hero p {
+    font-size: 0.9rem;
+    max-width: 100%;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1.25rem;
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+    border-radius: 16px;
+  }
+  .card:hover {
+    transform: none;
+  }
+  .card-title {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .step-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    padding: 1.5rem 1rem;
+    border-radius: 14px;
+  }
+  .upload-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .upload-zone p {
+    font-size: 0.85rem;
+  }
+  .camera-btn {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+
+  /* Camera Modal */
+  .camera-container {
+    width: 95%;
+    padding: 12px;
+    border-radius: 16px;
+  }
+  .camera-preview {
+    border-radius: 10px;
+  }
+  .camera-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 1rem;
+  }
+  .camera-capture-btn {
+    width: 60px;
+    height: 60px;
+  }
+  .camera-capture-btn::after {
+    width: 42px;
+    height: 42px;
+  }
+  .camera-close-btn {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+  }
+
+  /* Body Heatmap */
+  #body-heatmap-container {
+    min-height: 320px;
+  }
+  #body-heatmap-container.viewer-3d-mode,
+  #body-heatmap-container[data-body-heatmap-3d-mode="true"] {
+    height: 320px;
+    min-height: 320px;
+  }
+  #body-heatmap-container .body-svg-wrapper {
+    margin: 0.75rem 0;
+  }
+  #body-heatmap-container .gender-toggle,
+  #body-heatmap-container .view-toggle,
+  #body-heatmap-container .mode-toggle {
+    margin-bottom: 0.5rem;
+    gap: 6px;
+  }
+  .mode-toggle-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+  .mode-toggle-btn .mode-icon {
+    font-size: 0.9rem;
+  }
+
+  /* Form Elements */
+  textarea {
+    font-size: 0.9rem;
+    padding: 0.85rem;
+    min-height: 100px;
+  }
+  .body-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .body-btn {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    min-height: 44px;
+  }
+  .duration-row {
+    gap: 8px;
+  }
+  .dur-btn {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  /* Submit Button */
+  .submit-btn {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  /* Results */
+  #results {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+  }
+  .result-header {
+    padding: 1.5rem;
+    border-radius: 16px 16px 0 0;
+  }
+  .result-body {
+    padding: 1.5rem;
+  }
+  .result-footer {
+    padding: 1.5rem;
+    border-radius: 0 0 16px 16px;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .cta-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cta-row .btn-primary,
+  .cta-row .btn-secondary {
+    width: 100%;
+  }
+
+  /* Dashboard */
+  .dash-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .dash-card {
+    padding: 1rem;
+  }
+  .stat-card {
+    padding: 1rem;
+  }
+  .stat-card .number {
+    font-size: 2rem;
+  }
+
+  /* Chat Section */
+  #chat-section {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+  }
+
+  /* Preview Container */
+  #preview-container img {
+    max-height: 180px;
+  }
+}
+
+/* Standard mobile (iPhone 12/13/14, Android) */
+@media (min-width: 481px) and (max-width: 640px) {
+  /* Navigation */
+  nav {
+    height: 60px;
+    padding: 0 1.25rem;
+  }
+  .logo { font-size: 1.4rem; }
+  .nav-right { gap: 8px; }
+  .nav-tab {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+  .nav-badge { display: none; }
+
+  /* Hero Section */
+  .hero {
+    padding: 3rem 1.25rem 2.5rem;
+  }
+  .hero-tag {
+    font-size: 0.65rem;
+    padding: 9px 16px;
+  }
+  .hero h1 {
+    font-size: 1.8rem;
+  }
+  .hero p {
+    font-size: 0.95rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1.5rem;
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+  .card:hover {
+    transform: none;
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    padding: 2rem 1.25rem;
+  }
+  .upload-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  /* Body Heatmap */
+  #body-heatmap-container {
+    min-height: 350px;
+  }
+  #body-heatmap-container.viewer-3d-mode,
+  #body-heatmap-container[data-body-heatmap-3d-mode="true"] {
+    height: 350px;
+    min-height: 350px;
+  }
+
+  /* Form Elements */
+  .body-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Results */
+  #results {
+    margin-left: 1rem;
+    margin-right: 1rem;
+  }
+  .result-header,
+  .result-body,
+  .result-footer {
+    padding: 1.75rem;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  .cta-row {
+    flex-direction: column;
+  }
+
+  /* Dashboard */
+  .dash-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Camera */
+  .camera-container {
+    width: 95%;
+    padding: 15px;
+  }
+  .camera-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* Large phones / Small tablets */
+@media (min-width: 641px) and (max-width: 768px) {
+  /* Navigation */
+  nav {
+    height: 64px;
+    padding: 0 1.5rem;
+  }
+  .nav-right { gap: 8px; }
+  .nav-tab {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+
+  /* Hero Section */
+  .hero {
+    padding: 4rem 1.5rem 3rem;
+  }
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 1.75rem;
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    padding: 2.25rem 1.5rem;
+  }
+
+  /* Body Heatmap */
+  #body-heatmap-container {
+    min-height: 400px;
+  }
+
+  /* Form Elements */
+  .body-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Results */
+  .result-header,
+  .result-body,
+  .result-footer {
+    padding: 2rem;
+  }
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Dashboard */
+  .dash-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Navigation */
+  nav {
+    padding: 0 2rem;
+  }
+
+  /* Hero Section */
+  .hero {
+    padding: 5rem 2rem 3.5rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 2rem;
+  }
+
+  /* Body Heatmap */
+  #body-heatmap-container {
+    min-height: 450px;
+  }
+
+  /* Form Elements */
+  .body-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove scale transforms on hover for touch devices */
+  .card:hover {
+    transform: none;
+  }
+  .upload-zone:hover {
+    transform: none;
+  }
+  .upload-zone:hover .upload-icon {
+    transform: none;
+  }
+  .camera-btn:hover {
+    transform: none;
+  }
+  .body-btn:hover {
+    transform: none;
+  }
+  .dur-btn:hover {
+    transform: none;
+  }
+  .demo-btn:hover {
+    transform: none;
+  }
+  .mode-toggle-btn:hover {
+    transform: none;
+  }
+  .stat-card:hover {
+    transform: none;
+  }
+  .symptom-chip:hover {
+    transform: none;
+  }
+  .nav-tab:hover {
+    transform: none;
+  }
+  .btn-primary:hover {
+    transform: none;
+  }
+  .btn-secondary:hover {
+    transform: none;
+  }
+  .submit-btn:hover {
+    transform: none;
+  }
+
+  /* Add active states for touch feedback */
+  .card:active {
+    transform: scale(0.98);
+  }
+  .upload-zone:active {
+    transform: scale(0.98);
+  }
+  .upload-zone:active .upload-icon {
+    transform: scale(0.95);
+  }
+  .camera-btn:active {
+    transform: scale(0.95);
+  }
+  .body-btn:active {
+    transform: scale(0.95);
+  }
+  .dur-btn:active {
+    transform: scale(0.95);
+  }
+  .demo-btn:active {
+    transform: scale(0.95);
+  }
+  .mode-toggle-btn:active {
+    transform: scale(0.95);
+  }
+  .stat-card:active {
+    transform: scale(0.95);
+  }
+  .symptom-chip:active {
+    transform: scale(0.95);
+  }
+  .nav-tab:active {
+    transform: scale(0.95);
+  }
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: scale(0.95);
+  }
+  .submit-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Remove tap highlight color */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  /* Improve touch target sizes */
+  .nav-tab {
+    min-height: 40px;
+    min-width: 44px;
+  }
+  .body-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .dur-btn {
+    min-height: 40px;
+    min-width: 44px;
+  }
+  .mode-toggle-btn {
+    min-height: 40px;
+    min-width: 44px;
+  }
+  .demo-btn {
+    min-height: 40px;
+    min-width: 44px;
+  }
+  .camera-btn {
+    min-height: 44px;
+  }
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+  }
+  .submit-btn {
+    min-height: 48px;
+  }
+  .symptom-chip {
+    min-height: 36px;
+  }
+  .step-badge {
+    min-width: 28px;
+    min-height: 28px;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  @media (max-width: 640px) {
+    nav {
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+    }
+    .card {
+      margin-left: max(0.75rem, env(safe-area-inset-left));
+      margin-right: max(0.75rem, env(safe-area-inset-right));
+    }
+    #results,
+    #chat-section {
+      margin-left: max(0.75rem, env(safe-area-inset-left));
+      margin-right: max(0.75rem, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Results Section Mobile Optimizations */
+@media (max-width: 640px) {
+  .disease-name {
+    font-size: 1.6rem;
+  }
+  .disease-subtitle {
+    font-size: 0.85rem;
+  }
+  .severity-pill {
+    font-size: 0.7rem;
+    padding: 5px 12px;
+  }
+  .confidence-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .conf-bar-wrap {
+    width: 100%;
+  }
+  .conf-label {
+    font-size: 0.75rem;
+  }
+  .conf-pct {
+    font-size: 0.9rem;
+  }
+  .stat-label {
+    font-size: 0.65rem;
+  }
+  .stat-value {
+    font-size: 1.1rem;
+  }
+  .result-section {
+    padding: 1.25rem 0;
+  }
+  .section-label {
+    font-size: 0.7rem;
+  }
+  .result-section p {
+    font-size: 0.9rem;
+  }
+  .symptom-chip {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+  .steps-list li {
+    font-size: 0.9rem;
+  }
+  .step-num {
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+  .warning-box {
+    padding: 1rem;
+    font-size: 0.85rem;
+  }
+  .chart-wrap {
+    height: 180px;
+  }
+}
+
+/* Chat Section Mobile Optimizations */
+@media (max-width: 640px) {
+  .chat-header {
+    padding: 1rem 1.25rem;
+  }
+  .chat-title {
+    font-size: 0.9rem;
+  }
+  .chat-sub {
+    font-size: 0.75rem;
+  }
+  .chat-messages {
+    padding: 1.25rem;
+    min-height: 150px;
+    max-height: 320px;
+  }
+  .chat-msg {
+    font-size: 0.88rem;
+    padding: 0.75rem 1rem;
+    max-width: 90%;
+  }
+  .chat-input-row {
+    padding: 0.875rem 1.25rem;
+  }
+  .chat-input {
+    font-size: 0.9rem;
+    padding: 0.7rem 0.875rem;
+  }
+  .chat-send-btn {
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Loading Section Mobile Optimizations */
+@media (max-width: 640px) {
+  #loading {
+    padding: 3rem 1.5rem;
+  }
+  .spinner {
+    width: 48px;
+    height: 48px;
+  }
+  .loading-steps {
+    max-width: 300px;
+  }
+  .loading-steps li {
+    font-size: 0.85rem;
+    padding: 6px 0;
+  }
+}
+
+/* Dashboard Mobile Optimizations */
+@media (max-width: 640px) {
+  .dash-card {
+    padding: 1rem;
+  }
+  .dash-card-title {
+    font-size: 0.85rem;
+  }
+  .dash-card-value {
+    font-size: 1.5rem;
+  }
+  .dash-card-sub {
+    font-size: 0.75rem;
+  }
+}
+
+/* Button Mobile Optimizations */
+@media (max-width: 640px) {
+  .btn-primary {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+  .btn-secondary {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+  }
+}
+
+/* Phase 5: Polish & Refinement */
+
+/* Typography Scaling for Mobile */
+@media (max-width: 640px) {
+  /* Base font size adjustment */
+  html {
+    font-size: 14px;
+  }
+
+  /* Line height optimization for mobile */
+  body {
+    line-height: 1.5;
+  }
+
+  /* Character spacing optimization */
+  .hero-tag {
+    letter-spacing: 1.5px;
+  }
+  .section-label {
+    letter-spacing: 1px;
+  }
+  .stat-label {
+    letter-spacing: 0.75px;
+  }
+}
+
+/* Spacing Optimization for Mobile */
+@media (max-width: 640px) {
+  /* Consistent spacing rhythm */
+  .card {
+    margin-bottom: 1.25rem;
+  }
+  .result-section {
+    padding: 1rem 0;
+  }
+  .chat-messages {
+    gap: 10px;
+  }
+  .symptom-list {
+    gap: 6px;
+  }
+  .body-grid {
+    gap: 8px;
+  }
+  .duration-row {
+    gap: 8px;
+  }
+  .stats-row {
+    gap: 10px;
+  }
+  .dash-cards {
+    gap: 10px;
+  }
+}
+
+/* Performance Optimizations for Mobile */
+@media (max-width: 640px) {
+  /* Reduce particle effects on mobile */
+  .particle {
+    opacity: 0.3;
+  }
+  .particle:nth-child(1) { width: 200px; height: 200px; }
+  .particle:nth-child(2) { width: 150px; height: 150px; }
+  .particle:nth-child(3) { width: 120px; height: 120px; }
+  .particle:nth-child(4) { width: 180px; height: 180px; }
+  .particle:nth-child(5) { width: 140px; height: 140px; }
+
+  /* Optimize animations for mobile */
+  @keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  body {
+    animation-duration: 20s;
+  }
+
+  /* Reduce backdrop blur for performance */
+  nav,
+  .card,
+  .result-header,
+  .result-body,
+  .result-footer,
+  #chat-section {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Optimize box shadows */
+  .card {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+}
+
+/* Smooth Scrolling */
+@media (max-width: 640px) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Prevent Horizontal Overflow */
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
+  .card,
+  #results,
+  #chat-section,
+  .upload-zone,
+  .camera-container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 }
 
 /* Demo Body Heatmap Styles */
