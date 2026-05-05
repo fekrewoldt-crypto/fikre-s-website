@@ -6,6 +6,9 @@
 <title>MediScan — AI Health Identification</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+Ethiopic:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="hospital-map.css" />
 <style>
 :root {
   --bg: #f5f2ec; --green: #1a6b4a; --green-light: #e8f4ef; --green-mid: #2d8a62;
@@ -1911,6 +1914,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
+    <button class="nav-tab" data-page="facilities" onclick="showPage('facilities',this)" data-i18n="nav_facilities">🏥 Facilities</button>
     <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
     <div class="lang-selector">
       <button class="lang-btn" id="lang-btn" onclick="toggleLangDropdown()">
@@ -2125,6 +2129,41 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <div id="dash-empty" class="dash-empty" style="display:none">No scan data yet. Run your first scan to populate the dashboard.</div>
 </div>
 
+<!-- FACILITIES PAGE -->
+<div id="facilities-page" class="page">
+  <div class="page-header">
+    <h2>🏥 Healthcare Facilities</h2>
+    <p>Hospitals, clinics, and pharmacies in Gondar, Ethiopia</p>
+  </div>
+
+  <div class="facilities-controls">
+    <div class="filter-buttons">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="hospital">🏥 Hospitals</button>
+      <button class="filter-btn" data-filter="health_center">🏨 Health Centers</button>
+      <button class="filter-btn" data-filter="clinic">🩺 Clinics</button>
+      <button class="filter-btn" data-filter="pharmacy">💊 Pharmacies</button>
+    </div>
+    <div class="search-box">
+      <input type="text" id="facility-search" placeholder="Search facilities...">
+    </div>
+  </div>
+
+  <div class="facilities-content">
+    <div id="map-view" class="map-view">
+      <div id="hospital-map-container"></div>
+    </div>
+    <div id="list-view" class="list-view" style="display: none;">
+      <div id="facility-list"></div>
+    </div>
+  </div>
+
+  <div class="facilities-actions">
+    <button id="view-toggle" class="action-btn">📋 List View</button>
+    <button id="near-me-btn" class="action-btn">📍 Find Nearest</button>
+  </div>
+</div>
+
 <!-- BOOKING MODAL -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
@@ -2182,6 +2221,9 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 
 <!-- Body Heatmap Components - Using Demo Body Heatmap -->
 <script src="./modules/demo-body-heatmap-simple.js?v=20260502"></script>
+
+<!-- Hospital Map Components -->
+<script src="hospital-map.js"></script>
 
 <script>
 // Use relative URLs for API calls (works on both localhost and Vercel)
@@ -2542,6 +2584,12 @@ function showPage(name, btn) {
   if (btn) btn.classList.add('active');
   if (name === 'history') renderHistory();
   if (name === 'dashboard') renderDashboard();
+  if (name === 'facilities') {
+    // Initialize hospital map when facilities page is shown
+    if (typeof onFacilitiesPageShow === 'function') {
+      onFacilitiesPageShow();
+    }
+  }
 }
 
 // ── FILE UPLOAD ──
