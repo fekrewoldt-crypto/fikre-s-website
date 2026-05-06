@@ -2400,7 +2400,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 </div>
 
 <!-- Body Heatmap Components - Using Demo Body Heatmap -->
-<script src="./modules/demo-body-heatmap-simple.js?v=20260502"></script>
+<script src="modules/demo-body-heatmap-simple.js"></script>
 
 <!-- Hospital Map Components -->
 <script src="hospital-map.js"></script>
@@ -3480,22 +3480,49 @@ const HEALTH_NEWS = [
   }
 ];
 
-function renderHealthNews() {
+async function renderHealthNews() {
   const container = document.getElementById('health-news-container');
   if (!container) return;
 
-  container.innerHTML = HEALTH_NEWS.map(news => `
-    <div class="news-item">
-      <div class="news-icon">${news.icon}</div>
-      <div class="news-content">
-        <div class="news-title">${news.title}</div>
-        <div class="news-meta">
-          <span class="news-tag ${news.tag}">${news.tagName}</span>
-          <span>${news.date}</span>
+  // Show loading state
+  container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">Loading health news...</div>';
+
+  try {
+    const response = await fetch('/api/health-news');
+    const data = await response.json();
+
+    if (data.news && data.news.length > 0) {
+      container.innerHTML = data.news.map(news => `
+        <div class="news-item">
+          <div class="news-icon">${news.icon}</div>
+          <div class="news-content">
+            <div class="news-title">${news.title}</div>
+            <div class="news-meta">
+              <span class="news-tag ${news.tag}">${news.tagName}</span>
+              <span>${news.date}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">No health news available at this time.</div>';
+    }
+  } catch (error) {
+    console.error('Failed to load health news:', error);
+    // Fallback to static news
+    container.innerHTML = HEALTH_NEWS.map(news => `
+      <div class="news-item">
+        <div class="news-icon">${news.icon}</div>
+        <div class="news-content">
+          <div class="news-title">${news.title}</div>
+          <div class="news-meta">
+            <span class="news-tag ${news.tag}">${news.tagName}</span>
+            <span>${news.date}</span>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
 }
 
 // ── MODAL ──
@@ -3640,6 +3667,778 @@ window.addEventListener('DOMContentLoaded', () => {
   setLanguage(currentLang);
   initBodyHeatmap();
   restoreFormState();
+  renderHealthNews();
+});
+</script>
+
+<!-- EMERGENCY FLOATING BUTTON -->
+<button id="sos-fab" aria-label="Emergency: Find nearby hospitals" onclick="openSosModal()">
+  <span class="sos-pulse"></span>
+  🚨 SOS
+</button>
+
+<!-- EMERGENCY MODAL -->
+<div id="sos-modal-bg" onclick="if(event.target===this)closeSosModal()">
+  <div id="sos-modal">
+    <button id="sos-close" onclick="closeSosModal()">✕</button>
+
+    <div id="sos-header">
+      <div id="sos-title">🚨 Emergency Help</div>
+      <div id="sos-subtitle">Nearby hospitals in Gondar</div>
+    </div>
+
+    <div id="sos-ambulance">
+      <div>
+        <div style="font-weight:700;font-size:1.1rem">📞 Call Ambulance: 907</div>
+        <div style="font-size:0.82rem;opacity:0.9;margin-top:2px">Free emergency service · Gondar City</div>
+      </div>
+      <a href="tel:907" id="sos-call-btn">Call 907</a>
+    </div>
+
+    <div id="sos-locating" style="display:none">
+      <div class="sos-spinner"></div>
+      <span>Getting your location…</span>
+    </div>
+
+    <div id="sos-list"></div>
+
+    <button id="sos-locate-btn" onclick="sosLocate()">📍 Find Nearest to Me</button>
+  </div>
+</div>
+
+<style>
+/* ── Floating SOS Button ── */
+#sos-fab {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 9999;
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 4px 18px rgba(192,57,43,0.45);
+  letter-spacing: 0.04em;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+#sos-fab:hover { transform: translateY(-2px); box-shadow: 0 7px 24px rgba(192,57,43,0.55); }
+#sos-fab:active { transform: scale(0.97); }
+.sos-pulse {
+  width: 9px; height: 9px;
+  background: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: sosPulse 1.4s ease-in-out infinite;
+}
+@keyframes sosPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.4; transform:scale(1.5); }
+}
+
+/* ── Modal Backdrop ── */
+#sos-modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(3px);
+}
+#sos-modal-bg.open { display: flex; }
+
+/* ── Modal Box ── */
+#sos-modal {
+  background: var(--bg, #fff);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.4rem;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  color: var(--text, #1a1a18);
+  font-family: inherit;
+}
+#sos-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: var(--surface, #f2f2ea);
+  border: none;
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--muted, #6b6b60);
+  display: flex; align-items: center; justify-content: center;
+}
+#sos-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 2px; }
+#sos-subtitle { font-size: 0.82rem; color: var(--muted, #6b6b60); margin-bottom: 14px; }
+
+/* ── Ambulance Banner ── */
+#sos-ambulance {
+  background: linear-gradient(90deg, #c0392b, #e74c3c);
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+#sos-call-btn {
+  background: #fff;
+  color: #c0392b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  padding: 8px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+#sos-call-btn:hover { background: #fde; }
+
+/* ── Hospital Cards ── */
+.sos-card {
+  border: 1px solid var(--border, #ddddd0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sos-card:hover { border-color: #c0392b; box-shadow: 0 2px 12px rgba(192,57,43,0.12); }
+.sos-card-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+.sos-card-meta { font-size: 0.78rem; color: var(--muted, #6b6b60); display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.sos-badge { background: #fde8e6; color: #c0392b; border-radius: 6px; padding: 1px 7px; font-size: 0.72rem; font-weight: 600; }
+.sos-badge.green { background: #e8f4ef; color: #1a6b4a; }
+.sos-dist { font-weight: 600; color: #c0392b; }
+.sos-card-phone { font-size: 0.78rem; color: var(--muted, #6b6b60); margin-top: 5px; }
+.sos-card-phone a { color: #c0392b; font-weight: 600; text-decoration: none; }
+
+/* ── Locate button ── */
+#sos-locate-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1.5px dashed var(--border, #ddddd0);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text, #1a1a18);
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+#sos-locate-btn:hover { border-color: #c0392b; background: #fde8e6; color: #c0392b; }
+#sos-locate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Spinner ── */
+#sos-locating { display:none; align-items:center; gap:10px; font-size:0.85rem; color:var(--muted,#6b6b60); margin-bottom:12px; }
+#sos-locating.show { display:flex; }
+.sos-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border, #ddddd0);
+  border-top-color: #c0392b;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Dark mode ── */
+[data-theme="dark"] #sos-modal { background: #1e1e1a; color: #f0f0e8; }
+[data-theme="dark"] #sos-close { background: #2a2a26; color: #9b9b8a; }
+[data-theme="dark"] .sos-card { border-color: #2a2a26; }
+[data-theme="dark"] #sos-locate-btn { border-color: #2a2a26; color: #f0f0e8; }
+</style>
+
+<script>
+// ── Gondar hospitals data (self-contained, no fetch needed) ──
+const SOS_HOSPITALS = [
+  { name:"University of Gondar Comprehensive Specialized Hospital", type:"hospital",
+    address:"Maraki Street, Near Atse Tewodros Square", phone:"+251 58 114 1232",
+    hours:"24/7", lat:12.6089, lng:37.4671, verified:true,
+    services:["Emergency","Surgery","ICU","Maternity","Oncology"] },
+  { name:"Felege Hiwot Referral Hospital", type:"hospital",
+    address:"City Center, Gondar", phone:"+251 581 114 000",
+    hours:"24/7", lat:12.6050, lng:37.4650, verified:true,
+    services:["Emergency","General Medicine","Maternity","Surgery"] },
+  { name:"Ibex Hospital", type:"hospital",
+    address:"Yohannis Church area, Gondar", phone:"+251 58 111 8273",
+    hours:"24/7", lat:12.6100, lng:37.4700, verified:true,
+    services:["Emergency","Surgery","Radiology"] },
+  { name:"St. Mary's Catholic Hospital", type:"hospital",
+    address:"Near Kidus Giorgis Church, Gondar", phone:"+251 581 141 292",
+    hours:"24/7", lat:12.6020, lng:37.4680, verified:true,
+    services:["Emergency","Surgery","Maternity"] },
+  { name:"Azezo Hospital", type:"hospital",
+    address:"Azezo area, ~10km from Gondar", phone:"+251 581 111 111",
+    hours:"24/7", lat:12.5200, lng:37.4500, verified:true,
+    services:["Emergency","Surgery","General Medicine"] },
+  { name:"Nur Hospital", type:"hospital",
+    address:"Gondar City", phone:"+251 581 112 000",
+    hours:"24/7", lat:12.6070, lng:37.4690, verified:false,
+    services:["Emergency","General Medicine","Surgery"] },
+  { name:"Nur Clinic (24/7)", type:"clinic",
+    address:"Yohannis Church area, Gondar", phone:"+251 581 119 012",
+    hours:"24/7", lat:12.6105, lng:37.4695, verified:true,
+    services:["Emergency","General Medicine"] }
+];
+
+let sosUserLat = null, sosUserLng = null;
+
+function openSosModal() {
+  document.getElementById('sos-modal-bg').classList.add('open');
+  renderSosHospitals(SOS_HOSPITALS);
+}
+
+function closeSosModal() {
+  document.getElementById('sos-modal-bg').classList.remove('open');
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function formatDist(km) {
+  return km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(1)}km away`;
+}
+
+function renderSosHospitals(list) {
+  const el = document.getElementById('sos-list');
+  el.innerHTML = list.map(h => {
+    const distHtml = (sosUserLat !== null)
+      ? `<span class="sos-dist">${formatDist(haversineKm(sosUserLat, sosUserLng, h.lat, h.lng))}</span>`
+      : '';
+    const verBadge = h.verified ? '<span class="sos-badge green">✓ Verified</span>' : '';
+    const typeLabel = h.type === 'hospital' ? '🏥' : '🩺';
+    return `
+      <div class="sos-card" onclick="window.open('https://maps.google.com/?q=${h.lat},${h.lng}','_blank')">
+        <div class="sos-card-name">${typeLabel} ${h.name}</div>
+        <div class="sos-card-meta">
+          ${verBadge}
+          <span class="sos-badge">${h.hours}</span>
+          ${h.services.slice(0,3).map(s=>`<span>${s}</span>`).join('·')}
+          ${distHtml}
+        </div>
+        <div class="sos-card-phone">📍 ${h.address} &nbsp;|&nbsp; 📞 <a href="tel:${h.phone.replace(/\s/g,'')}">${h.phone}</a></div>
+      </div>`;
+  }).join('');
+}
+
+function sosLocate() {
+  const btn = document.getElementById('sos-locate-btn');
+  const locDiv = document.getElementById('sos-locating');
+
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser. Please use the addresses shown.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '📍 Locating…';
+  locDiv.classList.add('show');
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      sosUserLat = pos.coords.latitude;
+      sosUserLng = pos.coords.longitude;
+
+      // Sort by distance
+      const sorted = [...SOS_HOSPITALS].sort((a, b) =>
+        haversineKm(sosUserLat, sosUserLng, a.lat, a.lng) -
+        haversineKm(sosUserLat, sosUserLng, b.lat, b.lng)
+      );
+
+      renderSosHospitals(sorted);
+      locDiv.classList.remove('show');
+      btn.textContent = '✓ Sorted by distance';
+      document.getElementById('sos-subtitle').textContent =
+        `Sorted nearest to your location`;
+    },
+    (err) => {
+      locDiv.classList.remove('show');
+      btn.disabled = false;
+      btn.textContent = '📍 Find Nearest to Me';
+      const msgs = {1:'Location permission denied.', 2:'Location unavailable.', 3:'Location request timed out.'};
+      alert((msgs[err.code] || 'Could not get location.') + ' Using Gondar city center as reference.');
+      // Fallback: use Gondar city center
+      sosUserLat = 12.6089; sosUserLng = 37.4671;
+      const sorted = [...SOS_HOSPITALS].sort((a,b) =>
+        haversineKm(sosUserLat, sosUserLng, a.lat, a.lng) -
+        haversineKm(sosUserLat, sosUserLng, b.lat, b.lng)
+      );
+      renderSosHospitals(sorted);
+      document.getElementById('sos-subtitle').textContent = 'Sorted from Gondar city center';
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+}
+
+// Keyboard: Escape closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSosModal();
+});
+</script>
+
+<!-- NEWS + MAP FIX -->
+<style>
+/* ── News items ── */
+.news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #ddddd0);
+  background: var(--bg, #fff);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+.news-item:hover {
+  border-color: var(--green, #1a6b4a);
+  box-shadow: 0 2px 12px rgba(26,107,74,0.08);
+}
+.news-icon-wrap {
+  font-size: 1.4rem;
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--surface, #f2f2ea);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.news-content-inner { flex: 1; }
+.news-title-text { font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; color: var(--text, #1a1a18); }
+.news-body-text { font-size: 0.8rem; color: var(--muted, #6b6b60); line-height: 1.5; }
+.news-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.news-tag-pill {
+  font-size: 0.7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px;
+}
+.news-tag-pill.alert { background: #fde8e6; color: #c0392b; }
+.news-tag-pill.info  { background: #e8f4ef; color: #1a6b4a; }
+.news-tag-pill.warning { background: #fef3e2; color: #b7791f; }
+.news-date { font-size: 0.72rem; color: var(--muted, #6b6b60); }
+
+/* ── Map container ── */
+#fix-map-container {
+  width: 100%;
+  height: 480px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border, #ddddd0);
+  margin-top: 4px;
+}
+
+/* ── Map filter bar ── */
+#fix-filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.fix-filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border, #ddddd0);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text, #1a1a18);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.fix-filter-btn:hover { border-color: #1a6b4a; color: #1a6b4a; }
+.fix-filter-btn.active {
+  background: #1a6b4a;
+  border-color: #1a6b4a;
+  color: #fff;
+}
+
+/* ── Search box ── */
+#fix-search {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border, #ddddd0);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: var(--bg, #fff);
+  color: var(--text, #1a1a18);
+  font-family: inherit;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#fix-search:focus { border-color: #1a6b4a; }
+
+/* ── Leaflet popup ── */
+.fix-popup h4 { margin: 0 0 4px; font-size: 0.9rem; }
+.fix-popup .fp-type { font-size: 0.75rem; font-weight: 600; margin-bottom: 8px; display: block; }
+.fix-popup .fp-row { font-size: 0.78rem; color: #555; margin: 3px 0; }
+.fix-popup .fp-row a { color: #c0392b; font-weight: 600; text-decoration: none; }
+.fix-popup .fp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.fix-popup .fp-tag { background: #f2f2ea; border-radius: 6px; padding: 2px 7px; font-size: 0.7rem; }
+.fix-popup .fp-btns { display: flex; gap: 8px; margin-top: 10px; }
+.fix-popup .fp-btn {
+  flex: 1; text-align: center; padding: 7px 4px;
+  border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.fix-popup .fp-btn:hover { opacity: 0.85; }
+.fix-popup .fp-call { background: #1a6b4a; color: #fff; }
+.fix-popup .fp-dir  { background: #2980b9; color: #fff; }
+
+/* ── Custom marker ── */
+.fix-marker-pin {
+  width: 32px; height: 38px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+.fix-marker-pin span { transform: rotate(45deg); font-size: 15px; }
+.fix-marker-verified::after {
+  content: '✓';
+  position: absolute;
+  top: -5px; right: -5px;
+  background: #1a6b4a;
+  color: #fff;
+  border-radius: 50%;
+  width: 14px; height: 14px;
+  font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+</style>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   1. HEALTH NEWS — renders directly into
+      #health-news-container (already in your HTML)
+   ═══════════════════════════════════════════════════ */
+const FIX_NEWS = [
+  { icon:'🦠', tag:'alert',   tagName:'Alert',    date:'May 5, 2026',
+    title:'Malaria Prevention Alert',
+    body:'Increased malaria cases reported in Amhara region. Use mosquito nets and seek early treatment for fever symptoms.' },
+  { icon:'💉', tag:'info',    tagName:'Update',   date:'May 4, 2026',
+    title:'Vaccination Campaign Update',
+    body:'Free vaccination clinics available at Gondar University Hospital for children under 5 years.' },
+  { icon:'🌡️', tag:'warning', tagName:'Advisory', date:'May 3, 2026',
+    title:'Seasonal Flu Advisory',
+    body:'Flu season approaching. Practice good hygiene and consider getting vaccinated if at high risk.' },
+  { icon:'🏥', tag:'info',    tagName:'News',     date:'May 2, 2026',
+    title:'New Health Center Opening in Azezo',
+    body:'A new health center opens in Azezo next week, expanding healthcare access for ~69,000 residents.' },
+];
+
+async function fixRenderNews() {
+  const c = document.getElementById('health-news-container');
+  if (!c) return;
+
+  // Show loading state
+  c.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">Loading health news...</div>';
+
+  try {
+    const response = await fetch('/api/health-news');
+    const data = await response.json();
+
+    if (data.news && data.news.length > 0) {
+      c.innerHTML = data.news.map(n => `
+        <div class="news-item">
+          <div class="news-icon-wrap">${n.icon}</div>
+          <div class="news-content-inner">
+            <div class="news-title-text">${n.title}</div>
+            <div class="news-body-text">${n.body}</div>
+            <div class="news-foot">
+              <span class="news-tag-pill ${n.tag}">${n.tagName}</span>
+              <span class="news-date">${n.date}</span>
+            </div>
+          </div>
+        </div>`).join('');
+    } else {
+      c.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">No health news available at this time.</div>';
+    }
+  } catch (error) {
+    console.error('Failed to load health news:', error);
+    // Fallback to static news
+    c.innerHTML = FIX_NEWS.map(n => `
+      <div class="news-item">
+        <div class="news-icon-wrap">${n.icon}</div>
+        <div class="news-content-inner">
+          <div class="news-title-text">${n.title}</div>
+          <div class="news-body-text">${n.body}</div>
+          <div class="news-foot">
+            <span class="news-tag-pill ${n.tag}">${n.tagName}</span>
+            <span class="news-date">${n.date}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   2. HOSPITAL MAP — self-contained, no fetch needed,
+      replaces the broken onFacilitiesPageShow chain.
+      Targets #hospital-map-container (already in HTML)
+   ═══════════════════════════════════════════════════ */
+const FIX_FACILITIES = [
+  { id:'gondar_001', name:'University of Gondar Comprehensive Specialized Hospital',
+    type:'hospital', address:'Maraki Street, Near Atse Tewodros Square', phone:'+251 58 114 1232',
+    hours:'24/7', lat:12.6089, lng:37.4671, verified:true,
+    services:['Emergency','Surgery','ICU','Maternity','Oncology','Dialysis','Radiology'] },
+  { id:'gondar_002', name:'Felege Hiwot Referral Hospital',
+    type:'hospital', address:'City Center, Gondar', phone:'+251 581 114 000',
+    hours:'24/7', lat:12.6050, lng:37.4650, verified:true,
+    services:['Emergency','General Medicine','Maternity','Lab','Surgery'] },
+  { id:'azezo_001', name:'Azezo Hospital',
+    type:'hospital', address:'Azezo area, ~10km from Gondar', phone:'+251 581 111 111',
+    hours:'24/7', lat:12.5200, lng:37.4500, verified:true,
+    services:['Emergency','Surgery','General Medicine','Lab'] },
+  { id:'gondar_003', name:"St. Mary's Catholic Hospital",
+    type:'hospital', address:'Near Kidus Giorgis Church, Gondar', phone:'+251 581 141 292',
+    hours:'24/7', lat:12.6020, lng:37.4680, verified:true,
+    services:['Emergency','General Medicine','Surgery','Maternity','Lab'] },
+  { id:'gondar_004', name:'Ibex Hospital',
+    type:'hospital', address:'Yohannis Church area, Gondar', phone:'+251 58 111 8273',
+    hours:'24/7', lat:12.6100, lng:37.4700, verified:true,
+    services:['Emergency','General Medicine','Surgery','Lab','Radiology'] },
+  { id:'gondar_005', name:'Nur Hospital',
+    type:'hospital', address:'Gondar City', phone:'+251 581 112 000',
+    hours:'24/7', lat:12.6070, lng:37.4690, verified:false,
+    services:['Emergency','General Medicine','Surgery','Maternity'] },
+  { id:'gondar_007', name:'Kebele 14 Health Center',
+    type:'health_center', address:'Kebele 14, Gondar', phone:'+251 581 112 345',
+    hours:'8:00 AM - 6:00 PM', lat:12.6120, lng:37.4650, verified:true,
+    services:['Primary Care','Family Planning','Vaccination','Lab','Maternal Care'] },
+  { id:'gondar_010', name:'Azezo Health Center',
+    type:'health_center', address:'Kebele 20, Azezo', phone:'+251 581 115 678',
+    hours:'8:00 AM - 6:00 PM', lat:12.5250, lng:37.4550, verified:true,
+    services:['Primary Care','Vaccination','Lab','Emergency'] },
+  { id:'gondar_011', name:'Gondar Medical College Clinic',
+    type:'clinic', address:'University of Gondar Campus', phone:'+251 581 141 191',
+    hours:'8:00 AM - 5:00 PM', lat:12.6095, lng:37.4665, verified:true,
+    services:['Outpatient Care','Specialist Consultation','Lab'] },
+  { id:'gondar_012', name:'Dr. Endalkachew ENT Clinic',
+    type:'clinic', address:'Maraki area, Gondar', phone:'+251 93 570 4444',
+    hours:'9:00 AM - 5:00 PM', lat:12.6085, lng:37.4680, verified:true,
+    services:['ENT Specialist','Hearing Tests','Minor Surgery'] },
+  { id:'gondar_013', name:'Dr. Fisseha Ophthalmic Clinic',
+    type:'clinic', address:'Near Stadium, Gondar', phone:'+251 98 680 8060',
+    hours:'9:00 AM - 5:00 PM', lat:12.6060, lng:37.4710, verified:true,
+    services:['Eye Care','Vision Testing','Eye Surgery'] },
+  { id:'gondar_016', name:'Jan Tekel Speciality Dental Clinic',
+    type:'clinic', address:'Maraki, Gondar', phone:'+251 58 899 5950',
+    hours:'9:00 AM - 5:00 PM', lat:12.6090, lng:37.4675, verified:true,
+    services:['Dental Care','Oral Surgery','Teeth Cleaning'] },
+  { id:'gondar_021', name:'Nur Clinic (24/7)',
+    type:'clinic', address:'Yohannis Church area, Gondar', phone:'+251 581 119 012',
+    hours:'24/7', lat:12.6105, lng:37.4695, verified:true,
+    services:['General Medicine','Emergency','Lab'] },
+  { id:'gondar_022', name:'UoG Emergency Pharmacy',
+    type:'pharmacy', address:'Maraki Street, UoG Hospital Compound', phone:'+251 581 141 232',
+    hours:'24/7', lat:12.6091, lng:37.4673, verified:true,
+    services:['Prescription','Emergency Medications','OTC'] },
+  { id:'gondar_023', name:'Goha Pharmacy',
+    type:'pharmacy', address:'Arada Piazza, Gondar', phone:'+251 930 110 942',
+    hours:'8:00 AM - 10:00 PM', lat:12.6045, lng:37.4655, verified:true,
+    services:['Prescription','OTC','Medical Supplies'] },
+  { id:'gondar_024', name:'Dirma Pharmacy',
+    type:'pharmacy', address:'Piazza area, Gondar', phone:'+251 91 877 2215',
+    hours:'8:00 AM - 9:00 PM', lat:12.6035, lng:37.4660, verified:true,
+    services:['Prescription','OTC','Health Consultation'] },
+];
+
+const FIX_ICONS = {
+  hospital:      { color:'#c0392b', emoji:'🏥', label:'Hospital' },
+  health_center: { color:'#e67e22', emoji:'🏨', label:'Health Center' },
+  clinic:        { color:'#2980b9', emoji:'🩺', label:'Clinic' },
+  pharmacy:      { color:'#27ae60', emoji:'💊', label:'Pharmacy' },
+};
+
+let fixMap = null, fixMarkers = [], fixFilter = 'all', fixSearch = '';
+
+/* Inject the filter bar + search above the map container */
+function fixInjectControls() {
+  const mapWrap = document.getElementById('hospital-map-container');
+  if (!mapWrap || mapWrap.dataset.fixInjected) return;
+  mapWrap.dataset.fixInjected = '1';
+
+  const bar = document.createElement('div');
+  bar.id = 'fix-filter-bar';
+  bar.innerHTML = [
+    ['all','All'],['hospital','🏥 Hospitals'],['health_center','🏨 Health Centers'],
+    ['clinic','🩺 Clinics'],['pharmacy','💊 Pharmacies']
+  ].map(([v,l]) =>
+    `<button class="fix-filter-btn${v==='all'?' active':''}" data-fv="${v}">${l}</button>`
+  ).join('');
+
+  const search = document.createElement('input');
+  search.id = 'fix-search';
+  search.placeholder = 'Search facilities…';
+  search.addEventListener('input', e => { fixSearch = e.target.value.trim(); fixRenderMarkers(); });
+
+  const mapDiv = document.createElement('div');
+  mapDiv.id = 'fix-map-container';
+
+  mapWrap.innerHTML = '';
+  mapWrap.style.height = 'auto';
+  mapWrap.appendChild(bar);
+  mapWrap.appendChild(search);
+  mapWrap.appendChild(mapDiv);
+
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('[data-fv]');
+    if (!btn) return;
+    fixFilter = btn.dataset.fv;
+    bar.querySelectorAll('.fix-filter-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.fv === fixFilter));
+    fixRenderMarkers();
+  });
+}
+
+function fixInitMap() {
+  if (fixMap) { fixMap.invalidateSize(); fixRenderMarkers(); return; }
+  fixInjectControls();
+
+  // Wait a tick so the container is painted before Leaflet reads dimensions
+  setTimeout(() => {
+    if (!window.L) { console.error('Leaflet not loaded'); return; }
+    fixMap = L.map('fix-map-container').setView([12.6089, 37.4671], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(fixMap);
+    L.control.scale({ imperial: false, position: 'bottomright' }).addTo(fixMap);
+    fixMap.whenReady(() => { fixMap.invalidateSize(); fixRenderMarkers(); });
+  }, 400);
+}
+
+function fixGetFiltered() {
+  return FIX_FACILITIES.filter(f => {
+    if (fixFilter !== 'all' && f.type !== fixFilter) return false;
+    if (fixSearch) {
+      const q = fixSearch.toLowerCase();
+      if (!`${f.name} ${f.address} ${(f.services||[]).join(' ')}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function fixRenderMarkers() {
+  if (!fixMap) return;
+  fixMarkers.forEach(m => m.remove());
+  fixMarkers = [];
+
+  const ic = FIX_ICONS;
+  fixGetFiltered().forEach(f => {
+    const cfg = ic[f.type] || ic.clinic;
+    const iconHtml = `
+      <div class="fix-marker-pin" style="background:${cfg.color};position:relative">
+        <span>${cfg.emoji}</span>
+        ${f.verified ? '<span style="position:absolute;top:-5px;right:-5px;background:#1a6b4a;color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">✓</span>' : ''}
+      </div>`;
+    const icon = L.divIcon({ className:'', html:iconHtml, iconSize:[32,38], iconAnchor:[16,38], popupAnchor:[0,-40] });
+    const marker = L.marker([f.lat, f.lng], { icon }).addTo(fixMap);
+
+    const is24 = (f.hours||'').toLowerCase().includes('24');
+    marker.bindPopup(`
+      <div class="fix-popup">
+        <h4>${f.name} ${f.verified ? '<span style="color:#1a6b4a;font-size:11px">✓ Verified</span>' : ''}</h4>
+        <span class="fp-type" style="color:${cfg.color}">${cfg.emoji} ${cfg.label}</span>
+        ${f.address ? `<div class="fp-row">📍 ${f.address}</div>` : ''}
+        ${f.phone   ? `<div class="fp-row">📞 <a href="tel:${f.phone.replace(/\s/g,'')}">${f.phone}</a></div>` : ''}
+        ${f.hours   ? `<div class="fp-row">🕐 <b style="color:${is24?'#c0392b':'inherit'}">${f.hours}</b></div>` : ''}
+        ${f.services?.length ? `<div class="fp-tags">${f.services.slice(0,5).map(s=>`<span class="fp-tag">${s}</span>`).join('')}${f.services.length>5?`<span class="fp-tag">+${f.services.length-5}</span>`:''}</div>` : ''}
+        <div class="fp-btns">
+          <a href="tel:${f.phone.replace(/\s/g,'')}" class="fp-btn fp-call">📞 Call</a>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lng}" target="_blank" class="fp-btn fp-dir">🗺 Directions</a>
+        </div>
+      </div>`, { maxWidth:300 });
+
+    marker.facilityData = f;
+    fixMarkers.push(marker);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   3. WIRE EVERYTHING UP — override the broken
+      onFacilitiesPageShow, fix showPage, fix news
+   ═══════════════════════════════════════════════════ */
+
+// Replace the broken onFacilitiesPageShow with our working version
+window.onFacilitiesPageShow = function() { fixInitMap(); };
+
+// Patch showPage so it calls our map init (safe even if original showPage exists)
+(function() {
+  const _orig = window.showPage;
+  window.showPage = function(name, btn) {
+    if (_orig) _orig(name, btn);
+    if (name === 'facilities') fixInitMap();
+    if (name === 'dashboard')  fixRenderNews();
+  };
+})();
+
+// Run news immediately on DOM ready (no tab click needed)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', fixRenderNews);
+} else {
+  fixRenderNews();  // DOM already ready, run now
+}
+
+// Also wire the near-me button properly, independent of the facilities tab
+document.addEventListener('DOMContentLoaded', function() {
+  const nearBtn = document.getElementById('near-me-btn');
+  if (nearBtn && !nearBtn.dataset.fixBound) {
+    nearBtn.dataset.fixBound = '1';
+    nearBtn.addEventListener('click', function() {
+      if (!fixMap) { alert('Please open the Facilities tab first to load the map.'); return; }
+      if (!navigator.geolocation) { alert('Geolocation not supported by your browser.'); return; }
+      nearBtn.disabled = true; nearBtn.textContent = '📍 Locating…';
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+          const userIcon = L.divIcon({
+            className:'', iconSize:[20,20], iconAnchor:[10,10],
+            html:'<div style="width:16px;height:16px;border-radius:50%;background:#2980b9;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,128,185,0.4)"></div>'
+          });
+          if (fixMap._userMarker) fixMap._userMarker.remove();
+          fixMap._userMarker = L.marker([uLat, uLng], { icon: userIcon })
+            .addTo(fixMap).bindPopup('📍 You are here').openPopup();
+
+          const sorted = [...FIX_FACILITIES].sort((a,b) => {
+            const dist = (la,lo) => Math.hypot(la-uLat, lo-uLng);
+            return dist(a.lat,a.lng) - dist(b.lat,b.lng);
+          });
+          const nearest = sorted[0];
+          fixMap.fitBounds([[uLat,uLng],[nearest.lat,nearest.lng]], { padding:[60,60] });
+          nearBtn.disabled = false; nearBtn.textContent = '✓ Your Location';
+        },
+        err => {
+          nearBtn.disabled = false; nearBtn.textContent = '📍 Find Nearest';
+          const msgs = {1:'Location permission denied.',2:'Location unavailable.',3:'Request timed out.'};
+          alert(msgs[err.code] || 'Could not get location.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    });
+  }
 });
 </script>
 </body>

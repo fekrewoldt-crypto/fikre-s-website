@@ -783,7 +783,7 @@ function onFacilitiesPageShow() {
       // Re-render markers to ensure they're visible
       renderMarkers();
     }
-  }, 200);
+  }, 400);
 }
 
 // Export functions for global access

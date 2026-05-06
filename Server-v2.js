@@ -741,6 +741,115 @@ app.post('/api/chat', async (req, res) => {
   res.json({ reply: randomReply, modelUsed: 'demo' });
 });
 
+// ===== HEALTH NEWS ENDPOINT =====
+app.get('/api/health-news', async (req, res) => {
+  try {
+    // Check cache first
+    const cacheKey = 'health_news';
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+
+    let news = [];
+
+    // Try NVIDIA API for AI-generated health news
+    if (nvidia && isModelAvailable('nvidia')) {
+      try {
+        const prompt = `You are a health news curator for Ethiopia. Generate 4 recent health news items relevant to Ethiopian healthcare.
+
+For each news item, provide:
+1. icon (emoji representing the topic)
+2. tag (alert, info, warning, or news)
+3. tagName (Alert, Update, Advisory, or News)
+4. date (current date in format: May 5, 2026)
+5. title (short, attention-grabbing headline)
+6. body (2-3 sentences explaining the health issue and its relevance to Ethiopia)
+
+Topics to cover:
+- Disease outbreaks (malaria, dengue, cholera, etc.)
+- Vaccination campaigns
+- Seasonal health advisories
+- New healthcare facilities or services
+- Public health initiatives
+
+Return ONLY valid JSON in this exact format:
+[
+  {
+    "icon": "🦠",
+    "tag": "alert",
+    "tagName": "Alert",
+    "date": "May 5, 2026",
+    "title": "Malaria Prevention Alert",
+    "body": "Increased malaria cases reported..."
+  }
+]`;
+
+        const response = await nvidia.chat.completions.create({
+          model: 'meta/llama-3.1-405b-instruct',
+          temperature: 0.7,
+          max_tokens: 2048,
+          messages: [
+            { role: 'system', content: 'You are a health news curator. Respond ONLY with valid JSON array. No markdown, no explanations.' },
+            { role: 'user', content: prompt }
+          ]
+        });
+
+        const responseText = response.choices[0].message.content;
+        news = extractJSON(responseText);
+        incrementModel('nvidia');
+      } catch (error) {
+        console.log('NVIDIA news generation failed:', error.message);
+      }
+    }
+
+    // Fallback to static news if AI fails
+    if (!news || news.length === 0) {
+      news = [
+        {
+          icon: '🦠',
+          tag: 'alert',
+          tagName: 'Alert',
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          title: 'Malaria Prevention Alert',
+          body: 'Increased malaria cases reported in Amhara region. Use mosquito nets and seek early treatment for fever symptoms. Prevention is key during the rainy season.'
+        },
+        {
+          icon: '💉',
+          tag: 'info',
+          tagName: 'Update',
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          title: 'Vaccination Campaign Update',
+          body: 'Free vaccination clinics available at Gondar University Hospital for children under 5 years. Protect your family against preventable diseases.'
+        },
+        {
+          icon: '🌡️',
+          tag: 'warning',
+          tagName: 'Advisory',
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          title: 'Seasonal Flu Advisory',
+          body: 'Flu season approaching. Practice good hygiene, wash hands frequently, and consider getting vaccinated if at high risk for complications.'
+        },
+        {
+          icon: '🏥',
+          tag: 'info',
+          tagName: 'News',
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          title: 'New Health Center Opening',
+          body: 'A new health center opening in Azezo next week, expanding healthcare access for the community. More services available closer to home.'
+        }
+      ];
+    }
+
+    // Cache for 1 hour
+    setCached(cacheKey, news);
+    res.json({ news, cached: false, source: nvidia && isModelAvailable('nvidia') ? 'nvidia' : 'static' });
+  } catch (error) {
+    console.error('Health news error:', error);
+    res.status(500).json({ error: 'Failed to fetch health news' });
+  }
+});
+
 // ===== ROOT ROUTE - Serve main HTML file =====
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'IIndex.html'));
