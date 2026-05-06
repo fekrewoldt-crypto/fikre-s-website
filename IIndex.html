@@ -758,10 +758,12 @@ textarea::placeholder { color:#aaa; }
   display: flex;
   gap: 12px;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 .news-item:hover {
   border-color: var(--green);
   transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(26, 107, 74, 0.15);
 }
 .news-icon {
   font-size: 1.5rem;
@@ -910,6 +912,110 @@ textarea::placeholder { color:#aaa; }
 .hospital-phone:hover { background: var(--green-mid); transform: scale(1.05); }
 .emergency-btn { background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%); color: white; border: none; border-radius: 12px; padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 1rem 0; transition: all 0.3s ease; box-shadow: 0 4px 14px rgba(192, 57, 43, 0.3); }
 .emergency-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4); }
+
+/* Refresh News Button */
+#refresh-news-btn:hover { background: var(--green-mid); transform: scale(1.05); }
+#refresh-news-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* News Detail Modal */
+#news-detail-content {
+  padding: 1rem 0;
+}
+.news-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+.news-detail-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-light);
+  border-radius: 12px;
+}
+.news-detail-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.news-detail-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.news-detail-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.news-detail-tag.alert { background: #fde8e6; color: #c0392b; }
+.news-detail-tag.info { background: #e8f4ef; color: #1a6b4a; }
+.news-detail-tag.warning { background: #fef3e2; color: #b7791f; }
+.news-detail-tag.news { background: #e8f4ef; color: #1a6b4a; }
+.news-detail-body {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+.news-detail-source {
+  background: var(--green-light);
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.news-detail-source-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--green);
+  margin-bottom: 0.5rem;
+}
+.news-detail-source-text {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.news-detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 1rem;
+}
+.news-detail-action {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.news-detail-action.primary {
+  background: var(--green);
+  color: white;
+  border: none;
+}
+.news-detail-action.primary:hover {
+  background: var(--green-mid);
+}
+.news-detail-action.secondary {
+  background: var(--glass);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.news-detail-action.secondary:hover {
+  background: var(--green-light);
+  border-color: var(--green);
+}
 
 /* Recommended Facilities */
 .recommended-facility {
@@ -2300,7 +2406,12 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 
   <!-- Health News Section -->
   <div class="chart-card" style="margin-top: 1.5rem;">
-    <div class="chart-card-title">📰 Health News & Alerts</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div class="chart-card-title">📰 Health News & Alerts</div>
+      <button id="refresh-news-btn" onclick="refreshHealthNews()" style="background: var(--green); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+        🔄 Refresh
+      </button>
+    </div>
     <div id="health-news-container" style="display: flex; flex-direction: column; gap: 12px;">
       <!-- News items will be rendered here -->
     </div>
@@ -2382,6 +2493,16 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 
     <div id="hospitals-list">
       <!-- Hospitals populated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- HEALTH NEWS DETAIL MODAL -->
+<div class="modal-bg" id="news-detail-modal">
+  <div class="modal" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+    <button class="modal-close" onclick="closeNewsDetail()">✕</button>
+    <div id="news-detail-content">
+      <!-- News detail will be rendered here -->
     </div>
   </div>
 </div>
@@ -3492,8 +3613,8 @@ async function renderHealthNews() {
     const data = await response.json();
 
     if (data.news && data.news.length > 0) {
-      container.innerHTML = data.news.map(news => `
-        <div class="news-item">
+      container.innerHTML = data.news.map((news, index) => `
+        <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
           <div class="news-icon">${news.icon}</div>
           <div class="news-content">
             <div class="news-title">${news.title}</div>
@@ -3510,8 +3631,8 @@ async function renderHealthNews() {
   } catch (error) {
     console.error('Failed to load health news:', error);
     // Fallback to static news
-    container.innerHTML = HEALTH_NEWS.map(news => `
-      <div class="news-item">
+    container.innerHTML = HEALTH_NEWS.map((news, index) => `
+      <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
         <div class="news-icon">${news.icon}</div>
         <div class="news-content">
           <div class="news-title">${news.title}</div>
@@ -3523,6 +3644,148 @@ async function renderHealthNews() {
       </div>
     `).join('');
   }
+}
+
+// Refresh health news
+async function refreshHealthNews() {
+  const btn = document.getElementById('refresh-news-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '🔄 Loading...';
+  }
+  await renderHealthNews();
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = '🔄 Refresh';
+  }
+}
+
+// Show news detail
+function showNewsDetail(index) {
+  const container = document.getElementById('health-news-container');
+  const newsItems = container.querySelectorAll('.news-item');
+  const newsItem = newsItems[index];
+
+  if (!newsItem) return;
+
+  // Get news data from the item
+  const icon = newsItem.querySelector('.news-icon').textContent;
+  const title = newsItem.querySelector('.news-title').textContent;
+  const tag = newsItem.querySelector('.news-tag').textContent;
+  const date = newsItem.querySelector('.news-date').textContent;
+
+  // Generate detailed content based on the news type
+  let detailedContent = '';
+  let source = '';
+
+  switch(tag) {
+    case 'Alert':
+      detailedContent = `
+        <p><strong>What You Need to Know:</strong></p>
+        <p>This alert indicates increased malaria transmission in the Amhara region. Malaria is a serious, potentially life-threatening disease transmitted by infected mosquitoes.</p>
+        <p><strong>Symptoms to Watch For:</strong></p>
+        <ul>
+          <li>High fever with chills</li>
+          <li>Severe headache</li>
+          <li>Muscle and joint pain</li>
+          <li>Nausea and vomiting</li>
+          <li>Jaundice (yellowing of skin/eyes)</li>
+        </ul>
+        <p><strong>Prevention Measures:</strong></p>
+        <ul>
+          <li>Use insecticide-treated mosquito nets</li>
+          <li>Apply mosquito repellent containing DEET</li>
+          <li>Wear long-sleeved clothing, especially at night</li>
+          <li>Eliminate standing water around your home</li>
+          <li>Seek early treatment if symptoms appear</li>
+        </ul>
+      `;
+      source = 'Ethiopian Public Health Institute (EPHI)';
+      break;
+    case 'Update':
+      detailedContent = `
+        <p><strong>About This Campaign:</strong></p>
+        <p>The Ethiopian Ministry of Health, in partnership with Gondar University Hospital, has launched a comprehensive vaccination campaign targeting children under 5 years of age.</p>
+        <p><strong>Vaccines Available:</strong></p>
+        <ul>
+          <li>Polio vaccine</li>
+          <li>Measles, Mumps, Rubella (MMR)</li>
+          <li>Pentavalent 3-in-1</li>
+          <li>Rotavirus vaccine</li>
+          <li>PCV13 (Pneumococcal)</li>
+        </ul>
+        <p><strong>Where to Get Vaccinated:</strong></p>
+        <p>Gondar University Hospital - Pediatric Ward<br>Hours: 8:00 AM - 5:00 PM, Monday - Saturday<br>Bring your child's vaccination card.</p>
+      `;
+      source = 'Ethiopian Ministry of Health';
+      break;
+    case 'Advisory':
+      detailedContent = `
+        <p><strong>Seasonal Flu Overview:</strong></p>
+        <p>Flu season typically runs from October through May in Ethiopia. The influenza virus spreads easily through respiratory droplets when infected people cough, sneeze, or talk.</p>
+        <p><strong>Who Should Get Vaccinated:</strong></p>
+        <ul>
+          <li>Children aged 6 months to 5 years</li>
+          <li>Adults 65 years and older</li>
+          <li>Pregnant women</li>
+          <li>People with chronic health conditions</li>
+          <li>Healthcare workers</li>
+        </ul>
+        <p><strong>Flu vs. COVID-19:</strong></p>
+        <p>While both are respiratory illnesses, COVID-19 is caused by SARS-CoV-2 and can be more severe. If you're unsure which you have, get tested and isolate until results are known.</p>
+      `;
+      source = 'World Health Organization (WHO)';
+      break;
+    case 'News':
+      detailedContent = `
+        <p><strong>New Healthcare Access:</strong></p>
+        <p>A new health center is opening in Azezo, approximately 10km from Gondar city center. This facility will serve approximately 69,000 residents in the area.</p>
+        <p><strong>Services Available:</strong></p>
+        <ul>
+          <li>Primary care consultations</li>
+          <li>Maternal and child health services</li>
+          <li>Family planning</li>
+          <>Laboratory services</li>
+         >Emergency care (limited hours)</li>
+        </ul>
+        <p><strong>Impact:</strong></p>
+        <p>This expansion reduces travel time for Azezo residents who previously had to travel to Gondar for basic healthcare services. The facility will employ 15 healthcare professionals including doctors, nurses, and lab technicians.</p>
+      `;
+      source = 'Amhara Regional Health Bureau';
+      break;
+    default:
+      detailedContent = `<p>${newsItem.querySelector('.news-content')?.textContent || 'No additional details available.'}</p>`;
+      source = 'MediScan Health News';
+  }
+
+  const content = document.getElementById('news-detail-content');
+  content.innerHTML = `
+    <div class="news-detail-header">
+      <div class="news-detail-icon">${icon}</div>
+      <div>
+        <div class="news-detail-title">${title}</div>
+        <div class="news-detail-meta">
+          <span class="news-detail-tag ${tag.toLowerCase()}">${tag}</span>
+          <span>${date}</span>
+        </div>
+      </div>
+    </div>
+    <div class="news-detail-body">${detailedContent}</div>
+    <div class="news-detail-source">
+      <div class="news-detail-source-title">📚 Source</div>
+      <div class="news-detail-source-text">${source}</div>
+    </div>
+    <div class="news-detail-actions">
+      <button class="news-detail-action secondary" onclick="closeNewsDetail()">Close</button>
+      <button class="news-detail-action primary" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(title)}', '_blank')">Learn More</button>
+    </div>
+  `;
+
+  document.getElementById('news-detail-modal').classList.add('open');
+}
+
+function closeNewsDetail() {
+  document.getElementById('news-detail-modal').classList.remove('open');
 }
 
 // ── MODAL ──
