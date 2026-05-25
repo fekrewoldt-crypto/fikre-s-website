@@ -1,1 +1,0 @@
-- [Multi-model fallback with image support](feedback_fallback_logic.md) — Skip text-only models (Groq, Ollama) when image uploaded
