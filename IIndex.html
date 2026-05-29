@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"><!-- /auth/login /auth/register -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2178,6 +2178,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <nav>
   <div class="logo">Medi<span>Scan</span></div>
   <div class="nav-right">
+    <button class="nav-tab" id="auth-btn" onclick="openAuthModal()">Login / Register</button
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
@@ -2500,7 +2501,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- HEALTH NEWS DETAIL MODAL -->
 <div class="modal-bg" id="news-detail-modal">
   <div class="modal" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
-    <button class="modal-close" onclick="closeNewsDetail()">✕</button>
+    <button id="news-detail-close" class="modal-close" onclick="closeNewsDetail()">✕</button>
     <div id="news-detail-content">
       <!-- News detail will be rendered here -->
     </div>
@@ -3170,7 +3171,7 @@ async function analyze() {
 
   // Check which AI will be used
   try {
-    const statusRes = await fetch('http://localhost:3000/api/status');
+    const statusRes = await fetch('/api/status');
     const status = await statusRes.json();
     let modelName = 'AI';
     if (status.models.gemini.available) modelName = 'Gemini AI';
@@ -3668,11 +3669,11 @@ function showNewsDetail(index) {
 
   if (!newsItem) return;
 
-  // Get news data from the item
-  const icon = newsItem.querySelector('.news-icon').textContent;
-  const title = newsItem.querySelector('.news-title').textContent;
-  const tag = newsItem.querySelector('.news-tag').textContent;
-  const date = newsItem.querySelector('.news-date').textContent;
+  // Get news data from the item (handle both old and new class names)
+  const icon = newsItem.querySelector('.news-icon')?.textContent || newsItem.querySelector('.news-icon-wrap')?.textContent || '';
+  const title = newsItem.querySelector('.news-title')?.textContent || newsItem.querySelector('.news-title-text')?.textContent || '';
+  const tag = newsItem.querySelector('.news-tag')?.textContent || newsItem.querySelector('.news-tag-pill')?.textContent || '';
+  const date = newsItem.querySelector('.news-meta span:last-child')?.textContent || newsItem.querySelector('.news-date')?.textContent || '';
 
   // Generate detailed content based on the news type
   let detailedContent = '';
@@ -3792,6 +3793,17 @@ function closeNewsDetail() {
 document.getElementById('book-btn').addEventListener('click', () => document.getElementById('modal-bg').classList.add('open'));
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-bg').classList.remove('open'));
 document.getElementById('modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') document.getElementById('modal-bg').classList.remove('open'); });
+
+// News detail modal event listeners
+document.getElementById('news-detail-close').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeNewsDetail();
+});
+document.getElementById('news-detail-modal').addEventListener('click', e => {
+  if (e.target.id === 'news-detail-modal') {
+    closeNewsDetail();
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // ETHIOPIAN LANGUAGE SUPPORT
@@ -4423,8 +4435,8 @@ async function fixRenderNews() {
     const data = await response.json();
 
     if (data.news && data.news.length > 0) {
-      c.innerHTML = data.news.map(n => `
-        <div class="news-item">
+      c.innerHTML = data.news.map((n, index) => `
+        <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
           <div class="news-icon-wrap">${n.icon}</div>
           <div class="news-content-inner">
             <div class="news-title-text">${n.title}</div>
@@ -4441,8 +4453,8 @@ async function fixRenderNews() {
   } catch (error) {
     console.error('Failed to load health news:', error);
     // Fallback to static news
-    c.innerHTML = FIX_NEWS.map(n => `
-      <div class="news-item">
+    c.innerHTML = FIX_NEWS.map((n, index) => `
+      <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
         <div class="news-icon-wrap">${n.icon}</div>
         <div class="news-content-inner">
           <div class="news-title-text">${n.title}</div>

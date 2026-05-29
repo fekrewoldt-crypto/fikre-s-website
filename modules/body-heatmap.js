@@ -31,6 +31,8 @@ class BodyHeatmap {
     // Hold-to-increase timing
     this.holdTimer = null;
     this.holdInterval = null;
+    this.holdTriggered = false;
+    this.isHolding = false;
     this.holdThreshold = 200; // ms before acceleration starts
     this.holdAcceleration = 150; // ms between intensity increases during hold
     this.maxIntensity = 10;
@@ -763,6 +765,9 @@ class BodyHeatmap {
         e.preventDefault();
         if (e.button !== 0) return; // Only left click
 
+        // Reset flags
+        this.holdTriggered = false;
+        this.isHolding = true;
         // Start hold timer for acceleration
         this.holdTimer = setTimeout(() => {
           this.startHoldAcceleration(regionId);
@@ -773,17 +778,27 @@ class BodyHeatmap {
       region.addEventListener('mouseup', (e) => {
         e.preventDefault();
         this.clearHoldTimers();
+        this.isHolding = false;
+        // Do not reset holdTriggered here; click handler will handle it
       });
 
       // Mouse leave - clear hold timer
       region.addEventListener('mouseleave', (e) => {
         this.clearHoldTimers();
+        this.isHolding = false;
+        // Keep holdTriggered state for click handling
       });
 
-      // Click - handle intensity change
+      // Click - handle intensity change (ignore if hold triggered)
       region.addEventListener('click', (e) => {
         e.preventDefault();
         const regionId = e.currentTarget.dataset.region;
+
+        // If a hold was in progress, ignore the click to avoid double increment
+        if (this.holdTriggered) {
+          this.holdTriggered = false;
+          return;
+        }
 
         // Shift+click or right-click decreases intensity
         if (e.shiftKey || e.button === 2) {

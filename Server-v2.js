@@ -1,28 +1,84 @@
-const express = require('express');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const Anthropic = require('@anthropic-ai/sdk');
-const { OpenAI } = require('openai');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
-const app = express();
+const express = require('express');
+// Simple cookie parser middleware (no external dependency)
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
+const { verifyToken } = require('./auth/middleware-supabase');
+const authRoutes = require('./auth/supabase-auth');
+const recordsDAO = require('./db/records-supabase');
+const auditDAO = require('./db/audit-supabase');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { OpenAI } = require('openai');
+const fs = require('fs');
+const path = require('path');
+
+function createApp(options = {}) {
+  const app = express();
+
+// 1. Body parsing
 app.use(express.json({ limit: '20mb' }));
+// Parse cookies manually
+app.use((req, res, next) => {
+  req.cookies = {};
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(pair => {
+      const [key, ...val] = pair.trim().split('=');
+      req.cookies[key] = decodeURIComponent(val.join('='));
+    });
+  }
+  next();
+});
+
+// 2. CORS
 app.use(cors());
 
-// Serve static files from project root
+// 3. Security headers
+app.use(helmet());
+
+// 4. Global rate limiter for /api/*, /auth/*, and /timeline/*
+const windowMs = process.env.RATE_LIMIT_WINDOW
+  ? parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000
+  : 1 * 60 * 1000;
+const maxRequests = process.env.RATE_LIMIT_MAX
+  ? parseInt(process.env.RATE_LIMIT_MAX)
+  : 20;
+
+const apiLimiter = rateLimit({
+  windowMs,
+  max: maxRequests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please try again later.'
+});
+
+app.use('/api', apiLimiter);
+app.use('/auth', apiLimiter);
+app.use('/timeline', apiLimiter);
+
+// 5. Static file serving
 const publicDir = path.join(__dirname);
 app.use(express.static(publicDir));
 
-// Request logging middleware
+// 6. Request logging (after helmet and static)
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${req.method} ${req.path}`);
   next();
 });
 
-// Response cache - keyed by symptom hash, expires after 1 hour
+// 7. Mount auth routes (single mount, no duplicates)
+app.use('/auth', authRoutes);
+
+// 8. Mount timeline routes (requires authentication)
+app.use('/timeline', verifyToken, require('./timeline'));
+
+// 9. Mount heatmap API (requires authentication)
+app.use('/api/heatmap', verifyToken, require('./api/heatmap'));
+
+// ===== Response cache - keyed by symptom hash, expires after 1 hour =====
 const responseCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
@@ -45,54 +101,48 @@ function setCached(key, data) {
   responseCache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-// Ollama runs locally on port 11434
-// NOTE: Ollama is disabled on Vercel (serverless environment)
+// ===== Ollama (Local, Free) =====
 const OLLAMA_URL = 'http://localhost:11434';
 let ollamaAvailable = false;
 
-// Test if Ollama is running (disabled on Vercel)
 async function checkOllama() {
-  // Skip Ollama check on Vercel (serverless environment)
   if (process.env.VERCEL) {
-    console.log('⚠️  Ollama check skipped on Vercel (serverless environment)');
+    console.log('Ollama check skipped on Vercel');
     return;
   }
-
   try {
     const response = await fetch(`${OLLAMA_URL}/api/tags`);
     if (response.ok) {
       const data = await response.json();
       ollamaAvailable = true;
-      console.log('✅ Ollama available with models:', data.models?.map(m => m.name).join(', '));
+      console.log('Ollama available with models:', data.models?.map(m => m.name).join(', '));
     }
   } catch (e) {
-    console.log('⚠️  Ollama not running. Start it with: ollama serve');
+    console.log('Ollama not running. Start with: ollama serve');
   }
 }
 checkOllama();
 
-// Initialize all AI clients (only if API keys are available)
+// ===== AI Client Initialization =====
 const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const groq = process.env.GROQ_API_KEY ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' }) : null;
 const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({ apiKey: process.env.NVIDIA_API_KEY, baseURL: 'https://integrate.api.nvidia.com/v1' }) : null;
 
-// Model priority order
-const MODEL_PRIORITY = ['gemini', 'nvidia', 'groq', 'ollama', 'demo'];
+const { analyzeWithNvidiaVision } = require('./modules/nvidiaVisionClient.js');
 
-// Model capabilities - which models support image input
+// ===== Model Configuration =====
+const MODEL_PRIORITY = ['groq', 'nvidia', 'gemini', 'ollama', 'demo'];
+const IMAGE_MODEL_PRIORITY = ['vista3d', 'gemini'];
+
 const MODEL_CAPABILITIES = {
   gemini: { supportsImages: true },
-  nvidia: { supportsImages: false },  // NVIDIA uses text-only Llama
-  groq: { supportsImages: false },  // Groq uses text-only Llama
-  ollama: { supportsImages: false }, // Ollama in this config is text-only
-  demo: { supportsImages: false }    // Demo uses keyword matching
+  nvidia: { supportsImages: false },
+  groq: { supportsImages: false },
+  ollama: { supportsImages: false },
+  vista3d: { supportsImages: true },
+  demo: { supportsImages: false }
 };
-
-// ===== IN-MEMORY RATE LIMIT TRACKING =====
-// Vercel's file system is read-only, so we use in-memory storage
-// Rate limits will reset on each deployment/restart
 
 const DAILY_LIMITS = {
   gemini: 1500,
@@ -101,7 +151,6 @@ const DAILY_LIMITS = {
   demo: Infinity
 };
 
-// Initialize rate limits in memory
 let rateLimits = {
   resetTime: getNextMidnight(),
   gemini: 0,
@@ -117,7 +166,6 @@ function getNextMidnight() {
 }
 
 function loadRateLimits() {
-  // In-memory only for Vercel compatibility
   if (Date.now() > rateLimits.resetTime) {
     rateLimits = { resetTime: getNextMidnight(), gemini: 0, groq: 0, demo: 0 };
   }
@@ -125,15 +173,11 @@ function loadRateLimits() {
 }
 
 function saveRateLimits(limits) {
-  // No-op for Vercel - in-memory only
-  // Rate limits will reset on each deployment
+  // No-op for Vercel
 }
 
 function isModelAvailable(model) {
-  // Ollama is always available (local, unlimited)
   if (model === 'ollama') return ollamaAvailable;
-
-  // Roll over if the day has passed
   if (Date.now() > rateLimits.resetTime) {
     rateLimits = { resetTime: getNextMidnight(), gemini: 0, groq: 0, demo: 0 };
   }
@@ -148,7 +192,7 @@ function exhaustModel(model) {
   rateLimits[model] = DAILY_LIMITS[model];
 }
 
-// ===== MOCK DATA =====
+// ===== Mock Data =====
 const MOCK_CONDITIONS = [
   {
     primaryCondition: "Contact Dermatitis",
@@ -200,7 +244,7 @@ const MOCK_CONDITIONS = [
     subtitle: "Digestive disorder / acid reflux",
     description: "A digestive condition where stomach acid frequently flows back into the tube connecting your mouth and stomach.",
     symptoms: ["Heartburn after eating", "Chest pain or discomfort", "Difficulty swallowing", "Regurgitation of food or sour liquid"],
-    nextSteps: ["Avoid trigger foods (spicy, fatty, acidic)", "Eat smaller meals and don't lie down after eating", "Elevate head of bed 6-8 inches", "Try over-the-counter antacids"],
+    nextSteps: ["Avoid trigger foods (spicy, fatty, acidic)", "Eat smaller meals and do not lie down after eating", "Elevate head of bed 6-8 inches", "Try over-the-counter antacids"],
     urgentSigns: "Seek immediate care for chest pain with arm pain, vomiting blood, or black tarry stools.",
     alternatives: [{ name: "Gastritis", confidence: 38 }, { name: "Peptic Ulcer", confidence: 25 }, { name: "Gallbladder Issues", confidence: 12 }],
     disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
@@ -223,7 +267,7 @@ const MOCK_CONDITIONS = [
     description: "A sudden episode of intense fear that triggers severe physical reactions when there is no real danger or apparent cause.",
     symptoms: ["Rapid heart rate", "Sweating and trembling", "Shortness of breath", "Chest pain or tightness", "Fear of losing control"],
     nextSteps: ["Practice deep breathing (4-7-8 technique)", "Ground yourself with 5-4-3-2-1 technique", "Find a quiet space to rest", "Consider therapy or counseling"],
-    urgentSigns: "Call emergency services if chest pain is severe, or if this is your first episode and you're unsure it's anxiety.",
+    urgentSigns: "Call emergency services if chest pain is severe, or if this is your first episode and you are unsure it is anxiety.",
     alternatives: [{ name: "Hyperventilation Syndrome", confidence: 42 }, { name: "Heart Arrhythmia", confidence: 18 }, { name: "Thyroid Issue", confidence: 12 }],
     disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
   }
@@ -242,29 +286,21 @@ function getMockDiagnosis(symptoms, bodyArea) {
 }
 
 function extractJSON(raw) {
-  // Remove markdown code blocks
   raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-
-  // Find JSON boundaries
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
-
   if (start === -1 || end === -1) {
     console.error('No JSON found in response:', raw.slice(0, 200));
     throw new Error('No JSON found in AI response');
   }
-
   raw = raw.slice(start, end + 1);
-
   try {
     return JSON.parse(raw);
   } catch (e) {
-    // Try fixing common JSON issues
     const fixed = raw
-      .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
-      .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
-      .replace(/'/g, '"');  // Replace single quotes
-
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/[\x00-\x1F\x7F]/g, ' ')
+      .replace(/'/g, '"');
     try {
       return JSON.parse(fixed);
     } catch {
@@ -275,11 +311,9 @@ function extractJSON(raw) {
   }
 }
 
-// ===== OLLAMA (Secondary - Local, Free) - text only =====
+// ===== Ollama (Secondary - Local, Free) =====
 async function analyzeWithOllama(prompt) {
   if (!ollamaAvailable) throw new Error('Ollama not available');
-
-  // Enhanced system prompt for Ollama to ensure proper JSON output
   const systemPrompt = `You are a medical AI assistant. You MUST respond with ONLY a valid JSON object matching this exact structure:
 {
   "primaryCondition": "string - the main condition name",
@@ -300,7 +334,7 @@ async function analyzeWithOllama(prompt) {
 
 Rules:
 - Respond ONLY with the JSON object
-- NO markdown, NO backticks, NO explanations
+- No markdown, NO backticks, NO explanations
 - severity MUST be exactly: low, medium, or high
 - confidence MUST be a number between 55-92`;
 
@@ -316,15 +350,11 @@ Rules:
   });
   if (!response.ok) throw new Error('Ollama request failed');
   const data = await response.json();
-
-  // Try to extract and validate JSON
   try {
     const result = extractJSON(data.response);
-    // Validate required fields
     if (!result.primaryCondition || !result.severity) {
       throw new Error('Ollama response missing required fields');
     }
-    // Ensure severity is valid
     if (!['low', 'medium', 'high'].includes(result.severity)) {
       result.severity = 'medium';
     }
@@ -352,11 +382,9 @@ async function chatWithOllama(prompt) {
   return data.response.trim();
 }
 
-// ===== GEMINI (Primary) - supports images =====
+// ===== Gemini (Primary) =====
 async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
   if (!genAI) throw new Error('Gemini not configured');
-
-  // DEBUG: Log request details
   console.log('Gemini Request:', {
     model: 'gemini-2.0-flash',
     hasImage: !!imageBase64,
@@ -392,48 +420,16 @@ async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
   }
 }
 
-// ===== CLAUDE (Secondary) - supports images via base64 =====
-async function analyzeWithClaude(prompt, imageBase64, imageMimeType) {
-  if (!anthropic) throw new Error('Claude not configured');
-  const content = [];
-
-  if (imageBase64) {
-    content.push({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: imageMimeType || 'image/jpeg',
-        data: imageBase64
-      }
-    });
-  }
-
-  content.push({
-    type: 'text',
-    text: prompt + '\n\nRespond ONLY with valid JSON. No markdown, no backticks, no explanations.'
-  });
-
-  const response = await anthropic.messages.create({
-    model: 'claude-3-5-haiku-20241022',
-    max_tokens: 4096,
-    messages: [{ role: 'user', content }]
-  });
-
-  return extractJSON(response.content[0].text);
-}
-
-// ===== OPENAI (Tertiary) - supports images via base64 =====
+// ===== OpenAI (Tertiary) =====
 async function analyzeWithOpenAI(prompt, imageBase64, imageMimeType) {
   if (!openai) throw new Error('OpenAI not configured');
   const userContent = [];
-
   if (imageBase64) {
     userContent.push({
       type: 'image_url',
       image_url: { url: `data:${imageMimeType || 'image/jpeg'};base64,${imageBase64}` }
     });
   }
-
   userContent.push({ type: 'text', text: prompt });
 
   const response = await openai.chat.completions.create({
@@ -445,15 +441,12 @@ async function analyzeWithOpenAI(prompt, imageBase64, imageMimeType) {
       { role: 'user', content: userContent }
     ]
   });
-
   return extractJSON(response.choices[0].message.content);
 }
 
-// ===== GROQ (Secondary) - fast, cheap, no images =====
+// ===== Groq (Secondary) =====
 async function analyzeWithGroq(prompt) {
   if (!groq) throw new Error('Groq not configured');
-
-  // DEBUG: Log request details
   console.log('Groq Request:', {
     model: 'llama-3.3-70b-versatile',
     promptLength: prompt?.length
@@ -472,7 +465,6 @@ async function analyzeWithGroq(prompt) {
 
     const responseText = response.choices[0].message.content;
     console.log('Groq Response preview:', responseText.slice(0, 100));
-
     return extractJSON(responseText);
   } catch (error) {
     console.error('Groq Error Details:', {
@@ -484,19 +476,17 @@ async function analyzeWithGroq(prompt) {
   }
 }
 
-// ===== NVIDIA (Secondary) - fast, powerful, no images =====
+// ===== NVIDIA (Secondary) =====
 async function analyzeWithNvidia(prompt) {
   if (!nvidia) throw new Error('NVIDIA not configured');
-
-  // DEBUG: Log request details
   console.log('NVIDIA Request:', {
-    model: 'meta/llama-3.1-405b-instruct',
+    model: 'openai/gpt-oss-120b',
     promptLength: prompt?.length
   });
 
   try {
     const response = await nvidia.chat.completions.create({
-      model: 'meta/llama-3.1-405b-instruct',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.2,
       max_tokens: 4096,
       messages: [
@@ -507,7 +497,6 @@ async function analyzeWithNvidia(prompt) {
 
     const responseText = response.choices[0].message.content;
     console.log('NVIDIA Response preview:', responseText.slice(0, 100));
-
     return extractJSON(responseText);
   } catch (error) {
     console.error('NVIDIA Error Details:', {
@@ -519,9 +508,8 @@ async function analyzeWithNvidia(prompt) {
   }
 }
 
-// ===== FACILITY RECOMMENDATION =====
+// ===== Facility Recommendation =====
 function recommendFacilities(severity, condition) {
-  // Load hospital data
   let hospitals = [];
   try {
     const hospitalData = fs.readFileSync(path.join(__dirname, 'hospitals-gondar.json'), 'utf8');
@@ -531,7 +519,6 @@ function recommendFacilities(severity, condition) {
     return [];
   }
 
-  // Filter and rank facilities based on severity and condition
   const severityPriority = {
     high: ['hospital', 'health_center', 'clinic', 'pharmacy'],
     medium: ['health_center', 'hospital', 'clinic', 'pharmacy'],
@@ -540,22 +527,17 @@ function recommendFacilities(severity, condition) {
 
   const priorityOrder = severityPriority[severity] || severityPriority.low;
 
-  // Sort hospitals by priority and 24/7 availability
   const sorted = hospitals.sort((a, b) => {
     const aPriority = priorityOrder.indexOf(a.type);
     const bPriority = priorityOrder.indexOf(b.type);
     if (aPriority !== bPriority) return aPriority - bPriority;
-
-    // Prioritize 24/7 facilities
     const a247 = a.hours === '24/7';
     const b247 = b.hours === '24/7';
     if (a247 && !b247) return -1;
     if (!a247 && b247) return 1;
-
     return 0;
   });
 
-  // Return top 3 recommendations
   return sorted.slice(0, 3).map(h => ({
     name: h.name,
     type: h.type,
@@ -568,16 +550,18 @@ function recommendFacilities(severity, condition) {
   }));
 }
 
-// ===== MAIN ANALYZE ENDPOINT =====
+// ===== API ENDPOINTS =====
+
+// POST /api/analyze
 app.post('/api/analyze', async (req, res) => {
-  const { prompt, imageBase64, imageMimeType, symptoms, bodyArea } = req.body;
+  let { prompt, imageBase64, imageMimeType, symptoms, bodyArea } = req.body;
 
   // Check cache first (skip for images)
   if (!imageBase64 && symptoms) {
     const cacheKey = getCacheKey(symptoms, bodyArea);
     const cached = getCached(cacheKey);
     if (cached) {
-      console.log('✅ Cache hit for:', symptoms.slice(0, 30) + '...');
+      console.log('Cache hit for:', symptoms.slice(0, 30) + '...');
       return res.json({ ...cached, cached: true });
     }
   }
@@ -585,22 +569,47 @@ app.post('/api/analyze', async (req, res) => {
   const usedModels = [];
   let lastError = null;
 
+  // Image-only preprocessing using NVIDIA vision
+  let imageDescription = '';
+  if (imageBase64) {
+    try {
+      const visionRes = await analyzeWithNvidiaVision(prompt, imageBase64);
+      imageDescription = visionRes.description || '';
+      usedModels.push({ model: 'nvidia_vision', result: visionRes, error: null });
+      console.log('NVIDIA vision description obtained (' + imageDescription.slice(0, 50) + '...)');
+    } catch (e) {
+      console.error('NVIDIA vision failed:', e.message);
+      usedModels.push({ model: 'nvidia_vision', error: e.message });
+    }
+  }
+
+  // Build aggregated prompt
+  let aggregatedPrompt = prompt;
+  if (imageDescription) {
+    aggregatedPrompt += '\n\nImage description: ' + imageDescription;
+  }
+  if (bodyArea) {
+    aggregatedPrompt += '\nLocation: ' + bodyArea;
+  }
+  if (req.body.timePeriod) {
+    aggregatedPrompt += '\nTime period: ' + req.body.timePeriod;
+  }
+
+  prompt = aggregatedPrompt;
+  imageBase64 = null;
+
+  // Text-only / symptom path
   for (const modelName of MODEL_PRIORITY) {
-    // Skip if rate limited
     if (modelName !== 'demo' && !isModelAvailable(modelName)) {
-      console.log(`${modelName} rate limited, skipping...`);
+      console.log(modelName + ' rate limited, skipping...');
       continue;
     }
 
-    // Skip text-only models when an image is provided (they can't see the image)
-    // BUT: if we have an image, also extract text from symptoms for text-only models
     if (imageBase64 && MODEL_CAPABILITIES[modelName]?.supportsImages === false) {
-      // Only skip if no symptoms text provided - if symptoms exist, text-only models can still help
       if (!symptoms || !symptoms.trim()) {
-        console.log(`${modelName} does not support images and no symptoms text, skipping...`);
+        console.log(modelName + ' does not support images and no symptoms text, skipping...');
         continue;
       }
-      // If symptoms text exists, text-only models can analyze based on that
     }
 
     try {
@@ -630,14 +639,12 @@ app.post('/api/analyze', async (req, res) => {
         case 'demo':
           console.log('Using demo/mock diagnosis as fallback');
           result = getMockDiagnosis(symptoms, bodyArea);
-          // Don't increment demo counter (it's unlimited)
           break;
       }
 
       const duration = Date.now() - startTime;
-      console.log(`✅ Used ${modelName} (${duration}ms)`);
+      console.log('Used ' + modelName + ' (' + duration + 'ms)');
 
-      // Add facility recommendations
       const recommendedFacilities = recommendFacilities(result.severity, result.primaryCondition);
 
       const response = {
@@ -649,7 +656,6 @@ app.post('/api/analyze', async (req, res) => {
         recommendedFacilities: recommendedFacilities
       };
 
-      // Cache the response (skip for demo with images)
       if (!imageBase64 && symptoms) {
         setCached(getCacheKey(symptoms, bodyArea), response);
       }
@@ -657,7 +663,7 @@ app.post('/api/analyze', async (req, res) => {
       return res.json(response);
 
     } catch (error) {
-      console.error(`❌ ${modelName} failed:`, error.message);
+      console.error(modelName + ' failed:', error.message);
       usedModels.push({ model: modelName, error: error.message });
       lastError = error;
       if (error.message && (error.message.includes('429') || error.message.includes('quota'))) {
@@ -667,7 +673,7 @@ app.post('/api/analyze', async (req, res) => {
     }
   }
 
-  // Final fallback: if all AI models failed, use demo mode
+  // Final fallback
   console.log('All AI models failed, using demo mode as final fallback');
   const demoResult = getMockDiagnosis(symptoms, bodyArea);
   const recommendedFacilities = recommendFacilities(demoResult.severity, demoResult.primaryCondition);
@@ -682,19 +688,18 @@ app.post('/api/analyze', async (req, res) => {
   });
 });
 
-// ===== CHAT ENDPOINT =====
+// POST /api/chat
 const demoReplies = [
-  "That's a great question! In general, this condition responds well to rest and proper self-care. However, everyone's body is different.",
-  "Most people see improvement within 3-7 days. Make sure to monitor your symptoms and seek professional care if they worsen.",
-  "Prevention is really important! Good hygiene, adequate sleep, and staying hydrated are your best defenses.",
+  "That is a great question. In general, this condition responds well to rest and proper self-care. However, everyone is different.",
+  "Most people see improvement within 3-7 days. Monitor your symptoms and seek professional care if they worsen.",
+  "Prevention is important. Good hygiene, adequate sleep, and staying hydrated are your best defenses.",
   "Common triggers include stress, certain foods, and environmental factors. Keeping a symptom journal can help identify patterns.",
-  "While this is usually manageable at home, don't hesitate to consult a healthcare provider if you're concerned."
+  "While this is usually manageable at home, do not hesitate to consult a healthcare provider if you are concerned."
 ];
 
 app.post('/api/chat', async (req, res) => {
   const { prompt } = req.body;
 
-  // Try Gemini first for chat
   if (process.env.GEMINI_API_KEY && isModelAvailable('gemini')) {
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { temperature: 0.7, maxOutputTokens: 512 } });
@@ -707,7 +712,6 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  // Try Groq (fast fallback)
   if (process.env.GROQ_API_KEY && isModelAvailable('groq')) {
     try {
       const response = await groq.chat.completions.create({
@@ -727,7 +731,6 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  // Try Ollama (local, free)
   if (ollamaAvailable) {
     try {
       const reply = await chatWithOllama(prompt);
@@ -741,10 +744,9 @@ app.post('/api/chat', async (req, res) => {
   res.json({ reply: randomReply, modelUsed: 'demo' });
 });
 
-// ===== HEALTH NEWS ENDPOINT =====
+// GET /api/health-news
 app.get('/api/health-news', async (req, res) => {
   try {
-    // Check cache first
     const cacheKey = 'health_news';
     const cached = getCached(cacheKey);
     if (cached) {
@@ -753,10 +755,7 @@ app.get('/api/health-news', async (req, res) => {
 
     let news = [];
 
-    // Try NVIDIA API for AI-generated health news
-    if (nvidia && isModelAvailable('nvidia')) {
-      try {
-        const prompt = `You are a health news curator for Ethiopia. Generate 4 recent health news items relevant to Ethiopian healthcare.
+    const newsPrompt = `You are a health news curator for Ethiopia. Generate as many recent health news items as are relevant to Ethiopian healthcare.
 
 For each news item, provide:
 1. icon (emoji representing the topic)
@@ -785,25 +784,91 @@ Return ONLY valid JSON in this exact format:
   }
 ]`;
 
+    if (nvidia && isModelAvailable('nvidia')) {
+      try {
         const response = await nvidia.chat.completions.create({
-          model: 'meta/llama-3.1-405b-instruct',
+          model: 'nvidia/nemotron-nano-12b-v2-vl',
           temperature: 0.7,
-          max_tokens: 2048,
+          max_tokens: 10000,
           messages: [
             { role: 'system', content: 'You are a health news curator. Respond ONLY with valid JSON array. No markdown, no explanations.' },
-            { role: 'user', content: prompt }
+            { role: 'user', content: newsPrompt }
           ]
         });
 
         const responseText = response.choices[0].message.content;
-        news = extractJSON(responseText);
-        incrementModel('nvidia');
+        const objMatches = responseText.match(/\{[^}]*\}/g) || [];
+        const extracted = objMatches.map(str => {
+          try { return JSON.parse(str); } catch (e) { return null; }
+        }).filter(Boolean);
+        const isValid = Array.isArray(extracted) && extracted.length > 0 && extracted.every(item =>
+          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && typeof item.title === 'string' && typeof item.body === 'string'
+        );
+        if (isValid) {
+          news = extracted;
+          incrementModel('nvidia');
+        } else {
+          console.log('NVIDIA extraction yielded invalid structure, falling back');
+          news = [];
+        }
       } catch (error) {
         console.log('NVIDIA news generation failed:', error.message);
+        exhaustModel('nvidia');
       }
     }
 
-    // Fallback to static news if AI fails
+    if ((!news || news.length === 0) && groq && isModelAvailable('groq')) {
+      try {
+        const groqResponse = await groq.chat.completions.create({
+          model: 'gemma-7b-it',
+          temperature: 0.7,
+          max_tokens: 10000,
+          messages: [
+            { role: 'system', content: 'You are a health news curator. Respond ONLY with valid JSON array. No markdown, no explanations.' },
+            { role: 'user', content: newsPrompt }
+          ]
+        });
+        const groqText = groqResponse.choices[0].message.content;
+        let groqExtracted = [];
+        const startG = groqText.indexOf('[');
+        const endG = groqText.lastIndexOf(']');
+        let groqPortion = groqText;
+        if (startG !== -1 && endG !== -1 && endG > startG) {
+          groqPortion = groqText.slice(startG, endG + 1);
+        }
+        try {
+          groqExtracted = extractJSON(groqPortion);
+        } catch (_) {
+          const matches = groqPortion.match(/\{[^}]*\}/g) || [];
+          groqExtracted = matches.map(str => {
+            try { return JSON.parse(str); } catch (e) { return null; }
+          }).filter(Boolean);
+        }
+        const groqValid = Array.isArray(groqExtracted) && groqExtracted.length > 0 && groqExtracted.every(item =>
+          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && typeof item.title === 'string' && typeof item.body === 'string'
+        );
+        if (groqValid) {
+          news = groqExtracted;
+          incrementModel('groq');
+        } else {
+          console.log('Groq extraction yielded invalid structure, falling back');
+          news = [];
+        }
+      } catch (e) {
+        console.log('Groq news generation failed:', e.message);
+      }
+    }
+
+    if ((!news || news.length === 0) && genAI && isModelAvailable('gemini')) {
+      try {
+        const geminiNews = await analyzeWithGemini(newsPrompt);
+        news = Array.isArray(geminiNews) ? geminiNews : [geminiNews];
+        incrementModel('gemini');
+      } catch (e) {
+        console.log('Gemini news generation failed:', e.message);
+      }
+    }
+
     if (!news || news.length === 0) {
       news = [
         {
@@ -841,7 +906,6 @@ Return ONLY valid JSON in this exact format:
       ];
     }
 
-    // Cache for 1 hour
     setCached(cacheKey, news);
     res.json({ news, cached: false, source: nvidia && isModelAvailable('nvidia') ? 'nvidia' : 'static' });
   } catch (error) {
@@ -850,12 +914,7 @@ Return ONLY valid JSON in this exact format:
   }
 });
 
-// ===== ROOT ROUTE - Serve main HTML file =====
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'IIndex.html'));
-});
-
-// ===== HEALTH CHECK =====
+// GET /api/health
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -865,7 +924,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ===== STATUS ENDPOINT =====
+// GET /api/status
 app.get('/api/status', (req, res) => {
   res.json({
     models: {
@@ -896,24 +955,37 @@ app.get('/api/status', (req, res) => {
         dailyLimit: 'unlimited',
         hasKey: ollamaAvailable,
         supportsImages: false
-      },
-      // Include these for frontend compatibility (not configured in this server)
-      claude: { available: false, supportsImages: true },
-      openai: { available: false, supportsImages: true }
+      }
     },
     rateLimitResetsAt: new Date(rateLimits.resetTime).toISOString(),
     demoMode: !process.env.GEMINI_API_KEY && !ollamaAvailable && !process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY
   });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log('');
-  console.log('🚀 MediScan Multi-Model Server running on http://localhost:' + (process.env.PORT || 3000));
-  console.log('📊 Model priority:', MODEL_PRIORITY.join(' → '));
-  console.log('');
-  console.log('API Keys configured:');
-  console.log('  Gemini:', process.env.GEMINI_API_KEY ? '✅' : '❌');
-  console.log('  Groq:', process.env.GROQ_API_KEY ? '✅' : '❌');
-  console.log('');
-  console.log('Rate limits loaded. Resets at:', new Date(rateLimits.resetTime).toLocaleString());
+// Root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'IIndex.html'));
 });
+
+  // Export and listen
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(process.env.PORT || 3000, () => {
+    console.log('');
+    console.log('🚀 MediScan Multi-Model Server running on http://localhost:' + (process.env.PORT || 3000));
+    console.log('📊 Model priority:', MODEL_PRIORITY.join(' → '));
+    console.log('');
+    console.log('API Keys configured:');
+    console.log('  Gemini:', process.env.GEMINI_API_KEY ? 'yes' : 'no');
+    console.log('  Groq:', process.env.GROQ_API_KEY ? 'yes' : 'no');
+    console.log('  NVIDIA:', process.env.NVIDIA_API_KEY ? 'yes' : 'no');
+    console.log('');
+    console.log('Rate limits: ' + maxRequests + ' requests per ' + (windowMs / 1000 / 60) + ' minute(s). Resets at:', new Date(rateLimits.resetTime).toLocaleString());
+    });
+  }
+
+  return app;
+}
+
+const app = createApp();
+module.exports = app;
+module.exports.createApp = createApp;

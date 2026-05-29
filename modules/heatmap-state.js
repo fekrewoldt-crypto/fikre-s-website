@@ -236,8 +236,36 @@ class HeatmapState {
    * @param {string} key - localStorage key (default: 'mediscan_heatmap_state')
    */
   saveToStorage(key = 'mediscan_heatmap_state') {
+    // Attempt server sync first; fallback to localStorage on failure or offline
+    const payload = this.getEnhancedFormat();
+    if (!payload) {
+      // nothing to save
+      return this;
+    }
     try {
-      localStorage.setItem(key, JSON.stringify(this.toJSON()));
+      // Use fetch; assume JWT token is stored in a global variable `authToken`
+      const token = window.authToken || null;
+      if (token) {
+        fetch('/api/heatmap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(res => {
+            if (!res.ok) throw new Error('Server rejected heatmap sync');
+            return res.json();
+          })
+          .catch(err => {
+            console.warn('Heatmap sync failed, falling back to localStorage:', err);
+            localStorage.setItem(key, JSON.stringify(this.toJSON()));
+          });
+      } else {
+        // No token – cannot sync, store locally
+        localStorage.setItem(key, JSON.stringify(this.toJSON()));
+      }
     } catch (error) {
       console.error('HeatmapState saveToStorage error:', error);
     }
