@@ -13,6 +13,18 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/medicine-reminders/:id
+router.get('/:id', verifyToken, async (req, res) => {
+  try {
+    const { getReminderById } = require('../db/medicine-reminders');
+    const reminder = await getReminderById(req.params.id, req.user.id);
+    if (!reminder) return res.status(404).json({ error: 'Reminder not found' });
+    res.json(reminder);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get reminder' });
+  }
+});
+
 // POST /api/medicine-reminders
 router.post('/', verifyToken, async (req, res) => {
   try {

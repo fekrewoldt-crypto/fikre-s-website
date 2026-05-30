@@ -100,6 +100,9 @@ app.use('/api/appointments', verifyToken, requireVerifiedEmail, require('./api/a
 // 12. Mount doctors API (requires authentication + verified email)
 app.use('/api/doctors', verifyToken, requireVerifiedEmail, require('./api/doctors'));
 
+// 13. Mount medicine-reminders API (requires authentication + verified email)
+app.use('/api/medicine-reminders', verifyToken, requireVerifiedEmail, require('./api/medicine-reminders'));
+
 // ===== Response cache - keyed by symptom hash, expires after 1 hour =====
 const responseCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour

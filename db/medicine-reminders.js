@@ -30,6 +30,18 @@ async function updateReminder(reminderId, userId, updates) {
   return data;
 }
 
+async function getReminderById(reminderId, userId) {
+  const { data, error } = await supabase
+    .from('medicine_reminders')
+    .select('*')
+    .eq('id', reminderId)
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function deleteReminder(reminderId, userId) {
   const { error } = await supabase
     .from('medicine_reminders')
@@ -39,4 +51,4 @@ async function deleteReminder(reminderId, userId) {
   if (error) throw error;
 }
 
-module.exports = { getReminders, createReminder, updateReminder, deleteReminder };
+module.exports = { getReminders, createReminder, updateReminder, deleteReminder, getReminderById };

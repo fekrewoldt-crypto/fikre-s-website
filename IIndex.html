@@ -696,6 +696,172 @@ textarea::placeholder { color:#aaa; }
 .history-empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
 .history-empty p { margin-top: 0.5rem; font-size: 0.95rem; }
 .history-list { display: flex; flex-direction: column; gap: 12px; }
+
+/* Appointments Page Styling */
+#appointments-page { padding: 2rem 1rem 3rem; max-width: 720px; margin: 0 auto; }
+#appointments-container { margin-top: 1rem; }
+.appointments-list { display: flex; flex-direction: column; gap: 16px; }
+.appointment-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+}
+.appointment-card:hover {
+  border-color: var(--green-mid);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.appointment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.appointment-doctor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.appointment-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.1rem;
+}
+.appointment-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.appointment-specialty {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.appointment-status {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.appointment-status.pending {
+  background: linear-gradient(135deg, #fef3e2, #fdebd0);
+  color: var(--amber);
+}
+.appointment-status.confirmed {
+  background: linear-gradient(135deg, #e8f4ef, #d4edda);
+  color: var(--green);
+}
+.appointment-status.cancelled {
+  background: linear-gradient(135deg, #fde8e6, #fadbd8);
+  color: var(--red);
+}
+[data-theme="dark"] .appointment-status.pending {
+  background: rgba(243, 156, 18, 0.15);
+  color: #f39c12;
+}
+[data-theme="dark"] .appointment-status.confirmed {
+  background: rgba(26, 107, 74, 0.2);
+  color: var(--green);
+}
+[data-theme="dark"] .appointment-status.cancelled {
+  background: rgba(192, 57, 43, 0.15);
+  color: #e74c3c;
+}
+.appointment-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.appointment-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.appointment-detail-icon {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+.appointment-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.appointment-cancel-btn {
+  background: linear-gradient(135deg, var(--red) 0%, #e74c3c 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.appointment-cancel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
+}
+.appointment-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.appointment-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--muted);
+}
+.appointment-empty-state p { margin-top: 0.5rem; font-size: 0.95rem; }
+.appointments-loading {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--muted);
+}
+.appointments-not-logged-in {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+}
+.appointments-not-logged-in h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+.appointments-not-logged-in p {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+.appointment-count-badge {
+  background: var(--green);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 20px;
+  margin-left: 8px;
+  font-weight: 500;
+}
 .history-item {
   background: var(--glass);
   border: 1px solid var(--glass-border);
@@ -815,6 +981,8 @@ textarea::placeholder { color:#aaa; }
 .modal input, .modal select { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; background: rgba(255,255,255,0.5); color: var(--text); margin-bottom: 12px; outline: none; transition: all 0.2s ease; }
 [data-theme="dark"] .modal input, [data-theme="dark"] .modal select { background: rgba(0,0,0,0.2); }
 .modal input:focus, .modal select:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1); }
+.modal input[type="date"] { color-scheme: dark; }
+[data-theme="dark"] .modal input[type="date"] { color: var(--text); background: rgba(0,0,0,0.2); }
 .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); float: right; transition: color 0.2s; }
 .modal-close:hover { color: var(--text); }
 .disclaimer { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 0.5rem 2rem 2.5rem; max-width: 720px; margin: 0 auto; line-height: 1.7; }
@@ -2255,6 +2423,297 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 .auth-form-input::placeholder { color: #aaa; }
 [data-theme="dark"] .auth-form-input::placeholder { color: #666; }
 
+/* Profile Page Form Styles */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Form Styles for Reminders Modal */
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.times-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.time-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.87rem;
+  color: var(--text);
+}
+
+[data-theme="dark"] .time-checkbox {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.time-checkbox:hover {
+  border-color: var(--green-mid);
+  background: var(--green-light);
+}
+
+.time-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+
+.time-checkbox:has(input:checked) {
+  border-color: var(--green);
+  background: var(--green-light);
+  box-shadow: 0 2px 8px rgba(26, 107, 74, 0.15);
+}
+
+/* Reminder Card Styles */
+.reminder-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.reminder-card:hover {
+  border-color: var(--green-mid);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+
+.reminder-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.reminder-medicine-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reminder-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.3rem;
+}
+
+.reminder-medicine-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.reminder-dosage {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.reminder-frequency-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, var(--green-light) 0%, rgba(212, 237, 218, 0.3) 100%);
+  color: var(--green);
+}
+
+.reminder-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.reminder-time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+[data-theme="dark"] .reminder-time-chip {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reminder-time-chip .time-icon {
+  font-size: 0.9rem;
+}
+
+.reminder-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.reminder-notes {
+  background: var(--green-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.reminder-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.reminder-edit-btn {
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.reminder-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 107, 74, 0.3);
+}
+
+.reminder-delete-btn {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.reminder-delete-btn:hover {
+  background: var(--red);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.reminder-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive for Reminders */
+@media (max-width: 640px) {
+  .times-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .reminder-card {
+    padding: 1rem;
+  }
+
+  .reminder-actions {
+    flex-direction: column;
+  }
+
+  .reminder-edit-btn,
+  .reminder-delete-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--border);
+  border-radius: 26px;
+  transition: 0.3s;
+}
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+[data-theme="dark"] .toggle-slider { background-color: rgba(255,255,255,0.15); }
+
 .auth-submit-btn {
   width: 100%;
   padding: 1rem;
@@ -2441,6 +2900,10 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
+    <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
+    <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
+    <button class="nav-tab" data-page="appointments" onclick="showPage('appointments',this)" data-i18n="nav_appointments">📅 Appointments</button>
+    <button class="nav-tab" data-page="reminders" onclick="showPage('reminders',this)" data-i18n="nav_reminders">💊 Reminders</button>
     <button class="nav-tab" data-page="facilities" onclick="showPage('facilities',this)" data-i18n="nav_facilities">🏥 Facilities</button>
     <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
     <div class="lang-selector">
@@ -2685,7 +3148,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- DASHBOARD PAGE -->
 <div id="dashboard-page" class="page">
   <div class="dash-intro">
-    <h2>Health Dashboard</h2>
+    <h2 id="dash-welcome-heading">Health Dashboard</h2>
     <p>Patterns across all your scans</p>
   </div>
   <div class="dash-cards">
@@ -2716,6 +3179,277 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div id="dash-empty" class="dash-empty" style="display:none">No scan data yet. Run your first scan to populate the dashboard.</div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="profile-page" class="page">
+  <div class="dash-intro">
+    <h2>My Profile</h2>
+    <p>Manage your personal information and settings</p>
+  </div>
+
+  <!-- Personal Information Card -->
+  <div class="card" style="margin-bottom: 1rem;">
+    <div class="card-title">
+      <span style="font-size: 1.5rem;">👤</span>
+      <span>Personal Information</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-full-name">Full Name</label>
+        <input type="text" id="profile-full-name" class="auth-form-input" placeholder="Enter your full name">
+      </div>
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-phone">Phone Number</label>
+        <input type="tel" id="profile-phone" class="auth-form-input" placeholder="+251...">
+      </div>
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-dob">Date of Birth</label>
+        <input type="date" id="profile-dob" class="auth-form-input">
+      </div>
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-gender">Gender</label>
+        <select id="profile-gender" class="auth-form-input">
+          <option value="">Select gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column: span 2;">
+        <label class="auth-form-label" for="profile-blood-type">Blood Type</label>
+        <select id="profile-blood-type" class="auth-form-input" style="max-width: 200px;">
+          <option value="">Select blood type</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Contact Card -->
+  <div class="card" style="margin-bottom: 1rem;">
+    <div class="card-title">
+      <span style="font-size: 1.5rem;">🆘</span>
+      <span>Emergency Contact</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-emergency-name">Contact Name</label>
+        <input type="text" id="profile-emergency-name" class="auth-form-input" placeholder="Emergency contact name">
+      </div>
+      <div class="form-group">
+        <label class="auth-form-label" for="profile-emergency-phone">Contact Phone</label>
+        <input type="tel" id="profile-emergency-phone" class="auth-form-input" placeholder="+251...">
+      </div>
+    </div>
+  </div>
+
+  <!-- Address Card -->
+  <div class="card" style="margin-bottom: 1rem;">
+    <div class="card-title">
+      <span style="font-size: 1.5rem;">📍</span>
+      <span>Address</span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="form-group" style="grid-column: span 2;">
+        <label class="auth-form-label" for="profile-address">Street Address</label>
+        <input type="text" id="profile-address" class="auth-form-input" placeholder="Enter your address">
+      </div>
+      <div class="form-group" style="grid-column: span 2;">
+        <label class="auth-form-label" for="profile-city">City</label>
+        <input type="text" id="profile-city" class="auth-form-input" placeholder="City" value="Gondar">
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Settings Card -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">
+      <span style="font-size: 1.5rem;">🔔</span>
+      <span>Notification Settings</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <label class="toggle-switch">
+        <input type="checkbox" id="profile-notification-enabled">
+        <span class="toggle-slider"></span>
+      </label>
+      <span style="color: var(--text); font-size: 0.95rem;">Enable appointment and medicine reminders</span>
+    </div>
+  </div>
+
+  <!-- Save Button -->
+  <button class="submit-btn" id="profile-save-btn" onclick="saveProfile()" style="max-width: 720px; margin: 0 auto;">
+    Save Profile
+  </button>
+
+  <div id="profile-loading" class="appointments-loading" style="display: none;">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem;">Loading profile...</p>
+  </div>
+
+  <div id="profile-not-logged-in" class="appointments-not-logged-in" style="display: none;">
+    <h3>Login to manage your profile</h3>
+    <p>Please log in or create an account to view and manage your health profile.</p>
+    <button class="btn-primary" onclick="openAuthModal()">Login / Register</button>
+  </div>
+</div>
+
+<!-- APPOINTMENTS PAGE -->
+<div id="appointments-page" class="page">
+  <div class="dash-intro">
+    <h2>My Appointments</h2>
+    <p>View and manage your bookings</p>
+  </div>
+
+  <div id="appointments-container">
+    <div id="appointments-list"></div>
+  </div>
+
+  <div id="appointments-empty" class="history-empty" style="display: none;">
+    <div style="font-size: 2.5rem;">📅</div>
+    <p>No appointments yet. Book a consultation from your scan results.</p>
+  </div>
+</div>
+
+<!-- REMINDERS PAGE -->
+<div id="reminders-page" class="page">
+  <div class="dash-intro">
+    <h2>Medicine Reminders</h2>
+    <p>Track your medications and get timely reminders</p>
+  </div>
+
+  <div id="reminders-header">
+    <button class="btn-primary" id="add-reminder-btn" onclick="openAddReminderModal()">
+      + Add Reminder
+    </button>
+  </div>
+
+  <div id="reminders-container">
+    <div id="reminders-list"></div>
+  </div>
+
+  <div id="reminders-empty" class="history-empty" style="display: none;">
+    <div style="font-size: 2.5rem; color: var(--green);">💊</div>
+    <h3 style="margin: 1rem 0 0.5rem; color: var(--text); font-size: 1.2rem;">No medicine reminders</h3>
+    <p>Add your first reminder to track your medications.</p>
+  </div>
+
+  <div id="reminders-loading" class="appointments-loading" style="display: none;">
+    <div class="spinner"></div>
+    <p style="margin-top: 1rem;">Loading reminders...</p>
+  </div>
+
+  <div id="reminders-not-logged-in" class="appointments-not-logged-in" style="display: none;">
+    <h3>Login to manage your reminders</h3>
+    <p>Please log in or create an account to view and manage your medicine reminders.</p>
+    <button class="btn-primary" onclick="openAuthModal()">Login / Register</button>
+  </div>
+</div>
+
+<!-- MEDICINE REMINDER MODAL -->
+<div class="modal-bg" id="reminder-modal">
+  <div class="modal" style="max-width: 480px;">
+    <button class="modal-close" onclick="closeReminderModal()">✕</button>
+    <h3 id="reminder-modal-title">Add Medicine Reminder</h3>
+    <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5;">
+      Keep track of your medications and never miss a dose.
+    </p>
+
+    <form id="reminder-form">
+      <input type="hidden" id="reminder-id" value="">
+
+      <div class="form-group">
+        <label class="form-label" for="reminder-medicine">Medicine Name *</label>
+        <input type="text" id="reminder-medicine" placeholder="e.g., Amoxicillin" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reminder-dosage">Dosage *</label>
+        <input type="text" id="reminder-dosage" placeholder="e.g., 500mg, 2 tablets" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reminder-frequency">Frequency *</label>
+        <select id="reminder-frequency" required>
+          <option value="">Select frequency</option>
+          <option value="daily">Daily</option>
+          <option value="twice_daily">Twice Daily</option>
+          <option value="three_times_daily">Three Times Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="as_needed">As Needed</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Times of Day *</label>
+        <div class="times-grid">
+          <label class="time-checkbox">
+            <input type="checkbox" name="reminder-times" value="08:00">
+            <span>🌅 Morning (8 AM)</span>
+          </label>
+          <label class="time-checkbox">
+            <input type="checkbox" name="reminder-times" value="12:00">
+            <span>☀️ Afternoon (12 PM)</span>
+          </label>
+          <label class="time-checkbox">
+            <input type="checkbox" name="reminder-times" value="14:00">
+            <span>🌤️ Midday (2 PM)</span>
+          </label>
+          <label class="time-checkbox">
+            <input type="checkbox" name="reminder-times" value="20:00">
+            <span>🌙 Evening (8 PM)</span>
+          </label>
+          <label class="time-checkbox">
+            <input type="checkbox" name="reminder-times" value="22:00">
+            <span>🌛 Night (10 PM)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="reminder-start">Start Date *</label>
+          <input type="date" id="reminder-start" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reminder-end">End Date</label>
+          <input type="date" id="reminder-end">
+          <span style="font-size: 0.75rem; color: var(--muted);">Optional</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reminder-notes">Notes</label>
+        <textarea id="reminder-notes" placeholder="Any special instructions (take with food, etc.)" rows="2"></textarea>
+      </div>
+
+      <button type="submit" class="submit-btn" id="reminder-submit-btn">
+        <span id="reminder-submit-text">Add Reminder</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE REMINDER CONFIRM MODAL -->
+<div class="modal-bg" id="delete-reminder-modal">
+  <div class="modal" style="max-width: 400px; text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">💊</div>
+    <h3 style="margin-bottom: 0.75rem;">Delete Reminder?</h3>
+    <p id="delete-reminder-text" style="margin-bottom: 1.5rem;">
+      Are you sure you want to delete this medicine reminder?
+    </p>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn-secondary" style="flex: 1;" onclick="closeDeleteReminderModal()">Cancel</button>
+      <button class="btn-primary" style="flex: 1; background: var(--red);" id="confirm-delete-reminder-btn" onclick="confirmDeleteReminder()">Delete</button>
+    </div>
+  </div>
 </div>
 
 <!-- FACILITIES PAGE -->
@@ -2758,17 +3492,26 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <div class="modal">
     <button class="modal-close" id="modal-close">✕</button>
     <h3>Book a consultation</h3>
-    <p>Demo booking form. In a real telemedicine system, this connects to an available doctor.</p>
-    <input type="text" placeholder="Your full name">
-    <input type="email" placeholder="Email address">
-    <input type="tel" placeholder="Phone number">
-    <select>
-      <option>Next available slot (today)</option>
-      <option>Tomorrow morning</option>
-      <option>Tomorrow afternoon</option>
-      <option>This week, flexible</option>
+    <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem">Select a doctor and time to book your appointment.</p>
+    <input type="text" id="booking-name" placeholder="Your full name" autocomplete="name">
+    <input type="email" id="booking-email" placeholder="Email address" autocomplete="email">
+    <input type="tel" id="booking-phone" placeholder="Phone number" autocomplete="tel">
+    <select id="booking-doctor">
+      <option value="">Select a doctor</option>
     </select>
-    <button class="btn-primary" style="width:100%;margin-top:6px" onclick="document.getElementById('modal-bg').classList.remove('open');showToast('Booking submitted! A doctor will contact you shortly.', 'success')">Confirm booking</button>
+    <input type="date" id="booking-date">
+    <select id="booking-slot">
+      <option value="">Select a time slot</option>
+      <option value="08:00">08:00 AM</option>
+      <option value="09:00">09:00 AM</option>
+      <option value="10:00">10:00 AM</option>
+      <option value="11:00">11:00 AM</option>
+      <option value="14:00">02:00 PM</option>
+      <option value="15:00">03:00 PM</option>
+      <option value="16:00">04:00 PM</option>
+      <option value="17:00">05:00 PM</option>
+    </select>
+    <button class="btn-primary" id="booking-submit" style="width:100%;margin-top:6px">Confirm booking</button>
   </div>
 </div>
 
@@ -3183,6 +3926,9 @@ function showPage(name, btn) {
   if (btn) btn.classList.add('active');
   if (name === 'history') renderHistory();
   if (name === 'dashboard') renderDashboard();
+  if (name === 'profile') loadProfile();
+  if (name === 'appointments') loadAppointments();
+  if (name === 'reminders') loadReminders();
   if (name === 'facilities') {
     // Initialize hospital map when facilities page is shown
     if (typeof onFacilitiesPageShow === 'function') {
@@ -3556,6 +4302,10 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
     document.getElementById('loading-status').textContent = `Analyzed with ${modelDisplay} (${data.responseTimeMs}ms)`;
     await new Promise(r => setTimeout(r, 500));
     saveToHistory(data, symptoms, selectedBody, selectedDuration);
+
+    // Sync heatmap state to server if user is logged in
+    syncHeatmapAfterAnalysis();
+
     showResults(data);
     initChat(data);
     localStorage.removeItem('mediscan_form');
@@ -3564,6 +4314,37 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
     document.getElementById('form-section').style.display = 'block';
     showToast('Analysis failed: ' + err.message, 'error', 6000);
     console.error('Analysis error:', err);
+  }
+}
+
+// ── HEATMAP SYNC AFTER ANALYSIS ──
+async function syncHeatmapAfterAnalysis() {
+  // Only sync if user is logged in and has selections
+  if (!window.authToken) return;
+
+  try {
+    // Get heatmap state from window.mediscanBodyHeatmap
+    if (window.mediscanBodyHeatmap) {
+      const heatmapData = window.mediscanBodyHeatmap.getEnhancedFormat();
+      if (heatmapData && heatmapData.regions && heatmapData.regions.length > 0) {
+        // POST to /api/heatmap
+        const response = await fetch('/api/heatmap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + window.authToken
+          },
+          body: JSON.stringify(heatmapData)
+        });
+
+        if (!response.ok) {
+          console.warn('Heatmap sync failed:', response.status);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Heatmap sync error:', error);
+    // Don't show toast for sync failures - this is non-critical
   }
 }
 
@@ -3831,6 +4612,18 @@ function renderDashboard() {
   if (sevChart) { sevChart.destroy(); sevChart = null; }
   if (timeChart) { timeChart.destroy(); timeChart = null; }
 
+  // Show personalized greeting if logged in
+  const welcomeHeading = document.getElementById('dash-welcome-heading');
+  if (welcomeHeading) {
+    if (window.authToken && window.currentUser) {
+      // Get user name from currentUser or extract from email
+      const userName = window.currentUser.name || (window.currentUser.email ? window.currentUser.email.split('@')[0] : 'User');
+      welcomeHeading.textContent = `Welcome back, ${userName}!`;
+    } else {
+      welcomeHeading.textContent = 'Health Dashboard';
+    }
+  }
+
   const total = h.length;
   const high  = h.filter(x => x.severity === 'high').length;
   const med   = h.filter(x => x.severity === 'medium').length;
@@ -4090,9 +4883,104 @@ function closeNewsDetail() {
 }
 
 // ── MODAL ──
-document.getElementById('book-btn').addEventListener('click', () => document.getElementById('modal-bg').classList.add('open'));
+document.getElementById('book-btn').addEventListener('click', async () => {
+  await initBookingModal();
+  document.getElementById('modal-bg').classList.add('open');
+});
 document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-bg').classList.remove('open'));
 document.getElementById('modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') document.getElementById('modal-bg').classList.remove('open'); });
+
+// ── BOOKING MODAL FUNCTIONS ──
+window.initBookingModal = async function() {
+  const nameEl = document.getElementById('booking-name');
+  const emailEl = document.getElementById('booking-email');
+  const doctorEl = document.getElementById('booking-doctor');
+
+  // Pre-fill user data if logged in
+  if (window.currentUser) {
+    nameEl.value = window.currentUser.name || '';
+    emailEl.value = window.currentUser.email || '';
+  }
+
+  // Reset form state
+  const dateEl = document.getElementById('booking-date');
+  const today = new Date().toISOString().split('T')[0];
+  dateEl.value = today;
+  dateEl.min = today;
+  dateEl.disabled = false;
+  document.getElementById('booking-slot').value = '';
+  nameEl.disabled = true;
+  emailEl.disabled = true;
+
+  // Populate doctors dropdown
+  doctorEl.innerHTML = '<option value="">Loading doctors...</option>';
+  try {
+    const res = await fetch('/api/appointments/doctors');
+    if (!res.ok) throw new Error('Failed to fetch doctors');
+    const doctors = await res.json();
+    if (doctors && doctors.length > 0) {
+      doctorEl.innerHTML = '<option value="">Select a doctor</option>';
+      doctors.forEach(doc => {
+        const opt = document.createElement('option');
+        opt.value = doc.id;
+        opt.textContent = doc.name + (doc.specialty ? ` (${doc.specialty})` : '');
+        doctorEl.appendChild(opt);
+      });
+    } else {
+      doctorEl.innerHTML = '<option value="">No doctors available</option>';
+    }
+  } catch (err) {
+    doctorEl.innerHTML = '<option value="">Could not load doctors</option>';
+    showToast('Could not load doctors. Please try again.', 'error');
+  }
+};
+
+window.submitBooking = async function() {
+  const doctorId = document.getElementById('booking-doctor').value;
+  const appointmentDate = document.getElementById('booking-date').value;
+  const timeSlot = document.getElementById('booking-slot').value;
+  const btn = document.getElementById('booking-submit');
+
+  if (!doctorId || !appointmentDate || !timeSlot) {
+    showToast('Please fill in all required fields.', 'info');
+    return;
+  }
+  if (!window.authToken) {
+    showToast('Please login to book an appointment.', 'info');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Booking...';
+
+  try {
+    const res = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: window.getAuthHeaders(),
+      body: JSON.stringify({
+        doctor_id: doctorId,
+        appointment_date: appointmentDate,
+        time_slot: timeSlot
+      })
+    });
+
+    if (res.ok) {
+      showToast('Appointment booked successfully!', 'success');
+      document.getElementById('modal-bg').classList.remove('open');
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Booking failed. Please try again.', 'error');
+    }
+  } catch (err) {
+    showToast('Booking failed. Please check your connection.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirm booking';
+  }
+};
+
+// Wire up submit button
+document.getElementById('booking-submit').addEventListener('click', window.submitBooking);
 
 // News detail modal event listeners
 document.getElementById('news-detail-close').addEventListener('click', (e) => {
@@ -4115,6 +5003,8 @@ const TRANSLATIONS = {
     nav_new_scan: "New Scan",
     nav_history: "History",
     nav_dashboard: "Dashboard",
+    nav_profile: "Profile",
+    nav_appointments: "Appointments",
     nav_facilities: "F3E5 Facilities",
     auth_login_register: "Login / Register",
     // Hero section
@@ -5879,6 +6769,680 @@ function setAuthLoading(loading) {
   if (btnText) btnText.style.display = loading ? 'none' : 'inline';
 }
 
+// ── PROFILE ──
+async function loadProfile() {
+  const profileLoading = document.getElementById('profile-loading');
+  const profileNotLoggedIn = document.getElementById('profile-not-logged-in');
+  const profileSaveBtn = document.getElementById('profile-save-btn');
+  const profileCards = document.querySelectorAll('#profile-page .card');
+
+  // Show loading, hide others
+  if (profileLoading) profileLoading.style.display = 'block';
+  if (profileNotLoggedIn) profileNotLoggedIn.style.display = 'none';
+  if (profileSaveBtn) profileSaveBtn.style.display = 'none';
+  profileCards.forEach(card => card.style.display = 'none');
+
+  if (!window.authToken) {
+    // User not logged in - show login prompt
+    if (profileLoading) profileLoading.style.display = 'none';
+    if (profileNotLoggedIn) profileNotLoggedIn.style.display = 'block';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/profile', {
+      headers: { 'Authorization': 'Bearer ' + window.authToken }
+    });
+
+    if (profileLoading) profileLoading.style.display = 'none';
+    profileCards.forEach(card => card.style.display = '');
+    if (profileSaveBtn) profileSaveBtn.style.display = '';
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      showToast('Your session has expired. Please log in again.', 'info');
+      openAuthModal();
+      if (profileNotLoggedIn) {
+        profileNotLoggedIn.style.display = 'block';
+        profileNotLoggedIn.querySelector('h3').textContent = 'Session expired';
+        profileCards.forEach(card => card.style.display = 'none');
+        if (profileSaveBtn) profileSaveBtn.style.display = 'none';
+      }
+      return;
+    }
+
+    if (response.ok) {
+      const profile = await response.json();
+
+      // Populate form fields
+      document.getElementById('profile-full-name').value = profile.full_name || '';
+      document.getElementById('profile-phone').value = profile.phone || '';
+      document.getElementById('profile-dob').value = profile.date_of_birth || '';
+      document.getElementById('profile-gender').value = profile.gender || '';
+      document.getElementById('profile-blood-type').value = profile.blood_type || '';
+      document.getElementById('profile-emergency-name').value = profile.emergency_contact_name || '';
+      document.getElementById('profile-emergency-phone').value = profile.emergency_contact_phone || '';
+      document.getElementById('profile-address').value = profile.address || '';
+      document.getElementById('profile-city').value = profile.city || '';
+      document.getElementById('profile-notification-enabled').checked = profile.notification_enabled || false;
+    }
+    // If 404, that's OK - new user with no profile yet, form stays blank
+  } catch (error) {
+    console.error('Load profile error:', error);
+    if (profileLoading) profileLoading.style.display = 'none';
+    profileCards.forEach(card => card.style.display = '');
+    if (profileSaveBtn) profileSaveBtn.style.display = '';
+    showToast('Failed to load profile. Please try again.', 'error');
+  }
+}
+
+// ── MEDICINE REMINDERS ──
+let pendingDeleteId = null;
+
+async function loadReminders() {
+  const container = document.getElementById('reminders-list');
+  const emptyState = document.getElementById('reminders-empty');
+  const loadingState = document.getElementById('reminders-loading');
+  const notLoggedIn = document.getElementById('reminders-not-logged-in');
+  const h2 = document.querySelector('#reminders-page .dash-intro h2');
+
+  // Show loading state
+  loadingState.style.display = 'block';
+  container.innerHTML = '';
+  emptyState.style.display = 'none';
+  notLoggedIn.style.display = 'none';
+
+  if (!window.authToken) {
+    // User not logged in - show login prompt
+    loadingState.style.display = 'none';
+    notLoggedIn.style.display = 'block';
+    if (h2) h2.textContent = 'Medicine Reminders';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/medicine-reminders', {
+      headers: window.getAuthHeaders()
+    });
+
+    loadingState.style.display = 'none';
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      showToast('Your session has expired. Please log in again.', 'info');
+      openAuthModal();
+      notLoggedIn.style.display = 'block';
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to load reminders');
+    }
+
+    const reminders = await response.json();
+
+    if (h2) {
+      const count = reminders.length;
+      h2.innerHTML = 'Medicine Reminders' + (count > 0 ? ` <span class="appointment-count-badge">${count}</span>` : '');
+    }
+
+    if (reminders.length === 0) {
+      container.innerHTML = '';
+      emptyState.style.display = 'block';
+    } else {
+      emptyState.style.display = 'none';
+      renderReminders(reminders, container);
+    }
+  } catch (error) {
+    console.error('Load reminders error:', error);
+    loadingState.style.display = 'none';
+    container.innerHTML = '<div class="appointments-empty"><p>Could not load reminders. Please try again.</p></div>';
+    showToast('Failed to load reminders.', 'error');
+  }
+}
+
+function renderReminders(reminders, container) {
+  const list = document.createElement('div');
+  list.className = 'reminders-list';
+  list.style.display = 'flex';
+  list.style.flexDirection = 'column';
+  list.style.gap = '16px';
+
+  reminders.forEach((reminder, index) => {
+    const card = document.createElement('div');
+    card.className = 'reminder-card';
+    card.style.animation = 'fadeUp 0.4s ease';
+    card.style.animationDelay = `${index * 0.1}s`;
+    card.style.animationFillMode = 'both';
+
+    // Format times
+    const times = Array.isArray(reminder.times) ? reminder.times : (reminder.times ? JSON.parse(reminder.times) : []);
+    const timeIconMap = {
+      '08:00': { icon: '🌅', label: '8 AM' },
+      '12:00': { icon: '☀️', label: '12 PM' },
+      '14:00': { icon: '🌤️', label: '2 PM' },
+      '20:00': { icon: '🌙', label: '8 PM' },
+      '22:00': { icon: '🌛', label: '10 PM' }
+    };
+
+    const timesHtml = times.map(time => {
+      const timeInfo = timeIconMap[time] || { icon: '⏰', label: time };
+      return `<span class="reminder-time-chip"><span class="time-icon">${timeInfo.icon}</span>${timeInfo.label}</span>`;
+    }).join('');
+
+    // Format frequency label
+    const frequencyLabels = {
+      'daily': 'Daily',
+      'twice_daily': 'Twice Daily',
+      'three_times_daily': '3x Daily',
+      'weekly': 'Weekly',
+      'as_needed': 'As Needed'
+    };
+    const frequencyLabel = frequencyLabels[reminder.frequency] || reminder.frequency;
+
+    // Format dates
+    let dateInfo = '';
+    if (reminder.start_date) {
+      const startDate = new Date(reminder.start_date);
+      const formattedStart = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      if (reminder.end_date) {
+        const endDate = new Date(reminder.end_date);
+        const formattedEnd = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        dateInfo = `${formattedStart} - ${formattedEnd}`;
+      } else {
+        dateInfo = `Started ${formattedStart}`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="reminder-card-header">
+        <div class="reminder-medicine-info">
+          <div class="reminder-icon">💊</div>
+          <div>
+            <div class="reminder-medicine-name">${escapeHtml(reminder.medicine_name)}</div>
+            <div class="reminder-dosage">${escapeHtml(reminder.dosage)}</div>
+          </div>
+        </div>
+        <span class="reminder-frequency-badge">${frequencyLabel}</span>
+      </div>
+
+      ${times.length > 0 ? `
+      <div class="reminder-times">
+        ${timesHtml}
+      </div>
+      ` : ''}
+
+      ${dateInfo ? `
+      <div class="reminder-meta">
+        <span>📅</span>
+        <span>${dateInfo}</span>
+      </div>
+      ` : ''}
+
+      ${reminder.notes ? `
+      <div class="reminder-notes">
+        <strong>Notes:</strong> ${escapeHtml(reminder.notes)}
+      </div>
+      ` : ''}
+
+      <div class="reminder-actions">
+        <button class="reminder-edit-btn" onclick="openEditReminderModal(${reminder.id})" id="edit-btn-${reminder.id}">
+          ✏️ Edit
+        </button>
+        <button class="reminder-delete-btn" onclick="openDeleteReminderModal(${reminder.id})" id="delete-btn-${reminder.id}">
+          🗑️ Delete
+        </button>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function openAddReminderModal() {
+  // Reset form
+  document.getElementById('reminder-id').value = '';
+  document.getElementById('reminder-medicine').value = '';
+  document.getElementById('reminder-dosage').value = '';
+  document.getElementById('reminder-frequency').value = '';
+  document.getElementById('reminder-start').value = '';
+  document.getElementById('reminder-end').value = '';
+  document.getElementById('reminder-notes').value = '';
+
+  // Uncheck all time checkboxes
+  document.querySelectorAll('input[name="reminder-times"]').forEach(cb => {
+    cb.checked = false;
+  });
+
+  // Set default start date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('reminder-start').value = today;
+
+  // Update modal title
+  document.getElementById('reminder-modal-title').textContent = 'Add Medicine Reminder';
+  document.getElementById('reminder-submit-text').textContent = 'Add Reminder';
+
+  // Show modal
+  document.getElementById('reminder-modal').classList.add('open');
+}
+
+function openEditReminderModal(id) {
+  // Find the reminder data from the rendered cards
+  fetch(`/api/medicine-reminders/${id}`, {
+    headers: window.getAuthHeaders()
+  })
+    .then(res => res.json())
+    .then(reminder => {
+      // Populate form
+      document.getElementById('reminder-id').value = reminder.id;
+      document.getElementById('reminder-medicine').value = reminder.medicine_name;
+      document.getElementById('reminder-dosage').value = reminder.dosage;
+      document.getElementById('reminder-frequency').value = reminder.frequency;
+      document.getElementById('reminder-start').value = reminder.start_date || '';
+      document.getElementById('reminder-end').value = reminder.end_date || '';
+      document.getElementById('reminder-notes').value = reminder.notes || '';
+
+      // Set times
+      const times = Array.isArray(reminder.times) ? reminder.times : (reminder.times ? JSON.parse(reminder.times) : []);
+      document.querySelectorAll('input[name="reminder-times"]').forEach(cb => {
+        cb.checked = times.includes(cb.value);
+      });
+
+      // Update modal title
+      document.getElementById('reminder-modal-title').textContent = 'Edit Medicine Reminder';
+      document.getElementById('reminder-submit-text').textContent = 'Save Changes';
+
+      // Show modal
+      document.getElementById('reminder-modal').classList.add('open');
+    })
+    .catch(error => {
+      console.error('Failed to load reminder for edit:', error);
+      showToast('Failed to load reminder data.', 'error');
+    });
+}
+
+function closeReminderModal() {
+  document.getElementById('reminder-modal').classList.remove('open');
+}
+
+function openDeleteReminderModal(id) {
+  pendingDeleteId = id;
+  document.getElementById('delete-reminder-modal').classList.add('open');
+}
+
+function closeDeleteReminderModal() {
+  pendingDeleteId = null;
+  document.getElementById('delete-reminder-modal').classList.remove('open');
+}
+
+async function confirmDeleteReminder() {
+  if (!pendingDeleteId) return;
+
+  const deleteBtn = document.getElementById('confirm-delete-reminder-btn');
+  const originalText = deleteBtn.textContent;
+  deleteBtn.disabled = true;
+  deleteBtn.textContent = 'Deleting...';
+
+  try {
+    const response = await fetch(`/api/medicine-reminders/${pendingDeleteId}`, {
+      method: 'DELETE',
+      headers: window.getAuthHeaders()
+    });
+
+    if (response.ok) {
+      showToast('Reminder deleted successfully.', 'success');
+      closeDeleteReminderModal();
+      loadReminders();
+    } else {
+      const error = await response.json();
+      showToast(error.error || 'Failed to delete reminder.', 'error');
+    }
+  } catch (error) {
+    console.error('Delete reminder error:', error);
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    deleteBtn.disabled = false;
+    deleteBtn.textContent = originalText;
+  }
+}
+
+// Handle reminder form submission
+document.getElementById('reminder-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const medicine = document.getElementById('reminder-medicine').value.trim();
+  const dosage = document.getElementById('reminder-dosage').value.trim();
+  const frequency = document.getElementById('reminder-frequency').value;
+  const startDate = document.getElementById('reminder-start').value;
+  const endDate = document.getElementById('reminder-end').value;
+  const notes = document.getElementById('reminder-notes').value.trim();
+
+  // Get selected times
+  const times = [];
+  document.querySelectorAll('input[name="reminder-times"]:checked').forEach(cb => {
+    times.push(cb.value);
+  });
+
+  // Validation
+  if (!medicine) {
+    showToast('Please enter a medicine name.', 'error');
+    return;
+  }
+  if (!dosage) {
+    showToast('Please enter a dosage.', 'error');
+    return;
+  }
+  if (!frequency) {
+    showToast('Please select a frequency.', 'error');
+    return;
+  }
+  if (times.length === 0) {
+    showToast('Please select at least one time.', 'error');
+    return;
+  }
+  if (!startDate) {
+    showToast('Please select a start date.', 'error');
+    return;
+  }
+
+  const submitBtn = document.getElementById('reminder-submit-btn');
+  const submitText = document.getElementById('reminder-submit-text');
+  submitBtn.disabled = true;
+  submitText.textContent = 'Saving...';
+
+  const reminderId = document.getElementById('reminder-id').value;
+  const isEdit = !!reminderId;
+
+  const reminderData = {
+    medicine_name: medicine,
+    dosage: dosage,
+    frequency: frequency,
+    times: JSON.stringify(times),
+    start_date: startDate,
+    end_date: endDate || null,
+    notes: notes || null
+  };
+
+  try {
+    const url = isEdit ? `/api/medicine-reminders/${reminderId}` : '/api/medicine-reminders';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...window.getAuthHeaders()
+      },
+      body: JSON.stringify(reminderData)
+    });
+
+    if (response.ok) {
+      showToast(isEdit ? 'Reminder updated successfully.' : 'Reminder added successfully.', 'success');
+      closeReminderModal();
+      loadReminders();
+    } else {
+      const error = await response.json();
+      showToast(error.error || 'Failed to save reminder.', 'error');
+    }
+  } catch (error) {
+    console.error('Save reminder error:', error);
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitText.textContent = isEdit ? 'Save Changes' : 'Add Reminder';
+  }
+});
+
+async function saveProfile() {
+  if (!window.authToken) {
+    showToast('Please login to save your profile.', 'error');
+    setTimeout(() => openAuthModal(), 500);
+    return;
+  }
+
+  const saveBtn = document.getElementById('profile-save-btn');
+  const originalText = saveBtn.textContent;
+  saveBtn.textContent = 'Saving...';
+  saveBtn.disabled = true;
+
+  try {
+    const profileData = {
+      full_name: document.getElementById('profile-full-name').value.trim(),
+      phone: document.getElementById('profile-phone').value.trim(),
+      date_of_birth: document.getElementById('profile-dob').value || null,
+      gender: document.getElementById('profile-gender').value || null,
+      blood_type: document.getElementById('profile-blood-type').value || null,
+      emergency_contact_name: document.getElementById('profile-emergency-name').value.trim(),
+      emergency_contact_phone: document.getElementById('profile-emergency-phone').value.trim(),
+      address: document.getElementById('profile-address').value.trim(),
+      city: document.getElementById('profile-city').value.trim(),
+      notification_enabled: document.getElementById('profile-notification-enabled').checked
+    };
+
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + window.authToken
+      },
+      body: JSON.stringify(profileData)
+    });
+
+    if (response.ok) {
+      showToast('Profile saved successfully!', 'success');
+    } else {
+      const error = await response.json();
+      showToast(error.error || 'Failed to save profile.', 'error');
+    }
+  } catch (error) {
+    console.error('Save profile error:', error);
+    showToast('Network error. Please try again.', 'error');
+  }
+
+  saveBtn.textContent = originalText;
+  saveBtn.disabled = false;
+}
+
+// ── APPOINTMENTS ──
+async function loadAppointments() {
+  const container = document.getElementById('appointments-list');
+  const emptyState = document.getElementById('appointments-empty');
+  const h2 = document.querySelector('#appointments-page .dash-intro h2');
+
+  container.innerHTML = '<div class="appointments-loading"><div class="spinner"></div><p style="margin-top: 1rem;">Loading appointments...</p></div>';
+
+  if (!window.authToken) {
+    // User not logged in - show login prompt
+    container.innerHTML = '';
+    emptyState.style.display = 'none';
+    container.innerHTML = `
+      <div class="appointments-not-logged-in">
+        <h3>Login to view your appointments</h3>
+        <p>Please log in or create an account to view and manage your appointments.</p>
+        <button class="btn-primary" onclick="openAuthModal()">Login / Register</button>
+      </div>
+    `;
+    if (h2) h2.textContent = 'My Appointments';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/appointments', {
+      headers: window.getAuthHeaders()
+    });
+
+    // Handle 401 - token expired
+    if (response.status === 401) {
+      showToast('Your session has expired. Please log in again.', 'info');
+      openAuthModal();
+      container.innerHTML = `
+        <div class="appointments-not-logged-in">
+          <h3>Session Expired</h3>
+          <p>Please log in again to view your appointments.</p>
+          <button class="btn-primary" onclick="openAuthModal()">Login / Register</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to load appointments');
+    }
+
+    const appointments = await response.json();
+
+    if (h2) {
+      const count = appointments.length;
+      h2.innerHTML = 'My Appointments' + (count > 0 ? ` <span class="appointment-count-badge">${count}</span>` : '');
+    }
+
+    if (appointments.length === 0) {
+      container.innerHTML = '';
+      emptyState.style.display = 'block';
+    } else {
+      emptyState.style.display = 'none';
+      renderAppointments(appointments, container);
+    }
+  } catch (error) {
+    console.error('Load appointments error:', error);
+    container.innerHTML = '<div class="appointments-empty"><p>Could not load appointments. Please try again.</p></div>';
+    showToast('Failed to load appointments.', 'error');
+  }
+}
+
+function renderAppointments(appointments, container) {
+  const list = document.createElement('div');
+  list.className = 'appointments-list';
+
+  appointments.forEach((appointment, index) => {
+    const card = document.createElement('div');
+    card.className = 'appointment-card';
+    card.style.animationDelay = `${index * 0.1}s`;
+
+    // Extract doctor info - handle both formats
+    const doctorName = appointment.doctor_name || appointment.doctor?.name || 'Doctor';
+    const specialty = appointment.doctor_specialty || appointment.doctor?.specialty || 'General Practitioner';
+
+    // Format date
+    const appointmentDate = new Date(appointment.appointment_date);
+    const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Format time slot
+    let formattedTime = appointment.time_slot || appointment.appointment_time;
+    if (formattedTime) {
+      // Convert 24h to 12h format
+      const [hours, minutes] = formattedTime.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      formattedTime = `${hour12}:${minutes} ${ampm}`;
+    }
+
+    // Get status
+    const status = appointment.status || 'pending';
+    const statusClass = status.toLowerCase();
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+    // Build avatar initial
+    const initial = doctorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+    // Show cancel button only for pending or confirmed (not cancelled)
+    const showCancel = status !== 'cancelled';
+
+    card.innerHTML = `
+      <div class="appointment-header">
+        <div class="appointment-doctor">
+          <div class="appointment-avatar">${initial}</div>
+          <div class="appointment-info">
+            <h3>${doctorName}</h3>
+            <div class="appointment-specialty">${specialty}</div>
+          </div>
+        </div>
+        <span class="appointment-status ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="appointment-details">
+        <div class="appointment-detail">
+          <span class="appointment-detail-icon">📅</span>
+          <span>${formattedDate}</span>
+        </div>
+        ${formattedTime ? `
+        <div class="appointment-detail">
+          <span class="appointment-detail-icon">🕐</span>
+          <span>${formattedTime}</span>
+        </div>
+        ` : ''}
+      </div>
+      <div class="appointment-actions">
+        ${showCancel ? `
+        <button class="appointment-cancel-btn" onclick="cancelAppointment(${appointment.id})" id="cancel-btn-${appointment.id}">
+          ✕ Cancel Appointment
+        </button>
+        ` : ''}
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(list);
+}
+
+async function cancelAppointment(id) {
+  if (!confirm('Are you sure you want to cancel this appointment?')) {
+    return;
+  }
+
+  const cancelBtn = document.getElementById(`cancel-btn-${id}`);
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'Cancelling...';
+  }
+
+  try {
+    const response = await fetch(`/api/appointments/${id}`, {
+      method: 'DELETE',
+      headers: window.getAuthHeaders()
+    });
+
+    if (response.ok) {
+      showToast('Appointment cancelled successfully.', 'success');
+      // Reload appointments list
+      loadAppointments();
+    } else {
+      const error = await response.json();
+      showToast(error.error || 'Failed to cancel appointment.', 'error');
+      // Re-enable button on error
+      if (cancelBtn) {
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = '✕ Cancel Appointment';
+      }
+    }
+  } catch (error) {
+    console.error('Cancel appointment error:', error);
+    showToast('Network error. Please try again.', 'error');
+    if (cancelBtn) {
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = '✕ Cancel Appointment';
+    }
+  }
+}
+
 async function handleAuthSubmit(event) {
   event.preventDefault();
 
@@ -5931,6 +7495,8 @@ async function handleAuthSubmit(event) {
 
       // Update UI
       updateAuthUI();
+      loadProfile(); // Load user profile after login
+      renderDashboard(); // Update dashboard greeting
 
       // Close modal after brief delay
       setTimeout(() => {
@@ -5981,6 +7547,8 @@ async function handleAuthSubmit(event) {
 
         // Update UI
         updateAuthUI();
+        loadProfile(); // Load user profile after registration
+        renderDashboard(); // Update dashboard greeting
 
         setTimeout(() => {
           closeAuthModal();
@@ -6017,6 +7585,7 @@ async function handleLogout() {
   if (dropdown) dropdown.classList.remove('show');
 
   updateAuthUI();
+  renderDashboard(); // Update dashboard greeting
   showToast('You have been logged out.', 'info');
 }
 
@@ -6063,6 +7632,12 @@ function updateAuthUI() {
         </div>
         <div class="nav-user-dropdown-item" onclick="showPage('dashboard'); toggleUserDropdown();">
           📊 Dashboard
+        </div>
+        <div class="nav-user-dropdown-item" onclick="showPage('profile'); toggleUserDropdown();">
+          👤 My Profile
+        </div>
+        <div class="nav-user-dropdown-item" onclick="showPage('appointments'); toggleUserDropdown();">
+          📅 My Appointments
         </div>
         <div class="nav-user-dropdown-item danger" onclick="handleLogout()">
           🚪 Logout
