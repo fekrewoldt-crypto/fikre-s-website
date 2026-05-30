@@ -234,42 +234,51 @@ class HeatmapState {
   /**
    * Save state to localStorage
    * @param {string} key - localStorage key (default: 'mediscan_heatmap_state')
+   * @returns {Promise<HeatmapState>} Resolves with this when save completes
    */
-  saveToStorage(key = 'mediscan_heatmap_state') {
-    // Attempt server sync first; fallback to localStorage on failure or offline
-    const payload = this.getEnhancedFormat();
-    if (!payload) {
-      // nothing to save
-      return this;
-    }
+  async saveToStorage(key = 'mediscan_heatmap_state') {
     try {
-      // Use fetch; assume JWT token is stored in a global variable `authToken`
+      const payload = this.getEnhancedFormat();
+      if (!payload) {
+        // nothing to save, resolve immediately
+        return this;
+      }
+
       const token = window.authToken || null;
-      if (token) {
-        fetch('/api/heatmap', {
+      if (!token) {
+        // No token - store locally
+        localStorage.setItem(key, JSON.stringify(this.toJSON()));
+        return this;
+      }
+
+      // Attempt server sync first
+      try {
+        const response = await fetch('/api/heatmap', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(payload)
-        })
-          .then(res => {
-            if (!res.ok) throw new Error('Server rejected heatmap sync');
-            return res.json();
-          })
-          .catch(err => {
-            console.warn('Heatmap sync failed, falling back to localStorage:', err);
-            localStorage.setItem(key, JSON.stringify(this.toJSON()));
-          });
-      } else {
-        // No token – cannot sync, store locally
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server rejected heatmap sync: ${response.status}`);
+        }
+
+        // Server sync successful, also save to localStorage for offline access
         localStorage.setItem(key, JSON.stringify(this.toJSON()));
+        return this;
+      } catch (serverError) {
+        // Server sync failed, fallback to localStorage only
+        console.warn('Heatmap sync failed, falling back to localStorage:', serverError);
+        localStorage.setItem(key, JSON.stringify(this.toJSON()));
+        return this;
       }
     } catch (error) {
       console.error('HeatmapState saveToStorage error:', error);
+      return this;
     }
-    return this;
   }
 
   /**

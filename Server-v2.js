@@ -5,10 +5,11 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
-const { verifyToken } = require('./auth/middleware-supabase');
+const { verifyToken, requireRole, requireVerifiedEmail } = require('./auth/middleware-supabase');
 const authRoutes = require('./auth/supabase-auth');
 const recordsDAO = require('./db/records-supabase');
 const auditDAO = require('./db/audit-supabase');
+const newsDAO = require('./db/news');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { OpenAI } = require('openai');
 const fs = require('fs');
@@ -32,8 +33,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2. CORS
-app.use(cors());
+// 2. CORS - restricted to allowed origins
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001').split(',').map(o => o.trim());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like curl, Postman)
+    if (!origin) return callback(null, true);
+    // Check allowlist
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Also allow localhost on any port during development
+    if (origin.includes('localhost')) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 
 // 3. Security headers
 app.use(helmet());
@@ -72,11 +85,20 @@ app.use((req, res, next) => {
 // 7. Mount auth routes (single mount, no duplicates)
 app.use('/auth', authRoutes);
 
-// 8. Mount timeline routes (requires authentication)
-app.use('/timeline', verifyToken, require('./timeline'));
+// 8. Mount timeline routes (requires authentication + verified email)
+app.use('/timeline', verifyToken, requireVerifiedEmail, require('./timeline'));
 
-// 9. Mount heatmap API (requires authentication)
-app.use('/api/heatmap', verifyToken, require('./api/heatmap'));
+// 9. Mount heatmap API (requires authentication + verified email)
+app.use('/api/heatmap', verifyToken, requireVerifiedEmail, require('./api/heatmap'));
+
+// 10. Mount profile API (requires authentication + verified email)
+app.use('/api/profile', verifyToken, requireVerifiedEmail, require('./api/profile'));
+
+// 11. Mount appointments API (requires authentication + verified email)
+app.use('/api/appointments', verifyToken, requireVerifiedEmail, require('./api/appointments'));
+
+// 12. Mount doctors API (requires authentication + verified email)
+app.use('/api/doctors', verifyToken, requireVerifiedEmail, require('./api/doctors'));
 
 // ===== Response cache - keyed by symptom hash, expires after 1 hour =====
 const responseCache = new Map();
@@ -747,10 +769,12 @@ app.post('/api/chat', async (req, res) => {
 // GET /api/health-news
 app.get('/api/health-news', async (req, res) => {
   try {
-    const cacheKey = 'health_news';
-    const cached = getCached(cacheKey);
-    if (cached) {
-      return res.json({ ...cached, cached: true });
+    // Step 1: Check database for fresh cached news (less than 1 hour old)
+    if (await newsDAO.hasFreshNews(60)) {
+      const dbNews = await newsDAO.getNews(20);
+      if (dbNews.length > 0) {
+        return res.json({ news: dbNews, cached: true, source: 'database' });
+      }
     }
 
     let news = [];
@@ -802,7 +826,7 @@ Return ONLY valid JSON in this exact format:
           try { return JSON.parse(str); } catch (e) { return null; }
         }).filter(Boolean);
         const isValid = Array.isArray(extracted) && extracted.length > 0 && extracted.every(item =>
-          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && typeof item.title === 'string' && typeof item.body === 'string'
+          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && item.title && (typeof item.body === 'string')
         );
         if (isValid) {
           news = extracted;
@@ -845,7 +869,7 @@ Return ONLY valid JSON in this exact format:
           }).filter(Boolean);
         }
         const groqValid = Array.isArray(groqExtracted) && groqExtracted.length > 0 && groqExtracted.every(item =>
-          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && typeof item.title === 'string' && typeof item.body === 'string'
+          item && typeof item.icon === 'string' && typeof item.tag === 'string' && typeof item.tagName === 'string' && typeof item.date === 'string' && item.title && (typeof item.body === 'string')
         );
         if (groqValid) {
           news = groqExtracted;
@@ -906,8 +930,16 @@ Return ONLY valid JSON in this exact format:
       ];
     }
 
-    setCached(cacheKey, news);
-    res.json({ news, cached: false, source: nvidia && isModelAvailable('nvidia') ? 'nvidia' : 'static' });
+    // Step 2: Persist fresh news to database
+    await newsDAO.saveNews(news);
+    // Step 3: Also cache in memory for the remaining TTL window
+    setCached('health_news', news);
+
+    const dbSource = nvidia && isModelAvailable('nvidia') ? 'nvidia'
+      : groq && isModelAvailable('groq') ? 'groq'
+      : genAI && isModelAvailable('gemini') ? 'gemini'
+      : 'static';
+    res.json({ news, cached: false, source: dbSource });
   } catch (error) {
     console.error('Health news error:', error);
     res.status(500).json({ error: 'Failed to fetch health news' });
@@ -969,6 +1001,43 @@ app.get('/', (req, res) => {
 
   // Export and listen
   if (process.env.NODE_ENV !== 'test') {
+    // ===== Startup Validation =====
+    const missingVars = [];
+
+    if (!process.env.SUPABASE_URL) {
+      missingVars.push('SUPABASE_URL');
+    }
+    if (!process.env.SUPABASE_SERVICE_KEY) {
+      missingVars.push('SUPABASE_SERVICE_KEY');
+    }
+    if (!process.env.DATA_ENC_KEY) {
+      missingVars.push('DATA_ENC_KEY');
+    }
+    if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY) {
+      missingVars.push('GEMINI_API_KEY or GROQ_API_KEY or NVIDIA_API_KEY (at least one required)');
+    }
+
+    if (missingVars.length > 0) {
+      console.error('');
+      console.error('========================================');
+      console.error('Missing required environment variables:');
+      missingVars.forEach(v => console.error('  - ' + v));
+      console.error('========================================');
+      console.error('');
+      throw new Error('Missing required environment variables: ' + missingVars.join(', '));
+    }
+
+    // Schedule news cleanup on startup (delete news older than 7 days)
+    newsDAO.deleteOldNews(7).then(deleted => {
+      if (deleted > 0) console.log('Cleaned up ' + deleted + ' old news items from database');
+    }).catch(err => {
+      console.log('News cleanup skipped:', err.message);
+    });
+
+    console.log('');
+    console.log('CORS allowed origins:', allowedOrigins.join(', '));
+    console.log('');
+
     app.listen(process.env.PORT || 3000, () => {
     console.log('');
     console.log('🚀 MediScan Multi-Model Server running on http://localhost:' + (process.env.PORT || 3000));

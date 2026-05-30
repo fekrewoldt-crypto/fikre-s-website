@@ -1,7 +1,11 @@
-import fetch from 'node-fetch';
-
 /**
- * Calls the remote Vista3D image‑analysis service.
+ * DEPRECATED: Remote GPU image analysis service client.
+ *
+ * This module is no longer used as the project uses cloud-based AI
+ * fallbacks (Groq, NVIDIA, Gemini, Ollama) instead of a local Vista3D service.
+ *
+ * Kept for potential future use if on-premise image analysis is needed.
+ *
  * The service expects a JSON body with `prompt` and `imageBase64` fields
  * and returns a JSON diagnosis payload.
  *
@@ -9,7 +13,7 @@ import fetch from 'node-fetch';
  *   VISTA3D_URL  – e.g. https://my‑host.runpod.io (defaults to http://localhost:5000)
  *   VISTA3D_API_KEY – optional token, sent as `Authorization: Bearer <token>`
  */
-export async function analyzeWithVista3D(prompt, imageBase64) {
+async function analyzeWithVista3D(prompt, imageBase64) {
   const baseUrl = process.env.VISTA3D_URL || 'http://localhost:5000';
   const url = `${baseUrl.replace(/\/*$/,'')}/analyze`;
   const headers = { 'Content-Type': 'application/json' };
@@ -32,3 +36,5 @@ export async function analyzeWithVista3D(prompt, imageBase64) {
   const data = await response.json();
   return data;
 }
+
+module.exports = { analyzeWithVista3D };

@@ -322,12 +322,6 @@ textarea::placeholder { color:#aaa; }
   min-height: 500px;
 }
 
-#body-heatmap-container.viewer-3d-mode,
-#body-heatmap-container[data-body-heatmap-3d-mode="true"] {
-  height: 500px;
-  min-height: 500px;
-}
-
 #body-heatmap-container .body-heatmap-container {
   background: transparent;
   padding: 0;
@@ -1232,11 +1226,6 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   #body-heatmap-container {
     min-height: 320px;
   }
-  #body-heatmap-container.viewer-3d-mode,
-  #body-heatmap-container[data-body-heatmap-3d-mode="true"] {
-    height: 320px;
-    min-height: 320px;
-  }
   #body-heatmap-container .body-svg-wrapper {
     margin: 0.75rem 0;
   }
@@ -1413,11 +1402,6 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 
   /* Body Heatmap */
   #body-heatmap-container {
-    min-height: 350px;
-  }
-  #body-heatmap-container.viewer-3d-mode,
-  #body-heatmap-container[data-body-heatmap-3d-mode="true"] {
-    height: 350px;
     min-height: 350px;
   }
 
@@ -2159,6 +2143,281 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   background: rgba(192, 57, 43, 0.2);
   color: #e74c3c;
 }
+
+/* Auth Modal Styles */
+.auth-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(8px);
+}
+.auth-modal-overlay.open { display: flex; }
+
+.auth-modal {
+  background: var(--glass);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  animation: authSlideUp 0.3s ease;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+@keyframes authSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+.auth-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.auth-modal-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--text); }
+.auth-modal-close {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.auth-modal-close:hover { background: rgba(0, 0, 0, 0.2); color: var(--text); }
+
+.auth-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 1.5rem;
+}
+[data-theme="dark"] .auth-tabs { background: rgba(255, 255, 255, 0.1); }
+
+.auth-tab {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-tab:hover { color: var(--text); }
+.auth-tab.active {
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(26, 107, 74, 0.25);
+}
+
+.auth-form-group { margin-bottom: 1rem; }
+.auth-form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.auth-form-input {
+  width: 100%;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s ease;
+}
+[data-theme="dark"] .auth-form-input { background: rgba(0, 0, 0, 0.2); }
+.auth-form-input:focus {
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 4px rgba(26, 107, 74, 0.1);
+  background: rgba(255, 255, 255, 0.8);
+}
+[data-theme="dark"] .auth-form-input:focus { background: rgba(0, 0, 0, 0.3); }
+.auth-form-input::placeholder { color: #aaa; }
+[data-theme="dark"] .auth-form-input::placeholder { color: #666; }
+
+.auth-submit-btn {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(26, 107, 74, 0.3);
+  margin-top: 1.25rem;
+}
+.auth-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(26, 107, 74, 0.4);
+}
+.auth-submit-btn:active { transform: scale(0.98); }
+.auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.auth-error {
+  background: linear-gradient(135deg, rgba(253, 232, 230, 0.9) 0%, rgba(250, 219, 216, 0.9) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.3);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  color: var(--red);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  display: none;
+  animation: shake 0.4s ease;
+}
+[data-theme="dark"] .auth-error {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.15) 0%, rgba(231, 76, 60, 0.1) 100%);
+}
+.auth-error.show { display: block; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.auth-success {
+  background: linear-gradient(135deg, rgba(232, 244, 239, 0.9) 0%, rgba(212, 237, 218, 0.9) 100%);
+  border: 1px solid rgba(26, 107, 74, 0.3);
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  color: var(--green);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+[data-theme="dark"] .auth-success {
+  background: linear-gradient(135deg, rgba(26, 107, 74, 0.15) 0%, rgba(45, 138, 98, 0.1) 100%);
+}
+.auth-success.show { display: block; }
+
+.auth-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.auth-switch a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.auth-switch a:hover { color: var(--green-mid); text-decoration: underline; }
+
+/* Logged-in state */
+.nav-user-menu {
+  position: relative;
+}
+.nav-user-btn {
+  background: var(--green-light);
+  border: 2px solid var(--green);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+  transition: all 0.2s ease;
+}
+.nav-user-btn:hover { background: var(--green); color: white; }
+.nav-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.nav-user-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 180px;
+  box-shadow: var(--shadow);
+  z-index: 400;
+}
+.nav-user-dropdown.show { display: block; animation: fadeUp 0.2s ease; }
+.nav-user-dropdown-item {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+.nav-user-dropdown-item:hover { background: var(--green-light); }
+.nav-user-dropdown-item.danger { color: var(--red); }
+.nav-user-dropdown-item.danger:hover { background: rgba(192, 57, 43, 0.1); }
+
+/* Responsive auth modal */
+@media (max-width: 480px) {
+  .auth-modal {
+    padding: 1.5rem;
+    border-radius: 20px;
+    margin: 0.5rem;
+  }
+  .auth-modal-title { font-size: 1.3rem; }
+  .auth-tab { padding: 10px 12px; font-size: 0.85rem; }
+}
+
 </style>
 </head>
 <body>
@@ -2178,7 +2437,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <nav>
   <div class="logo">Medi<span>Scan</span></div>
   <div class="nav-right">
-    <button class="nav-tab" id="auth-btn" onclick="openAuthModal()">Login / Register</button
+    <button class="nav-tab" id="auth-btn" onclick="openAuthModal()" data-i18n="auth_login_register">Login / Register</button>
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
@@ -2207,6 +2466,43 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <div class="nav-badge">AI Powered</div>
   </div>
 </nav>
+
+<!-- Auth Modal -->
+<div class="auth-modal-overlay" id="auth-modal" onclick="closeAuthModalOnOverlay(event)">
+  <div class="auth-modal" onclick="event.stopPropagation()">
+    <div class="auth-modal-header">
+      <h2 class="auth-modal-title" id="auth-modal-title">Login</h2>
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">×</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-success" class="auth-success"></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="toggleAuthMode('login')">Login</button>
+      <button class="auth-tab" id="tab-register" onclick="toggleAuthMode('register')">Register</button>
+    </div>
+    <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+      <div class="auth-form-group">
+        <label class="auth-form-label" for="auth-email">Email</label>
+        <input type="email" id="auth-email" class="auth-form-input" placeholder="you@example.com" required>
+      </div>
+      <div class="auth-form-group">
+        <label class="auth-form-label" for="auth-password">Password</label>
+        <input type="password" id="auth-password" class="auth-form-input" placeholder="Enter your password" required>
+      </div>
+      <div class="auth-form-group" id="confirm-password-group" style="display: none;">
+        <label class="auth-form-label" for="auth-confirm-password">Confirm Password</label>
+        <input type="password" id="auth-confirm-password" class="auth-form-input" placeholder="Confirm your password">
+      </div>
+      <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
+        <span id="auth-btn-text">Login</span>
+        <div class="auth-spinner" id="auth-spinner" style="display: none;"></div>
+      </button>
+    </form>
+    <div class="auth-switch" id="auth-switch">
+      <span>Don't have an account? <a onclick="toggleAuthMode('register')">Register</a></span>
+    </div>
+  </div>
+</div>
 
 <!-- SCAN PAGE -->
 <div id="scan-page" class="page active">
@@ -2349,6 +2645,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <div class="result-footer">
       <div class="cta-row">
         <button class="btn-primary" id="book-btn">Book a consultation</button>
+        <button class="btn-secondary" id="export-pdf-btn" onclick="exportPDF()">Export PDF</button>
         <button class="btn-secondary" id="restart-btn">New scan</button>
       </div>
     </div>
@@ -2424,20 +2721,20 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- FACILITIES PAGE -->
 <div id="facilities-page" class="page">
   <div class="page-header">
-    <h2>🏥 Healthcare Facilities</h2>
-    <p>Hospitals, clinics, and pharmacies in Gondar, Ethiopia</p>
+    <h2 data-i18n="facilities_title">🏥 Healthcare Facilities</h2>
+    <p data-i18n="facilities_subtitle">Hospitals, clinics, and pharmacies in Gondar, Ethiopia</p>
   </div>
 
   <div class="facilities-controls">
     <div class="filter-buttons">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="hospital">🏥 Hospitals</button>
-      <button class="filter-btn" data-filter="health_center">🏨 Health Centers</button>
-      <button class="filter-btn" data-filter="clinic">🩺 Clinics</button>
-      <button class="filter-btn" data-filter="pharmacy">💊 Pharmacies</button>
+      <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
+      <button class="filter-btn" data-filter="hospital" data-i18n="filter_hospital">🏥 Hospitals</button>
+      <button class="filter-btn" data-filter="health_center" data-i18n="filter_health_center">🏨 Health Centers</button>
+      <button class="filter-btn" data-filter="clinic" data-i18n="filter_clinic">🩺 Clinics</button>
+      <button class="filter-btn" data-filter="pharmacy" data-i18n="filter_pharmacy">💊 Pharmacies</button>
     </div>
     <div class="search-box">
-      <input type="text" id="facility-search" placeholder="Search facilities...">
+      <input type="text" id="facility-search" data-i18n-placeholder="search_placeholder" placeholder="Search facilities...">
     </div>
   </div>
 
@@ -2451,8 +2748,8 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div class="facilities-actions">
-    <button id="view-toggle" class="action-btn">📋 List View</button>
-    <button id="near-me-btn" class="action-btn">📍 Find Nearest</button>
+    <button id="view-toggle" class="action-btn" data-i18n="view_list">📋 List View</button>
+    <button id="near-me-btn" class="action-btn" data-i18n="find_nearest">📍 Find Nearest</button>
   </div>
 </div>
 
@@ -3413,6 +3710,9 @@ function buildAltsChart(r) {
   });
 }
 
+// ── EXPORT PDF ──
+function exportPDF() { window.print(); }
+
 // ── RESTART ──
 document.getElementById('restart-btn').addEventListener('click', () => {
   document.getElementById('results').style.display = 'none';
@@ -3811,60 +4111,556 @@ document.getElementById('news-detail-modal').addEventListener('click', e => {
 
 const TRANSLATIONS = {
   en: {
+    // Navigation
     nav_new_scan: "New Scan",
     nav_history: "History",
     nav_dashboard: "Dashboard",
+    nav_facilities: "F3E5 Facilities",
+    auth_login_register: "Login / Register",
+    // Hero section
     hero_tag: "Science Fair Project",
     hero_title: "How are you\nfeeling?",
     hero_desc: "Describe your symptoms or upload a photo. We'll help you understand what might be going on.",
+    // Step 1: Upload
     step1_title: "Upload a photo (optional but recommended)",
     upload_click: "Click to upload",
     upload_or: "or drag and drop",
     upload_hint: "Skin, eye, wound, rash — any visible condition",
+    camera_take_photo: "Take Photo with Camera",
+    // Step 2: Symptoms
     step2_title: "Describe your symptoms",
     symptoms_placeholder: "e.g. I have had a rash on my forearm for 3 days...",
+    voice_tap_speak: "Tap to speak",
+    // Step 3: Body area
+    step3_title: "Where on the body?",
+    // Step 4: Duration
+    step4_title: "How long have you had these symptoms?",
+    dur_under24h: "Under 24h",
+    dur_1_3_days: "1-3 days",
+    dur_4_7_days: "4-7 days",
+    dur_1_2_weeks: "1-2 weeks",
+    dur_2_plus_weeks: "2+ weeks",
+    dur_chronic: "Chronic",
+    // Submit
+    analyze_symptoms: "F52C Analyze symptoms",
+    // Loading
+    loading_title: "Analyzing your information...",
+    loading_status: "Connecting to AI...",
+    ls1: "Processing uploaded image",
+    ls2: "Reading symptom description",
+    ls3: "Cross-referencing medical knowledge",
+    ls4: "Generating your report",
+    // Results
+    ai_confidence: "AI confidence",
+    stat_severity: "Severity",
+    stat_confidence: "Confidence",
+    stat_conditions: "Conditions checked",
+    section_what_is_it: "What is it?",
+    section_symptoms: "Key symptoms identified",
+    section_next_steps: "Recommended next steps",
+    section_urgent: "When to seek urgent care",
+    section_alternatives: "Other possible conditions",
+    emergency_immediate: "F3E5 Immediate Medical Care Recommended",
+    emergency_subtitle: "This condition may require prompt medical attention. Below are hospitals in Gondar with emergency services.",
+    btn_view_hospitals: "View Nearby Hospitals",
+    facilities_recommended: "F4CD Recommended Healthcare Facilities",
+    facilities_subtitle: "Based on your condition, these facilities in Gondar are best suited for your needs.",
+    btn_book: "Book a consultation",
+    btn_export: "Export PDF",
+    btn_new_scan: "New scan",
+    result_severity_low: "Low risk",
+    result_severity_med: "Medium risk",
+    result_severity_high: "High risk",
+    // Chat
+    chat_title: "Ask a follow-up question",
+    chat_subtitle: "AI Medical Assistant",
+    chat_placeholder: "Ask anything about this condition...",
+    chat_send: "Send",
+    chat_sug_contagious: "Is this contagious?",
+    chat_sug_causes: "What causes this?",
+    chat_sug_medicine: "What medicine helps?",
+    chat_sug_recovery: "How long until recovery?",
+    // History page
+    history_title: "Scan History",
+    history_clear: "Clear all",
+    history_empty: "No scans yet. Run your first scan to see history here.",
+    // Dashboard
+    dash_title: "Health Dashboard",
+    dash_subtitle: "Patterns across all your scans",
+    dash_total: "Total scans",
+    dash_high: "High severity",
+    dash_medium: "Medium severity",
+    chart_severity_dist: "Severity distribution",
+    chart_scans_over_time: "Scans over time (last 7 days)",
+    news_title: "F4F0 Health News & Alerts",
+    btn_refresh: "🔄 Refresh",
+    dash_empty: "No scan data yet. Run your first scan to populate the dashboard.",
+    loading_health_news: "Loading health news...",
+    no_health_news: "No health news available at this time.",
+    // Facilities
+    facilities_title: "F3E5 Healthcare Facilities",
+    facilities_subtitle: "Hospitals, clinics, and pharmacies in Gondar, Ethiopia",
+    filter_all: "All",
+    filter_hospital: "F3E5 Hospitals",
+    filter_health_center: "F3E6 Health Centers",
+    filter_clinic: "FA7A Clinics",
+    filter_pharmacy: "F48A Pharmacies",
+    search_placeholder: "Search facilities...",
+    view_list: "F4CB List View",
+    find_nearest: "F4CD Find Nearest",
+    // Modal
+    modal_book_title: "Book a consultation",
+    modal_book_desc: "Demo booking form. In a real telemedicine system, this connects to an available doctor.",
+    modal_confirm: "Confirm booking",
+    // Hospitals modal
+    hospitals_title: "F3E5 Nearby Hospitals in Gondar",
+    hospitals_subtitle: "High severity detected. Please seek immediate medical attention at one of these facilities.",
+    emergency_call: "Emergency? Call 907 (Ambulance)",
+    emergency_sub: "Free ambulance service in Gondar city",
+    // News detail
+    btn_close: "Close",
+    btn_learn_more: "Learn More",
+    source: "F4DA Source",
+    // SOS modal
+    sos_title: "🚨 Emergency Help",
+    sos_subtitle: "Nearby hospitals in Gondar",
+    sos_call_ambulance: "📞 Call Ambulance: 907",
+    sos_call_free: "Free emergency service · Gondar City",
+    locate_nearest: "F4CD Find Nearest to Me",
+    sos_locating: "Getting your location…",
+    sorted_distance: "Sorted nearest to your location",
+    sorted_center: "Sorted from Gondar city center",
+    // Chat input placeholder
+    chat_input_placeholder: "Ask anything about this condition...",
+    // Camera
+    camera_title: "📷 Take a Photo",
+    camera_cancel: "Cancel",
+    // Common
+    loading: "Loading...",
+    error: "Error occurred",
+    retry: "Retry",
+    logout: "Logout",
+    save: "Save",
+    cancel: "Cancel",
+    confirmed: "Confirmed",
+    days: "days",
+    weeks: "weeks",
+    months: "months",
+    years: "years",
   },
   am: {
-    nav_new_scan: "አዲስ ትንሽ",
-    nav_history: "ታሪክ",
-    nav_dashboard: "ዳሽቦርድ",
-    hero_tag: "የሳይንስ ትርኢት ፕሮጀክት",
-    hero_title: "እንዴት\nእየተሰማህ ነው?",
-    hero_desc: "የእርስዎን ምልክቶች ይግለጹ ወይም ፎቶ ያስገቡ። ምን እየሆነ እንደሆነ እንረዳዎታለን።",
-    step1_title: "ፎቶ ያስገቡ (አማሚግም ግን የሚመከር)",
-    upload_click: "ለመጫን ይጉዱ",
-    upload_or: "ወይም ይጎትቱ እና ይጣሉ",
-    upload_hint: "ቆዳ፣ ዓይን፣ ቁስል፣ ራሽ — ማንኛውም የሚታይ ሁኔታ",
-    step2_title: "የእርስዎን ምልክቶች ይግለጹ",
-    symptoms_placeholder: "ለምሳሌ፡ በእጄ ላይ ቁስል ከ3 ቀናት ይዛለሁ...",
+    // Navigation
+    nav_new_scan: "አեմ ንዋሳ",
+    nav_history: "ኛሪሺ",
+    nav_dashboard: "ዚሺቤርዓ",
+    nav_facilities: "ኛቀጥዋና F3E5",
+    auth_login_register: "ጓት / ጨሚቁድን",
+    // Hero section
+    hero_tag: "የሴኣንስ ትሪቀዪ ፕሪናዚእነ",
+    hero_title: "ጭቤቅት\nጭጋቅ \��ስማ?",
+    hero_desc: "የጭቃታኛዕኛዥ \��ደምለጺ \��ይማ ፎቶ ያስገቡ። ምን እየሆነ እንደሆነ እንረዳዎታለን።",
+    // Step 1: Upload
+    step1_title: "ፕቶ ያስገቡ (አማማኛሳን ግን የሚመከር)",
+    upload_click: "ፊዋን \��ጉዑល",
+    upload_or: "លይማ ይጎትቱ እና ይጣሉ",
+    upload_hint: "ታንኣለጽኦኛመርቀሃሎም — ማኛንየ ዘርአ ቁሩብ",
+    camera_take_photo: "ቀባ ይልስሙ",
+    // Step 2: Symptoms
+    step2_title: "የጭቃታኛዕኘን ምልክቶች ይግለጹ",
+    symptoms_placeholder: "ፊምሳሌ። ታንኣቀሽ ኝስ \��ና \��ናት ይዛለሁ...",
+    voice_tap_speak: "ፋስልስሽ ይጠሩ",
+    // Step 3: Body area
+    step3_title: "ማልዋዎቅ \��ንታይ ነው?",
+    // Step 4: Duration
+    step4_title: "የምልክቶችን ከምን ያህል ጊዜ አላችሁ?",
+    dur_under24h: "24 ቅናት በታች",
+    dur_1_3_days: "1-3 ቀናት",
+    dur_4_7_days: "4-7 ቀናት",
+    dur_1_2_weeks: "1-2 ሳምንታት",
+    dur_2_plus_weeks: "2+ ሳምንታት",
+    dur_chronic: "ወረፈር",
+    // Submit
+    analyze_symptoms: "ንዋሳና \��ንታኔ",
+    // Loading
+    loading_title: "አቄንምስር እየሆነ ነው...",
+    loading_status: "F916 ጋር እየተገናኘ ነው...",
+    ls1: "የስልስር ምስል እየተሠራ ነው",
+    ls2: "የምልክት መግለጫ እየተሠቀለ ነው",
+    ls3: "ኛማክ እየታወቀ ነው",
+    ls4: "የሪፖርት እየተዘጋጀ ነው",
+    // Results
+    ai_confidence: "AI ትኩረት",
+    stat_severity: "እኖቀያ",
+    stat_confidence: "ወኛተማ",
+    stat_conditions: "ኛሚሽማዎች ተለክተዋል",
+    section_what_is_it: "\D9ንዘነ?",
+    section_symptoms: "እኖ�1240�12EB ምልክቶች",
+    section_next_steps: "የተከተል የሚሆኑ እርምጃዎች",
+    section_urgent: "\ኣስቸኳይ እንክብለት መፈለግ",
+    section_alternatives: "የሌላ የሚችሉ ሁኔታዎች",
+    emergency_immediate: "F3E5 አስሲዥ የሕክምና እርዳታ ይመከራል",
+    emergency_subtitle: "ታህህ ሁኔታ ፈጣን የሕክምና እርምጃ ሊያስፈልግ ይችላል። ቶዋር ከሚገኙ ሆስፒታሎች አንዱን ይጎብኙ።",
+    btn_view_hospitals: "F4CD የቅርብ ሆስፒታሎችን ይመልከቱ",
+    facilities_recommended: "F4CD የተመከሩ የጤና አገልግሎቶች",
+    facilities_subtitle: "የሁኔታዎ ላይ በመመስረት፤ \��ነዚህ በቶዋር ውስጥ ለእርስዎ በቂ ናቸው።",
+    btn_book: "\ነጋሪ ይያዙ",
+    btn_export: "PDF አውጣ",
+    btn_new_scan: "አዲስ ስካን",
+    result_severity_low: "ቻቅተኛ አደጋ",
+    result_severity_med: "ኖኰለማ አደጋ",
+    result_severity_high: "እሴሽዥ አደጋ",
+    // Chat
+    chat_title: "አማታዊ ጥያቄ ይጠይቁ",
+    chat_subtitle: "AI ቀሪቃ \��ኪም",
+    chat_placeholder: "ዘንየኛ ነገር ሁሉ ይጠይቁ...",
+    chat_send: "\ላክ",
+    chat_sug_contagious: "ቻስፋይ?",
+    chat_sug_causes: "ዘዘነ?",
+    chat_sug_medicine: "ዘጥ \��ኪም ይረዣል?",
+    chat_sug_recovery: "\ምን ያህል ጊዜ?",
+    // History page
+    history_title: "ኛሪሺ ስካን",
+    history_clear: "\ሁሉንም አስወግድ",
+    history_empty: "\ስካን የለም። \ለመጀመር የመጀመሪያውን ስካን ያሂዱ።",
+    // Dashboard
+    dash_title: "F4CC የጤና ዓቤርዓ",
+    dash_subtitle: "የሁሉ ስካንዎት ንዑስ ሁኔታዎች",
+    dash_total: "F4CB ጠቅላላ ስካንዎች",
+    dash_high: "F534 \��ፍተኛ አደጋ",
+    dash_medium: "F7E1 \��ካከለኛ አደጋ",
+    chart_severity_dist: "እሴቶሳ ስርጭት",
+    chart_scans_over_time: "\ስካኑ በጊዜ (የመጨረሻ 7 ቀናት)",
+    news_title: "F4F0 የጤና ዜናዎች እና ማስታወቂያዎች",
+    btn_refresh: "🔄 እንደገና",
+    dash_empty: "\ስካን ውሂብ የለም። \ለመጀመር የመጀመሪያውን ስካን ያሂዱ።",
+    loading_health_news: "አቄንምስር እየሆነ ነው...",
+    no_health_news: "\ጤና ዜና በዚህ ጊዜ የለም።",
+    // Facilities
+    facilities_title: "F3E5 የጤና አገልግሎቶች",
+    facilities_subtitle: "ቶዋር፡ ሆስፒታሎች፣ ክሊኒኮች እና ፋርማሲዎች",
+    filter_all: "\ሁሉ",
+    filter_hospital: "F3E5 F3E5",
+    filter_health_center: "F3E6 F3E6",
+    filter_clinic: "FA7A FA7A",
+    filter_pharmacy: "F48A F48A",
+    search_placeholder: "F50D ፈልግ...",
+    view_list: "F4CB ዝርዝር ርዕስ",
+    find_nearest: "F4CD ቅርብ ይፈልጉ",
+    // Modal
+    modal_book_title: "\ነጋሪ ይያዙ",
+    modal_book_desc: "አማሳየት የነጋሪ ፎርም። \በእውነተኛ የቲለሜዲሲን ስርዓት፤ \��ህ ከተጀመረ ሐኪም ጋር ይገናኛል።",
+    modal_confirm: "\ነጋሪ ይረጋገጥ",
+    // Hospitals modal
+    hospitals_title: "F3E5 ቶዋር ውስጥ የቅርብ ሆስፒታሎች",
+    hospitals_subtitle: "F534 \��ፍተኛ አደጋ ተገኝቷል። \እባክዎ በነዚህ ሆስፒታሎች ውስጥ ፈጣን የሕክምና እርዳታ ይፈልጉ።",
+    emergency_call: "አስቸኳይ? 907 (አምቡላንስ) ይደውሉ",
+    emergency_sub: "\ነፃ የድንገት አገልግሎት · ቶዋር ከተማ",
+    // News detail
+    btn_close: "\ዝጋ",
+    btn_learn_more: "\ተጨማሪ ይማሩ",
+    source: "F4DA \ምንጭ",
+    // SOS modal
+    sos_title: "🚨 አስቸኳይ እርዳታ",
+    sos_subtitle: "ቶዋር ውስጥ የቅርብ ሆስፒታሎች",
+    sos_call_ambulance: "📞 \��ምቡላንስ ይደውሉ: 907",
+    sos_call_free: "\ነፃ \��ድንገት አገልግሎት · ቶዋር ከተማ",
+    locate_nearest: "F4CD ለእኔ ቅርብ ይፈልጉ",
+    sos_locating: "F4CD አካባቢዎን እየተላኩ ነው...",
+    sorted_distance: "የአካባቢዎ ቅርብ ሆነው ተደርድረዋል",
+    sorted_center: "የቶዋር ከተማ ማዕከል ከተሰላ ተደርድረዋል",
+    // Chat input placeholder
+    chat_input_placeholder: "ዘንየኛ ነገር ሁሉ ይጠይቁ...",
+    // Camera
+    camera_title: "📷 ቀባ ይልስሙ",
+    camera_cancel: "\ሰርዝ",
+    // Common
+    loading: "አቄንምስር እየሆነ ነው...",
+    error: "ጣጋተት ተፈጥሯል",
+    retry: "\እንደገና ይሞክሩ",
+    logout: "F6AA \ይውጡ",
+    save: "አፕዋጽ",
+    cancel: "ጫት",
+    confirmed: "\ተረጋግጧል",
+    days: "ስናት",
+    weeks: "F4C6",
+    months: "F4C5",
+    years: "F4C6",
   },
   om: {
+    // Navigation
     nav_new_scan: "Barbaaduu Haaraa",
     nav_history: "Odeeffannoo",
     nav_dashboard: "Daashboardii",
+    nav_facilities: "F3E5 Mogaalota",
+    auth_login_register: "Seenaa / Galaana",
+    // Hero section
     hero_tag: "Piroojektii Saayinsii Fayiiri",
     hero_title: "Akkam\njirta?",
     hero_desc: "Mallattoolee kee ibsi ykn suuraa galchi. Maal ta'aa jiru si hubachiifna.",
+    // Step 1: Upload
     step1_title: "Suuraa Galchi (filannoodhaaf garagalchi)",
     upload_click: "Suura cuufi",
     upload_or: "ykn qara qalbi",
     upload_hint: "Qobboo, ija, madaa, rashi — haala kamiyyuu mul'atu",
+    camera_take_photo: "Suura Fudhadhu",
+    // Step 2: Symptoms
     step2_title: "Mallattoolee Keeri Ibsi",
     symptoms_placeholder: "Fkn. Rashii qophee kootti ji'a 3 arraa...",
+    voice_tap_speak: "Dubbachuu danda'u",
+    // Step 3: Body area
+    step3_title: "Eenyatti?",
+    // Step 4: Duration
+    step4_title: "Yeroon ittiin ramadama?",
+    dur_under24h: "24 sa'a'a gadii",
+    dur_1_3_days: "1-3 Guyyaa",
+    dur_4_7_days: "4-7 Guyyaa",
+    dur_1_2_weeks: "1-2 Torbee",
+    dur_2_plus_weeks: "2+ Torbee",
+    dur_chronic: "Duraa",
+    // Submit
+    analyze_symptoms: "F52C Qoorannoo",
+    // Loading
+    loading_title: "Qoorannoo jira...",
+    loading_status: "AI waliin walqabsiisa jira...",
+    ls1: "Suuraa sirra oolchu",
+    ls2: "Ibsa mallattoo turka",
+    ls3: "Ogbarruun fayyaa ragaa",
+    ls4: "Bu'aa qoobannoo",
+    // Results
+    ai_confidence: "I bullsita AI",
+    stat_severity: "Hiritsa",
+    stat_confidence: "I bullsita",
+    stat_conditions: "Haalaawwan rafame",
+    section_what_is_it: "Maali?",
+    section_symptoms: "Mallattoolee calqabame",
+    section_next_steps: "Sagantaa urratti hordofii",
+    section_urgent: "Yeroo Tokkoon yaaluuf",
+    section_alternatives: "Haalo bu'aa kanbiru",
+    emergency_immediate: "F3E5 Gara bu'aa medikaliliif",
+    emergency_subtitle: "Haala kanaaf gargaara medikalii dachaa yaalaa.",
+    btn_view_hospitals: "Hoospitalii dachaa ilaaluu",
+    facilities_recommended: "F4CD Mogaalota Fayyaa",
+    facilities_subtitle: "Haalli kee irratti hundaa'u, mogaalottawanii gonde." ,
+    btn_book: "Karoo fudhadhuu",
+    btn_export: "PDF Baasi",
+    btn_new_scan: "Scan haaraa",
+    result_severity_low: "Hiritsa gadii",
+    result_severity_med: "Hiritsa gidduti",
+    result_severity_high: "Hiritsa oli",
+    // Chat
+    chat_title: "Gaaffii boodaaf - gaaffii",
+    chat_subtitle: "Deggeetti AI",
+    chat_placeholder: "Haalchi waa'ee haala kanaa gaaffi...",
+    chat_send: "Ergi",
+    chat_sug_contagious: "Viristuu?",
+    chat_sug_causes: "Maaliif?",
+    chat_sug_medicine: "Qoricha ownaa?",
+    chat_sug_recovery: "Yeroon fedha?",
+    // History page
+    history_title: "Scan dhageenya",
+    history_clear: "Hundaa rucisi",
+    history_empty: "Scna hin jiru. Scna duraa golchuuf.",
+    // Dashboard
+    dash_title: "Dashboodii Fayyaa",
+    dash_subtitle: "Mijjaala scan keessaa",
+    dash_total: "Scan giddugaleessa",
+    dash_high: "Hiritsa oli",
+    dash_medium: "Hiritsa gidduti",
+    chart_severity_dist: "Hiritsa qoodu",
+    chart_scans_over_time: "Scan al ti 7 guyyaa",
+    news_title: "F4F0 Bahee Fayyaa",
+    btn_refresh: "🔄 Ergaa",
+    dash_empty: "Ragaan scan hin jiru. Scna duraa golchuuf.",
+    loading_health_news: "Bahee fayyaa sirra jira...",
+    no_health_news: "Baheyyi fayyaa hin jiru.",
+    // Facilities
+    facilities_title: "F3E5 Mogaalota Fayyaa",
+    facilities_subtitle: "Hoospitaalaa, kiliinikaa fi phaarmaasii Gondeer keessatti",
+    filter_all: "Hunda",
+    filter_hospital: "F3E5 Hoospitaalaa",
+    filter_health_center: "F3E6 Kaantara Fayyaa",
+    filter_clinic: "FA7A Kiliinikaa",
+    filter_pharmacy: "F48A Pharamaasii",
+    search_placeholder: "Mogaala gaafachuu...",
+    view_list: "F4CB Mogaala ilaaluu",
+    find_nearest: "F4CD Nagaan danda'u",
+    // Modal
+    modal_book_title: "Karoo fudhadhuu",
+    modal_book_desc: "Fakkeenyi gaaffii. Haalreeshaan, DHCP waliin.",
+    modal_confirm: "Karoo mirkanneessi",
+    // Hospitals modal
+    hospitals_title: "F3E5 Hoospitaalaa dachaa Gondeer",
+    hospitals_subtitle: "Hiritsa guddittii. Gargaara medikalii dachaa barreeffamu.",
+    emergency_call: "Madaallii? 907 (Ambulansii)",
+    emergency_sub: "Adeemsa dachaa Gondeer keessatti",
+    // News detail
+    btn_close: "Cuudhuu",
+    btn_learn_more: "Barnoota dabalataa",
+    source: "F4DA Bulchiinsaa",
+    // SOS modal
+    sos_title: "🚨 Gargaara adda",
+    sos_subtitle: "Hoospitaalaa dachaa Gondeer keessatti",
+    sos_call_ambulance: "📞 Ambulansii: 907",
+    sos_call_free: "Adeemsa dachaa Gondeer keessatti",
+    locate_nearest: "F4CD Dannaan dachaa",
+    sos_locating: "Iddoon kee argamaa jira...",
+    sorted_distance: "Iddoo kee dachaa qabame",
+    sorted_center: "Gondeer iddoo kaazawaa",
+    // Chat input placeholder
+    chat_input_placeholder: "Haalchi waa'ee haala kanaa...",
+    // Camera
+    camera_title: "📷 Suura Fudhadhuu",
+    camera_cancel: "Sodaa",
+    // Common
+    loading: "Sirra jira...",
+    error: "Dhaggeeffamerr",
+    retry: "Irra deebi'i",
+    logout: "Murtii",
+    save: "Qabsi",
+    cancel: "Sodaa",
+    confirmed: "Mirkanneffamame",
+    days: "guyyaa",
+    weeks: "torbee",
+    months: "ji'a",
+    years: "waggoota",
   },
   ti: {
-    nav_new_scan: "ሓዱሽ ምጽሓፍ",
-    nav_history: "ታሪኽ",
-    nav_dashboard: "ዳሽቦርድ",
-    hero_tag: "ፕሮጀክት ሳይንስ ፌር",
-    hero_title: "ከመይ\nእዩ ዝስመዓካ?",
-    hero_desc: "ምልክታትካ ገለጽ ወይ ስእሊ ኣእትይ። እንታይ ኸይኑ ከም ዘሎ ንሕበረካ።",
-    step1_title: "ስእሊ ኣእትይ (ኣማሚግም ግን ዝመረጽ)",
-    upload_click: "ክትኣቱ ንእሽቶዎ ይጉዐዙ",
-    upload_or: "ወይ ስኒ ኣጥፍእዎ",
-    upload_hint: "ቆዳ፣ ዓይኒ፣ ጉህህርቲ፣ ራሽ — ዝኾነ ዝርአ ቁሩብ",
-    step2_title: "ምልክታትካ ገለጽ",
-    symptoms_placeholder: "ኣብነቲ፣ ራሽ ኣብ እገይ 3 መዓልቲ ኣለኒ...",
+    // Navigation
+    nav_new_scan: "ንባዕና ትንቀቁ",
+    nav_history: "ቱቢሪን",
+    nav_dashboard: "ዚቤርዓ",
+    nav_facilities: "F3E5 ኔዐጥቀና",
+    auth_login_register: "አታና / አባንቂያን",
+    // Hero section
+    hero_tag: "ፐሪናዚእነ ሴንስ F9EE",
+    hero_title: "ኤኖቅ\nአያያዲ?",
+    hero_desc: "የቱኖዕምለጽ \��ይም ስእሊ ኣእትይ። እንታይ ኸይኑ ከም ዘሎ ንሕበረካ።",
+    // Step 1: Upload
+    step1_title: "F4F7 ስእሊ ኣእትይ (አማማምግም ግን ዝመርጽ)",
+    upload_click: "ኖምዕ \��ሽቶዎ ይጉዐዙ",
+    upload_or: "លይማ ስኒ ኣጥፍእዎ",
+    upload_hint: "ታንኣእድርሻ — ዝርእት እንኮል",
+    camera_take_photo: "F4F7 ፎቶ ኣንሶ",
+    // Step 2: Symptoms
+    step2_title: "የቱኖዕ \��ልክታትካ ገለጽ",
+    symptoms_placeholder: "አኖኰምሳ ራሽ አን \��ብ 3 ምስሕት ኣለኒ...",
+    voice_tap_speak: "ፋውበቅ \��ደይ",
+    // Step 3: Body area
+    step3_title: "ዘንታስድ?",
+    // Step 4: Duration
+    step4_title: "አኖኰምስሕት እንታይ ነብሩ?",
+    dur_under24h: "24 መዓልቲ በታች",
+    dur_1_3_days: "1-3 ምስሕት",
+    dur_4_7_days: "4-7 ምስሕት",
+    dur_1_2_weeks: "1-2 ሳምንት",
+    dur_2_plus_weeks: "2+ ሳምንት",
+    dur_chronic: "ወቁረፈር",
+    // Submit
+    analyze_symptoms: "ንቀንኒ \��ኒያ",
+    // Loading
+    loading_title: "አቄንምስር እየተሆነ ነው...",
+    loading_status: "አሕሪማኒያ AI...",
+    ls1: "የስር \��እሊ እየተሠራ ነው",
+    ls2: "የያ዗ መግለጫ እየተሠቀለ ነው",
+    ls3: "ኛሟኵ እየለከበ ነው",
+    ls4: "የኖቲሪት እየተዘጋጀ ነው",
+    // Results
+    ai_confidence: "ተስፈሪነት AI",
+    stat_severity: "እቁዕ",
+    stat_confidence: "ፋምዕራም",
+    stat_conditions: "ኛሚሽማዎች ተልከዋል",
+    section_what_is_it: "ዘነህ?",
+    section_symptoms: "\ነብሳት",
+    section_next_steps: "የሚቤ \��ርምጃዎች",
+    section_urgent: "\ኣስቸ \��ሆነ",
+    section_alternatives: "የሌላ ዘዴዎች",
+    emergency_immediate: "F3E5 \��ጣን የሕክምና ክርክሪ",
+    emergency_subtitle: "ጊህ \��ኔታ ፈጣን የሕክምና እርምጃ ሊያስፈልግ ይችላል",
+    btn_view_hospitals: "F4CD ሆስታሎች ንረአሽ",
+    facilities_recommended: "F4CD የተመከሩ ሆስታሎች",
+    facilities_subtitle: "አርስወርሽሽሪ ላይ በመመስረት, እነዚህ ተስርደው አሉ",
+    btn_book: "አኛታሪ ይያዙ",
+    btn_export: "PDF አውጣ",
+    btn_new_scan: "ንባዕና ስካን",
+    result_severity_low: "ቻኖሽት",
+    result_severity_med: "አኛራም",
+    result_severity_high: "ቅረ",
+    // Chat
+    chat_title: "አማሳሽ",
+    chat_subtitle: "AI ",
+    chat_placeholder: "የአ \��ገር ሁሉ...",
+    chat_send: "ላክ",
+    chat_sug_contagious: "አሲ?",
+    chat_sug_causes: "ዘዘነ?",
+    chat_sug_medicine: "ዘመድ?",
+    chat_sug_recovery: "የለአሽ?",
+    // History page
+    history_title: "አ \��ካን",
+    history_clear: "አቋ",
+    history_empty: "አር የለም \��መጀመር ስካን ኣል...",
+    // Dashboard
+    dash_title: "ዕቤርዓ \��ና",
+    dash_subtitle: "የሁሉ ስካንዎት ንዑስ ሁኔታዎች",
+    dash_total: "አጠቅላላ ስካን",
+    dash_high: "F534 ከፍተኛ",
+    dash_medium: "F7E1 ከፍተኛ",
+    chart_severity_dist: "እሴሳ \��ለም",
+    chart_scans_over_time: "የተማዛርያ ላይ ምልክት",
+    news_title: "F4F0 \��ሽርስ",
+    btn_refresh: "F504 እንደገና",
+    dash_empty: "አምእላር የለም",
+    loading_health_news: "አምስር የሆነ ነው...",
+    no_health_news: "አምዋ የለም",
+    // Facilities
+    facilities_title: "F3E5 \��",
+    facilities_subtitle: "ቶዋ \��",
+    filter_all: "አ",
+    filter_hospital: "F3E5 \��",
+    filter_health_center: "F3E6 \��",
+    filter_clinic: "FA7A \��ሊኒ",
+    filter_pharmacy: "F48A ፋርማሲ",
+    search_placeholder: "አ...",
+    view_list: "F4CB ዝርዝር",
+    find_nearest: "F4CD የቅርብ",
+    // Modal
+    modal_book_title: "አርሪ \��ያዙ",
+    modal_book_desc: "የም ሪ...",
+    modal_confirm: "አማዛራ",
+    // Hospitals modal
+    hospitals_title: "F3E5 \��",
+    hospitals_subtitle: "F534 \��",
+    emergency_call: "አ? 907",
+    emergency_sub: "የ",
+    // News detail
+    btn_close: "አጪ",
+    btn_learn_more: "አር",
+    source: "F4DA \��ንጭ",
+    // SOS modal
+    sos_title: "🚨 \��",
+    sos_subtitle: "ቶዋ ሆ�0001",
+    sos_call_ambulance: "📞 አምቡላንስ: 907",
+    sos_call_free: "አ",
+    locate_nearest: "F4CD ለእኔ ቅርብ",
+    sos_locating: "የ",
+    sorted_distance: "አ",
+    sorted_center: "አ",
+    // Chat input placeholder
+    chat_input_placeholder: "አምስ...",
+    // Camera
+    camera_title: "F4F7 ስእሊ",
+    camera_cancel: "አሪ",
+    // Common
+    loading: "አምስር...",
+    error: "ህተም",
+    retry: "አ",
+    logout: "F6AA \��ጣ",
+    save: "አ",
+    cancel: "ጫ",
+    confirmed: "አ",
+    days: "",
+    weeks: "",
+    months: "",
+    years: "",
   }
 };
 
@@ -3887,9 +4683,211 @@ function setLanguage(lang) {
     }
   });
 
-  document.getElementById('symptoms-text').placeholder = TRANSLATIONS[lang].symptoms_placeholder;
-  document.getElementById('chat-input').placeholder = "Ask anything about this condition...";
+  // Update placeholder for symptoms textarea
+  if (TRANSLATIONS[lang]) {
+    const sPlaceholder = TRANSLATIONS[lang].symptoms_placeholder || TRANSLATIONS['en'].symptoms_placeholder;
+    document.getElementById('symptoms-text').placeholder = sPlaceholder;
 
+    // Update duration buttons
+    const durMap = {
+      'dur_under24h': { sel: '[data-val="less than 24 hours"]', key: 'dur_under24h' },
+      'dur_1_3_days': { sel: '[data-val="1-3 days"]', key: 'dur_1_3_days' },
+      'dur_4_7_days': { sel: '[data-val="4-7 days"]', key: 'dur_4_7_days' },
+      'dur_1_2_weeks': { sel: '[data-val="1-2 weeks"]', key: 'dur_1_2_weeks' },
+      'dur_2_plus_weeks': { sel: '[data-val="more than 2 weeks"]', key: 'dur_2_plus_weeks' },
+      'dur_chronic': { sel: '[data-val="chronic / ongoing"]', key: 'dur_chronic' }
+    };
+    Object.values(durMap).forEach(({ sel, key }) => {
+      const el = document.querySelector(sel);
+      if (el && TRANSLATIONS[lang][key]) {
+        el.textContent = TRANSLATIONS[lang][key];
+      }
+    });
+
+    // Update analyze button
+    const analyzeBtn = document.getElementById('analyze-btn');
+    if (analyzeBtn && TRANSLATIONS[lang].analyze_symptoms) {
+      analyzeBtn.textContent = TRANSLATIONS[lang].analyze_symptoms;
+    }
+
+    // Update camera button
+    const camBtns = document.querySelectorAll('.camera-btn');
+    camBtns.forEach(btn => {
+      if (TRANSLATIONS[lang].camera_take_photo) {
+        const spans = btn.querySelectorAll('span');
+        if (spans.length >= 2) {
+          spans[1].textContent = TRANSLATIONS[lang].camera_take_photo;
+        }
+      }
+    });
+
+    // Update loading text
+    const loadingTitle = document.getElementById('loading-title');
+    if (loadingTitle && TRANSLATIONS[lang].loading_title) loadingTitle.textContent = TRANSLATIONS[lang].loading_title;
+
+    const loadingStatus = document.getElementById('loading-status');
+    if (loadingStatus && TRANSLATIONS[lang].loading_status) loadingStatus.textContent = TRANSLATIONS[lang].loading_status;
+
+    // Loading steps
+    const lsKeys = ['ls1', 'ls2', 'ls3', 'ls4'];
+    const lsIds = ['ls1', 'ls2', 'ls3', 'ls4'];
+    lsIds.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && TRANSLATIONS[lang][lsKeys[i]]) {
+        el.textContent = TRANSLATIONS[lang][lsKeys[i]];
+      }
+    });
+
+    // Result labels
+    const confLabel = document.querySelector('.conf-label');
+    if (confLabel && TRANSLATIONS[lang].ai_confidence) confLabel.textContent = TRANSLATIONS[lang].ai_confidence;
+
+    const statSev = document.querySelector('#stat-sev')?.closest('.stat-card')?.querySelector('.stat-label');
+    if (statSev && TRANSLATIONS[lang].stat_severity) statSev.textContent = TRANSLATIONS[lang].stat_severity;
+
+    const statConf = document.querySelector('#stat-conf')?.closest('.stat-card')?.querySelector('.stat-label');
+    if (statConf && TRANSLATIONS[lang].stat_confidence) statConf.textContent = TRANSLATIONS[lang].stat_confidence;
+
+    const statAlts = document.querySelector('#stat-alts')?.closest('.stat-card')?.querySelector('.stat-label');
+    if (statAlts && TRANSLATIONS[lang].stat_conditions) statAlts.textContent = TRANSLATIONS[lang].stat_conditions;
+
+    // Section labels
+    const sectionLabels = document.querySelectorAll('.section-label');
+    sectionLabels.forEach(label => {
+      const text = label.textContent.trim();
+      if (text.includes('What is it')) label.textContent = TRANSLATIONS[lang].section_what_is_it || label.textContent;
+      else if (text.includes('Key symptoms')) label.textContent = TRANSLATIONS[lang].section_symptoms || label.textContent;
+      else if (text.includes('next steps') || text.includes('Recommended')) label.textContent = TRANSLATIONS[lang].section_next_steps || label.textContent;
+      else if (text.includes('urgent care') || text.includes('When to seek')) label.textContent = TRANSLATIONS[lang].section_urgent || label.textContent;
+      else if (text.includes('Other possible')) label.textContent = TRANSLATIONS[lang].section_alternatives || label.textContent;
+    });
+
+    // CTA buttons
+    const bookBtn = document.getElementById('book-btn');
+    if (bookBtn && TRANSLATIONS[lang].btn_book) bookBtn.textContent = TRANSLATIONS[lang].btn_book;
+
+    const exportBtn = document.getElementById('export-pdf-btn');
+    if (exportBtn && TRANSLATIONS[lang].btn_export) exportBtn.textContent = TRANSLATIONS[lang].btn_export;
+
+    const restartBtn = document.getElementById('restart-btn');
+    if (restartBtn && TRANSLATIONS[lang].btn_new_scan) restartBtn.textContent = TRANSLATIONS[lang].btn_new_scan;
+
+    // Chat section
+    const chatTitle = document.querySelector('.chat-title');
+    if (chatTitle && TRANSLATIONS[lang].chat_title) chatTitle.textContent = TRANSLATIONS[lang].chat_title;
+
+    const chatSub = document.querySelector('.chat-sub');
+    if (chatSub && TRANSLATIONS[lang].chat_subtitle) chatSub.textContent = TRANSLATIONS[lang].chat_subtitle;
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput && TRANSLATIONS[lang].chat_input_placeholder) chatInput.placeholder = TRANSLATIONS[lang].chat_input_placeholder;
+
+    const chatSend = document.getElementById('chat-send');
+    if (chatSend && TRANSLATIONS[lang].chat_send) chatSend.textContent = TRANSLATIONS[lang].chat_send;
+
+    // Chat suggestions
+    const chatSugs = document.querySelectorAll('.chat-sug');
+    const sugKeys = ['chat_sug_contagious', 'chat_sug_causes', 'chat_sug_medicine', 'chat_sug_recovery'];
+    chatSugs.forEach((sug, i) => {
+      if (TRANSLATIONS[lang][sugKeys[i]]) {
+        sug.textContent = TRANSLATIONS[lang][sugKeys[i]];
+      }
+    });
+
+    // History page
+    const histTitle = document.querySelector('#history-page h2');
+    if (histTitle && TRANSLATIONS[lang].history_title) histTitle.textContent = TRANSLATIONS[lang].history_title;
+
+    const histClear = document.querySelector('#history-page .btn-secondary');
+    if (histClear && TRANSLATIONS[lang].history_clear) histClear.textContent = TRANSLATIONS[lang].history_clear;
+
+    // Dashboard
+    const dashTitle = document.querySelector('#dashboard-page .dash-intro h2');
+    if (dashTitle && TRANSLATIONS[lang].dash_title) dashTitle.textContent = TRANSLATIONS[lang].dash_title;
+
+    const dashSub = document.querySelector('#dashboard-page .dash-intro p');
+    if (dashSub && TRANSLATIONS[lang].dash_subtitle) dashSub.textContent = TRANSLATIONS[lang].dash_subtitle;
+
+    const dashEmpty = document.getElementById('dash-empty');
+    if (dashEmpty && TRANSLATIONS[lang].dash_empty) dashEmpty.textContent = TRANSLATIONS[lang].dash_empty;
+
+    // Dashboard cards labels
+    const dashCards = document.querySelectorAll('.dash-card .lbl');
+    const dashKeys = ['dash_total', 'dash_high', 'dash_medium'];
+    dashCards.forEach((card, i) => {
+      if (TRANSLATIONS[lang][dashKeys[i]]) {
+        card.textContent = TRANSLATIONS[lang][dashKeys[i]];
+      }
+    });
+
+    // Chart labels
+    const chartTitles = document.querySelectorAll('.chart-card-title');
+    chartTitles.forEach((title, i) => {
+      if (i === 0 && TRANSLATIONS[lang].chart_severity_dist) title.textContent = TRANSLATIONS[lang].chart_severity_dist;
+      else if (i === 1 && TRANSLATIONS[lang].chart_scans_over_time) title.textContent = TRANSLATIONS[lang].chart_scans_over_time;
+      else if (title.textContent.includes('Health News')) {
+        if (TRANSLATIONS[lang].news_title) title.textContent = TRANSLATIONS[lang].news_title;
+      }
+    });
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-news-btn');
+    if (refreshBtn && TRANSLATIONS[lang].btn_refresh) refreshBtn.innerHTML = TRANSLATIONS[lang].btn_refresh;
+
+    // Facilities page
+    const facTitle = document.querySelector('#facilities-page .page-header h2');
+    if (facTitle && TRANSLATIONS[lang].facilities_title) facTitle.textContent = TRANSLATIONS[lang].facilities_title;
+
+    const facSub = document.querySelector('#facilities-page .page-header p');
+    if (facSub && TRANSLATIONS[lang].facilities_subtitle) facSub.textContent = TRANSLATIONS[lang].facilities_subtitle;
+
+    // Filter buttons
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const filterKeys = ['filter_all', 'filter_hospital', 'filter_health_center', 'filter_clinic', 'filter_pharmacy'];
+    filterBtns.forEach((btn, i) => {
+      if (TRANSLATIONS[lang][filterKeys[i]]) {
+        btn.textContent = TRANSLATIONS[lang][filterKeys[i]].replace(/🏥|🏨|🩺|💊/g, '').trim() || btn.textContent;
+      }
+    });
+
+    // SOS Modal
+    const sosTitle = document.getElementById('sos-title');
+    if (sosTitle && TRANSLATIONS[lang].sos_title) sosTitle.textContent = TRANSLATIONS[lang].sos_title;
+
+    const sosSubtitle = document.getElementById('sos-subtitle');
+    if (sosSubtitle && TRANSLATIONS[lang].sos_subtitle) sosSubtitle.textContent = TRANSLATIONS[lang].sos_subtitle;
+
+    const sosAmbulance = document.querySelector('#sos-ambulance > div:nth-child(1) > div:nth-child(1)');
+    if (sosAmbulance && TRANSLATIONS[lang].sos_call_ambulance) sosAmbulance.textContent = TRANSLATIONS[lang].sos_call_ambulance;
+
+    const sosAmbulanceSub = document.querySelector('#sos-ambulance > div:nth-child(1) > div:nth-child(2)');
+    if (sosAmbulanceSub && TRANSLATIONS[lang].sos_call_free) sosAmbulanceSub.textContent = TRANSLATIONS[lang].sos_call_free;
+
+    const locateBtn = document.getElementById('sos-locate-btn');
+    if (locateBtn && TRANSLATIONS[lang].locate_nearest) locateBtn.textContent = TRANSLATIONS[lang].locate_nearest;
+
+    // Nav tabs
+    const navTabs = document.querySelectorAll('.nav-tab');
+    navTabs.forEach(tab => {
+      const page = tab.dataset?.page;
+      const tabKey = `nav_${page}`;
+      if (TRANSLATIONS[lang][tabKey]) {
+        tab.textContent = TRANSLATIONS[lang][tabKey];
+      }
+    });
+
+    // Card titles (step X)
+    const cardTitles = document.querySelectorAll('.card-title');
+    cardTitles.forEach((card, i) => {
+      const span = card.querySelector('span');
+      if (!span) return;
+      const text = span.textContent;
+      if (i === 0 && TRANSLATIONS[lang].step1_title) span.textContent = TRANSLATIONS[lang].step1_title;
+      else if (i === 1 && TRANSLATIONS[lang].step2_title) span.textContent = TRANSLATIONS[lang].step2_title;
+    });
+  }
+
+  // Update language selector UI
   document.getElementById('current-lang-flag').textContent = lang === 'en' ? '🇬🇧' : '🇪🇹';
   const langNames = { en: 'English', am: 'አማርኛ', om: 'Afaan Oromo', ti: 'ትግርኛ' };
   document.getElementById('current-lang-name').textContent = langNames[lang];
@@ -4716,5 +5714,418 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-</body>
+
+<!-- Auth Modal Script -->
+<script>
+// Auth state
+window.authToken = null;
+window.currentUser = null;
+let authMode = 'login';
+
+function openAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // Focus email input
+    setTimeout(() => document.getElementById('auth-email')?.focus(), 100);
+  }
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('auth-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    // Clear error/success messages
+    hideAuthError();
+    hideAuthSuccess();
+    // Reset form elements
+    resetAuthModal();
+  }
+}
+
+function closeAuthModalOnOverlay(event) {
+  if (event.target.id === 'auth-modal') {
+    closeAuthModal();
+  }
+}
+
+function toggleAuthMode(mode) {
+  authMode = mode;
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const title = document.getElementById('auth-modal-title');
+  const btnText = document.getElementById('auth-btn-text');
+  const confirmGroup = document.getElementById('confirm-password-group');
+  const authSwitch = document.getElementById('auth-switch');
+  const passwordInput = document.getElementById('auth-password');
+  const authForm = document.getElementById('auth-form');
+
+  if (mode === 'login') {
+    tabLogin?.classList.add('active');
+    tabRegister?.classList.remove('active');
+    title.textContent = 'Login';
+    btnText.textContent = 'Login';
+    confirmGroup.style.display = 'none';
+    passwordInput.removeAttribute('required');
+    authSwitch.innerHTML = '<span>Don\'t have an account? <a onclick="toggleAuthMode(\'register\')">Register</a></span>';
+    // Remove confirm password validator from form
+    const confirmInput = document.getElementById('auth-confirm-password');
+    if (confirmInput) confirmInput.removeAttribute('required');
+  } else {
+    tabLogin?.classList.remove('active');
+    tabRegister?.classList.add('active');
+    title.textContent = 'Create Account';
+    btnText.textContent = 'Register';
+    confirmGroup.style.display = 'block';
+    passwordInput.setAttribute('required', '');
+    authSwitch.innerHTML = '<span>Already have an account? <a onclick="toggleAuthMode(\'login\')">Login</a></span>';
+  }
+
+  hideAuthError();
+  hideAuthSuccess();
+}
+
+function showAuthError(message) {
+  const errorEl = document.getElementById('auth-error');
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.classList.add('show');
+  }
+}
+
+function hideAuthError() {
+  const errorEl = document.getElementById('auth-error');
+  if (errorEl) {
+    errorEl.textContent = '';
+    errorEl.classList.remove('show');
+  }
+}
+
+function showAuthSuccess(message) {
+  const successEl = document.getElementById('auth-success');
+  if (successEl) {
+    successEl.textContent = message;
+    successEl.classList.add('show');
+  }
+}
+
+function hideAuthSuccess() {
+  const successEl = document.getElementById('auth-success');
+  if (successEl) {
+    successEl.textContent = '';
+    successEl.classList.remove('show');
+  }
+}
+
+function showVerificationPending(message) {
+  const form = document.getElementById('auth-form');
+  const modalTitle = document.getElementById('auth-modal-title');
+  const tabs = document.querySelector('.auth-tabs');
+  const authSwitch = document.getElementById('auth-switch');
+
+  // Hide form and show verification message
+  if (form) form.style.display = 'none';
+  if (tabs) tabs.style.display = 'none';
+  if (authSwitch) authSwitch.style.display = 'none';
+
+  // Update title
+  if (modalTitle) {
+    modalTitle.textContent = 'Verify Your Email';
+  }
+
+  // Add verification pending message
+  const successEl = document.getElementById('auth-success');
+  if (successEl) {
+    successEl.innerHTML = `
+      <div style="text-align: center; padding: 1rem 0;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">&#128231;</div>
+        <p style="margin-bottom: 0.5rem;">${message || 'Registration successful. Please check your email.'}</p>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem;">
+          We sent a verification link to your email. Click the link to activate your account.
+        </p>
+      </div>
+    `;
+    successEl.classList.add('show');
+  }
+}
+
+function resetAuthModal() {
+  // Reset modal to initial state
+  const form = document.getElementById('auth-form');
+  const tabs = document.querySelector('.auth-tabs');
+  const authSwitch = document.getElementById('auth-switch');
+  const modalTitle = document.getElementById('auth-modal-title');
+  const successEl = document.getElementById('auth-success');
+
+  if (form) form.style.display = 'block';
+  if (tabs) tabs.style.display = 'flex';
+  if (authSwitch) authSwitch.style.display = 'block';
+  if (modalTitle) modalTitle.textContent = authMode === 'register' ? 'Register' : 'Login';
+  if (successEl) {
+    successEl.innerHTML = '';
+    successEl.classList.remove('show');
+  }
+}
+
+function setAuthLoading(loading) {
+  const btn = document.getElementById('auth-submit-btn');
+  const spinner = document.getElementById('auth-spinner');
+  const btnText = document.getElementById('auth-btn-text');
+
+  if (btn) btn.disabled = loading;
+  if (spinner) spinner.style.display = loading ? 'block' : 'none';
+  if (btnText) btnText.style.display = loading ? 'none' : 'inline';
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+
+  hideAuthError();
+  hideAuthSuccess();
+
+  const email = document.getElementById('auth-email')?.value.trim();
+  const password = document.getElementById('auth-password')?.value;
+  const confirmPassword = document.getElementById('auth-confirm-password')?.value;
+
+  if (!email || !password) {
+    showAuthError('Please fill in all required fields.');
+    return;
+  }
+
+  if (authMode === 'register') {
+    if (password.length < 8) {
+      showAuthError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showAuthError('Passwords do not match.');
+      return;
+    }
+  }
+
+  setAuthLoading(true);
+
+  try {
+    if (authMode === 'login') {
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showAuthError(data.error || 'Login failed. Please check your credentials.');
+        setAuthLoading(false);
+        return;
+      }
+
+      // Store token in memory (never localStorage for security)
+      window.authToken = data.token;
+      window.currentUser = { email };
+
+      showAuthSuccess('Login successful! Redirecting...');
+
+      // Update UI
+      updateAuthUI();
+
+      // Close modal after brief delay
+      setTimeout(() => {
+        closeAuthModal();
+        showToast('Welcome back! You are now logged in.', 'success');
+      }, 800);
+
+    } else {
+      // Register mode
+      const response = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showAuthError(data.error || 'Registration failed. Please try again.');
+        setAuthLoading(false);
+        return;
+      }
+
+      // Check if email verification is pending
+      if (data.pendingVerification) {
+        // Show verification pending state
+        showVerificationPending(data.message || 'Please check your email to verify your account.');
+        setAuthLoading(false);
+        return;
+      }
+
+      // Auto-login after registration (only if no verification required)
+      // Note: This may fail if email confirmation is required
+      // In that case, Supabase will return an error on login
+      const loginResponse = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const loginData = await loginResponse.json();
+
+      if (loginResponse.ok && loginData.token) {
+        window.authToken = loginData.token;
+        window.currentUser = { email };
+
+        showAuthSuccess('Account created! Redirecting...');
+
+        // Update UI
+        updateAuthUI();
+
+        setTimeout(() => {
+          closeAuthModal();
+          showToast('Welcome to MediScan! Your account has been created.', 'success');
+        }, 800);
+      } else {
+        // Registration succeeded but auto-login failed
+        showAuthSuccess('Account created! Please log in with your credentials.');
+        toggleAuthMode('login');
+        document.getElementById('auth-password').value = '';
+        document.getElementById('auth-confirm-password').value = '';
+      }
+    }
+  } catch (error) {
+    console.error('Auth error:', error);
+    showAuthError('Network error. Please check your connection and try again.');
+  }
+
+  setAuthLoading(false);
+}
+
+async function handleLogout() {
+  try {
+    await fetch('/auth/logout', { method: 'POST' });
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+
+  window.authToken = null;
+  window.currentUser = null;
+
+  // Close dropdown if open
+  const dropdown = document.querySelector('.nav-user-dropdown');
+  if (dropdown) dropdown.classList.remove('show');
+
+  updateAuthUI();
+  showToast('You have been logged out.', 'info');
+}
+
+function updateAuthUI() {
+  const authBtn = document.getElementById('auth-btn');
+  const navRight = document.querySelector('.nav-right');
+
+  if (!navRight) return;
+
+  // Remove existing user menu if present
+  const existingUserMenu = document.querySelector('.nav-user-menu');
+  if (existingUserMenu) {
+    existingUserMenu.remove();
+  }
+
+  // Remove existing logout from nav tabs
+  const existingLogoutTab = document.querySelector('[data-auth-action="logout"]');
+  if (existingLogoutTab) {
+    existingLogoutTab.remove();
+  }
+
+  if (window.authToken && window.currentUser) {
+    // User is logged in - show user menu
+    if (authBtn) authBtn.style.display = 'none';
+
+    const userMenuDiv = document.createElement('div');
+    userMenuDiv.className = 'nav-user-menu';
+
+    // Get first letter of email for avatar
+    const initial = window.currentUser.email ? window.currentUser.email[0].toUpperCase() : '?';
+
+    userMenuDiv.innerHTML = `
+      <button class="nav-user-btn" onclick="toggleUserDropdown()">
+        <div class="nav-user-avatar">${initial}</div>
+        <span class="nav-user-email">${window.currentUser.email.split('@')[0]}</span>
+        <span style="font-size: 0.7rem;">▼</span>
+      </button>
+      <div class="nav-user-dropdown" id="user-dropdown">
+        <div class="nav-user-dropdown-item" style="pointer-events: none; opacity: 0.7;">
+          👤 ${window.currentUser.email}
+        </div>
+        <div class="nav-user-dropdown-item" onclick="showPage('history'); toggleUserDropdown();">
+          📋 My Scans
+        </div>
+        <div class="nav-user-dropdown-item" onclick="showPage('dashboard'); toggleUserDropdown();">
+          📊 Dashboard
+        </div>
+        <div class="nav-user-dropdown-item danger" onclick="handleLogout()">
+          🚪 Logout
+        </div>
+      </div>
+    `;
+
+    // Insert after auth button in nav-right
+    if (authBtn) {
+      navRight.insertBefore(userMenuDiv, authBtn.nextSibling);
+    }
+  } else {
+    // User is not logged in - show login button
+    if (authBtn) authBtn.style.display = '';
+  }
+}
+
+function toggleUserDropdown() {
+  const dropdown = document.getElementById('user-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('show');
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+  const userMenu = document.querySelector('.nav-user-menu');
+  if (userMenu && !userMenu.contains(event.target)) {
+    const dropdown = document.getElementById('user-dropdown');
+    if (dropdown) dropdown.classList.remove('show');
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('auth-modal');
+    if (modal && modal.classList.contains('open')) {
+      closeAuthModal();
+    }
+  }
+});
+
+// Initialize auth UI on page load
+document.addEventListener('DOMContentLoaded', updateAuthUI);
+
+// For API calls that need auth, use this helper
+window.getAuthHeaders = function() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (window.authToken) {
+    headers['Authorization'] = `Bearer ${window.authToken}`;
+  }
+  return headers;
+};
+
+// Helper to require authentication for certain actions
+window.requireAuth = function(action) {
+  if (!window.authToken) {
+    showToast('Please login to continue.', 'info');
+    openAuthModal();
+    return false;
+  }
+  return true;
+};
+</script></body>
 </html>

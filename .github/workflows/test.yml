@@ -1,0 +1,63 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test on Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: test-secret-key-for-mediscan-auth-tests-only-do-not-use-in-prod
+      DATA_ENC_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      BCRYPT_ROUNDS: '4'
+      RATE_LIMIT_WINDOW: '1'
+      RATE_LIMIT_MAX: '10'
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_SERVICE_KEY: test-service-role-key
+      GEMINI_API_KEY: test-gemini-key
+      GROQ_API_KEY: test-groq-key
+      NVIDIA_API_KEY: test-nvidia-key
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            reports/
+            coverage/
+          if-no-files-found: ignore
+
+  done:
+    name: All tests passed
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: All tests passed
+        run: echo "All test jobs completed successfully"
