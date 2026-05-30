@@ -1641,6 +1641,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    max-width: calc(100vw - 140px);
   }
   .nav-right::-webkit-scrollbar {
     display: none;
@@ -3134,7 +3135,6 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
-    <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
     <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
     <button class="nav-tab" data-page="appointments" onclick="showPage('appointments',this)" data-i18n="nav_appointments"><svg class="icon icon-sm icon-inline"><use href="#icon-calendar"/></svg> Appointments</button>
     <button class="nav-tab" data-page="reminders" onclick="showPage('reminders',this)" data-i18n="nav_reminders"><svg class="icon icon-sm icon-inline"><use href="#icon-pill"/></svg> Reminders</button>
