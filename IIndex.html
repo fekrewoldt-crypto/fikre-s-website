@@ -37,7 +37,23 @@
   }
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
+.icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 20px; height: 20px; }
+.icon-lg { width: 24px; height: 24px; }
+.icon-xl { width: 32px; height: 32px; }
+.icon-2xl { width: 48px; height: 48px; }
+.icon-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
 
 /* Animated Gradient Background - Light */
 body {
@@ -2880,8 +2896,226 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 </style>
 </head>
 <body>
+<!-- SVG Icon Library (hidden) -->
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <!-- Camera -->
+    <symbol id="icon-camera" viewBox="0 0 24 24">
+      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z"/>
+    </symbol>
+    <!-- Camera with flash -->
+    <symbol id="icon-camera-flash" viewBox="0 0 24 24">
+      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z"/>
+      <circle cx="17" cy="7" r="2" fill="#f39c12"/>
+    </symbol>
+    <!-- Microphone -->
+    <symbol id="icon-microphone" viewBox="0 0 24 24">
+      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+    </symbol>
+    <!-- Microscope/Scan -->
+    <symbol id="icon-microscope" viewBox="0 0 24 24">
+      <circle cx="10" cy="10" r="4"/>
+      <path d="M10 14v6m0 0c-2 0-4-2-4-4m4 4c2 0 4-2 4-4M6 18H4m16 0h-2m-2.5-2.5L18 8l-1.5-1.5M6 8.5L4.5 7 6 5.5"/>
+    </symbol>
+    <!-- Calendar -->
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Pill/Medicine -->
+    <symbol id="icon-pill" viewBox="0 0 24 24">
+      <path d="M8.5 8.5l7 7m0-14l-7 7 3 3 7-7-3-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10.5 13.5l3-3m0 0l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Hospital -->
+    <symbol id="icon-hospital" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 9v6m-3-3h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 7V5m8 2V5" stroke="currentColor" stroke-width="1.5"/>
+    </symbol>
+    <!-- Hotel/Health Center -->
+    <symbol id="icon-health-center" viewBox="0 0 24 24">
+      <rect x="4" y="6" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M9 6V4m6 2V4M8 10h8M8 14h8M8 18h8" stroke="currentColor" stroke-width="1.5"/>
+    </symbol>
+    <!-- Moon -->
+    <symbol id="icon-moon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Sun -->
+    <symbol id="icon-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Refresh -->
+    <symbol id="icon-refresh" viewBox="0 0 24 24">
+      <path d="M23 4v6h-6M1 20v-6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Location Pin -->
+    <symbol id="icon-location" viewBox="0 0 24 24">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Phone -->
+    <symbol id="icon-phone" viewBox="0 0 24 24">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Warning Alert -->
+    <symbol id="icon-warning" viewBox="0 0 24 24">
+      <path d="M12 2L2 22h20L12 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Alert Siren -->
+    <symbol id="icon-alert" viewBox="0 0 24 24">
+      <path d="M12 2L4 20h16L12 2z" fill="currentColor" opacity="0.2"/>
+      <path d="M12 2L4 20h16L12 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 9v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Checkmark -->
+    <symbol id="icon-check" viewBox="0 0 24 24">
+      <path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <!-- Close (X) -->
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="M6 6l12 12M6 18L18 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- User -->
+    <symbol id="icon-user" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M4 22c0-4 3.58-7 8-7s8 3 8 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Bell -->
+    <symbol id="icon-bell" viewBox="0 0 24 24">
+      <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9m-4.27 13c-.94 0-1.73-.79-1.73-1.73" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Newspaper -->
+    <symbol id="icon-newspaper" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M8 9h6m-6 4h8M8 17h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- List/Clipboard -->
+    <symbol id="icon-list" viewBox="0 0 24 24">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <rect x="9" y="3" width="6" height="2" rx="1" fill="currentColor"/>
+      <path d="M9 12h6m-6 4h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Clock -->
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 7v5l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Sunrise -->
+    <symbol id="icon-sunrise" viewBox="0 0 24 24">
+      <path d="M12 14V6m-5 5l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Partly Cloudy/Sun with cloud -->
+    <symbol id="icon-sun-cloud" viewBox="0 0 24 24">
+      <path d="M12 14V8m-3 3l3-3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M16 17a4 4 0 00-8 0h8z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Moon Waxing Crescent (Night) -->
+    <symbol id="icon-night" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M17 5l-2 2m2-2l-2-2m-2 6l-2 2m2-2l-2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- Map -->
+    <symbol id="icon-map" viewBox="0 0 24 24">
+      <path d="M1 6l7-4 8 4v12l-8 4-7-4V6z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M8 2v12m8-12v12" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Thermometer -->
+    <symbol id="icon-thermometer" viewBox="0 0 24 24">
+      <path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Syringe -->
+    <symbol id="icon-syringe" viewBox="0 0 24 24">
+      <path d="M18 2l4 4-9.5 9.5-4-4L18 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M15 5l4 4M5 15l6 6M12 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Virus -->
+    <symbol id="icon-virus" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 2v3m0 14v3m9-9h-3M6 12H3m15.36-6.36l-2.12 2.12m-6.36 6.36l-2.12 2.12m0-10.52l2.12 2.12m6.36 6.36l2.12 2.12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Circle Green (Success/Low) -->
+    <symbol id="icon-circle-green" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="#4CAF50"/>
+    </symbol>
+    <!-- Circle Yellow (Warning/Medium) -->
+    <symbol id="icon-circle-yellow" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="#FFC107"/>
+    </symbol>
+    <!-- Circle Red (Alert/High) -->
+    <symbol id="icon-circle-red" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="#f44336"/>
+    </symbol>
+    <!-- Circle Gray (Neutral) -->
+    <symbol id="icon-circle-gray" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="#9E9E9E"/>
+    </symbol>
+    <!-- Stethoscope/Clinic -->
+    <symbol id="icon-stethoscope" viewBox="0 0 24 24">
+      <path d="M4 12a6 6 0 016-6h4a6 6 0 016 6v2a4 4 0 01-4 4H8" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="4" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="20" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 12V6m0 0a4 4 0 100-4" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Book/Document -->
+    <symbol id="icon-book" viewBox="0 0 24 24">
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M8 7h8M8 11h8M8 15h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- Chart -->
+    <symbol id="icon-chart" viewBox="0 0 24 24">
+      <path d="M18 20V10m-6 6V4m-6 6v6m6-6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Info -->
+    <symbol id="icon-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 11v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- UK Flag -->
+    <symbol id="icon-flag-uk" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="20" fill="#012169" stroke="#C8102E" stroke-width="1"/>
+      <path d="M2 12L22 2m0 20L2 12m10-10l-2 12m10-10l-2-12M12 2v20" stroke="#fff" stroke-width="3"/>
+      <path d="M2 12L22 2m0 20L2 12m10-10l-2 12m10-10l-2-12M12 2v20" stroke="#C8102E" stroke-width="2"/>
+    </symbol>
+    <!-- Ethiopia Flag -->
+    <symbol id="icon-flag-et" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="20" fill="#078930"/>
+      <rect x="2" y="9" width="20" height="6" fill="#FCDD09"/>
+      <rect x="2" y="16" width="20" height="6" fill="#DA121A"/>
+      <circle cx="16" cy="12" r="3" fill="#FCDD09"/>
+    </symbol>
+    <!-- Plus (Add) -->
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+      <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- Trash -->
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+      <path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <!-- Clipboard -->
+    <symbol id="icon-clipboard" viewBox="0 0 24 24">
+      <rect x="8" y="2" width="8" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M6 4a2 2 0 012-2h8a2 2 0 012 2v18a2 2 0 01-2 2H8a2 2 0 01-2-2V4z" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Ambuance/Vehicle -->
+    <symbol id="icon-ambulance" viewBox="0 0 24 24">
+      <rect x="2" y="6" width="15" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M17 10h4l2 6v-6h-6z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M6 20a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="2"/>
+      <path d="M8 10h4m1 0h3" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+  </defs>
+</svg>
+
 <div class="ethiopian-accent"></div>
-<div class="demo-banner" id="demo-banner">⚠️ Demo Mode: Using sample data (API quota exceeded)</div>
 <div class="toast-container" id="toast-container"></div>
 
 <!-- Floating Particles -->
@@ -2902,27 +3136,27 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
     <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
     <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
-    <button class="nav-tab" data-page="appointments" onclick="showPage('appointments',this)" data-i18n="nav_appointments">📅 Appointments</button>
-    <button class="nav-tab" data-page="reminders" onclick="showPage('reminders',this)" data-i18n="nav_reminders">💊 Reminders</button>
-    <button class="nav-tab" data-page="facilities" onclick="showPage('facilities',this)" data-i18n="nav_facilities">🏥 Facilities</button>
-    <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
+    <button class="nav-tab" data-page="appointments" onclick="showPage('appointments',this)" data-i18n="nav_appointments"><svg class="icon icon-sm icon-inline"><use href="#icon-calendar"/></svg> Appointments</button>
+    <button class="nav-tab" data-page="reminders" onclick="showPage('reminders',this)" data-i18n="nav_reminders"><svg class="icon icon-sm icon-inline"><use href="#icon-pill"/></svg> Reminders</button>
+    <button class="nav-tab" data-page="facilities" onclick="showPage('facilities',this)" data-i18n="nav_facilities"><svg class="icon icon-sm icon-inline"><use href="#icon-hospital"/></svg> Facilities</button>
+    <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode"><svg class="icon icon-sm icon-inline"><use href="#icon-moon"/></svg></button>
     <div class="lang-selector">
       <button class="lang-btn" id="lang-btn" onclick="toggleLangDropdown()">
-        <span class="lang-flag" id="current-lang-flag">🇬🇧</span>
+        <span class="lang-flag" id="current-lang-flag">EN</span>
         <span id="current-lang-name">English</span>
       </button>
       <div class="lang-dropdown" id="lang-dropdown">
         <div class="lang-option active" data-lang="en" onclick="setLanguage('en')">
-          <span class="lang-flag">🇬🇧</span> English
+          <span class="lang-flag">EN</span> English
         </div>
         <div class="lang-option" data-lang="am" onclick="setLanguage('am')">
-          <span class="lang-flag">🇪🇹</span> አማርኛ
+          <span class="lang-flag">ET</span> አማርኛ
         </div>
         <div class="lang-option" data-lang="om" onclick="setLanguage('om')">
-          <span class="lang-flag">🇪🇹</span> Afaan Oromo
+          <span class="lang-flag">ET</span> Afaan Oromo
         </div>
         <div class="lang-option" data-lang="ti" onclick="setLanguage('ti')">
-          <span class="lang-flag">🇪🇹</span> ትግርኛ
+          <span class="lang-flag">ET</span> ትግርኛ
         </div>
       </div>
     </div>
@@ -2935,7 +3169,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <div class="auth-modal" onclick="event.stopPropagation()">
     <div class="auth-modal-header">
       <h2 class="auth-modal-title" id="auth-modal-title">Login</h2>
-      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">×</button>
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
     </div>
     <div id="auth-error" class="auth-error"></div>
     <div id="auth-success" class="auth-success"></div>
@@ -2980,12 +3214,12 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <div class="card-title"><div class="step-badge">1</div><span data-i18n="step1_title">Upload a photo (optional but recommended)</span></div>
       <div class="upload-zone" id="drop-zone">
         <input type="file" id="file-input" accept="image/*">
-        <div class="upload-icon">📷</div>
+        <div class="upload-icon"><svg class="icon icon-xl icon-inline"><use href="#icon-camera"/></svg></div>
         <p><strong data-i18n="upload_click">Click to upload</strong> <span data-i18n="upload_or">or drag and drop</span></p>
         <p style="margin-top:6px" data-i18n="upload_hint">Skin, eye, wound, rash — any visible condition</p>
       </div>
       <button class="camera-btn" onclick="openCamera()">
-        <span>📸</span>
+        <span><svg class="icon icon-md icon-inline"><use href="#icon-camera-flash"/></svg></span>
         <span>Take Photo with Camera</span>
       </button>
       <div id="preview-container">
@@ -2999,7 +3233,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <div style="position:relative" class="voice-input-wrapper">
         <textarea id="symptoms-text" data-i18n-placeholder="symptoms_placeholder" placeholder="e.g. I have had a rash on my forearm for 3 days. It is red, slightly raised, and itchy. No fever. No known allergies..."></textarea>
         <button type="button" id="voice-btn" onclick="toggleVoiceInput()" title="Voice input">
-          <span class="voice-icon">🎤</span>
+          <span class="voice-icon"><svg class="icon icon-lg icon-inline"><use href="#icon-microphone"/></svg></span>
           <span class="voice-text">Tap to speak</span>
           <span class="voice-waves">
             <span></span><span></span><span></span>
@@ -3040,7 +3274,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     </div>
 
     <div style="max-width:720px;margin:0 auto 2rem">
-      <button class="submit-btn" id="analyze-btn">🔬 Analyze symptoms</button>
+      <button class="submit-btn" id="analyze-btn"><svg class="icon icon-md icon-inline"><use href="#icon-microscope"/></svg> Analyze symptoms</button>
     </div>
   </div>
 
@@ -3082,21 +3316,21 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
         <ul class="alt-list" id="res-alts"></ul>
         <div class="chart-wrap"><canvas id="alts-chart"></canvas></div>
       </div>
-      <div class="result-section"><div class="warning-box">⚠️ <span id="res-disclaimer"></span></div></div>
+      <div class="result-section"><div class="warning-box"><svg class="icon icon-md icon-inline"><use href="#icon-warning"/></svg> <span id="res-disclaimer"></span></div></div>
 
       <div class="result-section" id="emergency-section" style="display:none;">
-        <div class="section-label">🏥 Immediate Medical Care Recommended</div>
+        <div class="section-label"><svg class="icon icon-md icon-inline"><use href="#icon-hospital"/></svg> Immediate Medical Care Recommended</div>
         <p style="font-size:0.9rem;color:var(--muted);margin-bottom:14px;">
           This condition may require prompt medical attention. Below are hospitals in Gondar with emergency services.
         </p>
         <button class="emergency-btn" onclick="showHospitalsModal()">
-          <span>🚨</span>
+          <svg class="icon icon-md icon-inline" fill="#fff"><use href="#icon-alert"/></svg>
           <span>View Nearby Hospitals</span>
         </button>
       </div>
 
       <div class="result-section" id="facilities-section" style="display:none;">
-        <div class="section-label">📍 Recommended Healthcare Facilities</div>
+        <div class="section-label"><svg class="icon icon-md icon-inline"><use href="#icon-location"/></svg> Recommended Healthcare Facilities</div>
         <p style="font-size:0.9rem;color:var(--muted);margin-bottom:14px;">
           Based on your condition, these facilities in Gondar are best suited for your needs.
         </p>
@@ -3168,9 +3402,9 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <!-- Health News Section -->
   <div class="chart-card" style="margin-top: 1.5rem;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <div class="chart-card-title">📰 Health News & Alerts</div>
+      <div class="chart-card-title"><svg class="icon icon-md icon-inline"><use href="#icon-newspaper"/></svg> Health News & Alerts</div>
       <button id="refresh-news-btn" onclick="refreshHealthNews()" style="background: var(--green); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
-        🔄 Refresh
+        <svg class="icon icon-sm icon-inline"><use href="#icon-refresh"/></svg> Refresh
       </button>
     </div>
     <div id="health-news-container" style="display: flex; flex-direction: column; gap: 12px;">
@@ -3191,7 +3425,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <!-- Personal Information Card -->
   <div class="card" style="margin-bottom: 1rem;">
     <div class="card-title">
-      <span style="font-size: 1.5rem;">👤</span>
+      <svg class="icon icon-xl icon-inline"><use href="#icon-user"/></svg>
       <span>Personal Information</span>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -3236,7 +3470,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <!-- Emergency Contact Card -->
   <div class="card" style="margin-bottom: 1rem;">
     <div class="card-title">
-      <span style="font-size: 1.5rem;">🆘</span>
+      <svg class="icon icon-xl icon-inline" fill="#c0392b"><use href="#icon-phone"/></svg>
       <span>Emergency Contact</span>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -3254,7 +3488,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <!-- Address Card -->
   <div class="card" style="margin-bottom: 1rem;">
     <div class="card-title">
-      <span style="font-size: 1.5rem;">📍</span>
+      <svg class="icon icon-xl icon-inline"><use href="#icon-location"/></svg>
       <span>Address</span>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -3272,7 +3506,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <!-- Notification Settings Card -->
   <div class="card" style="margin-bottom: 1.5rem;">
     <div class="card-title">
-      <span style="font-size: 1.5rem;">🔔</span>
+      <svg class="icon icon-xl icon-inline"><use href="#icon-bell"/></svg>
       <span>Notification Settings</span>
     </div>
     <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -3313,7 +3547,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div id="appointments-empty" class="history-empty" style="display: none;">
-    <div style="font-size: 2.5rem;">📅</div>
+    <svg class="icon icon-2xl icon-inline" style="color: var(--green);"><use href="#icon-calendar"/></svg>
     <p>No appointments yet. Book a consultation from your scan results.</p>
   </div>
 </div>
@@ -3336,7 +3570,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div id="reminders-empty" class="history-empty" style="display: none;">
-    <div style="font-size: 2.5rem; color: var(--green);">💊</div>
+    <svg class="icon icon-2xl icon-inline" style="color: var(--green);"><use href="#icon-pill"/></svg>
     <h3 style="margin: 1rem 0 0.5rem; color: var(--text); font-size: 1.2rem;">No medicine reminders</h3>
     <p>Add your first reminder to track your medications.</p>
   </div>
@@ -3356,7 +3590,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- MEDICINE REMINDER MODAL -->
 <div class="modal-bg" id="reminder-modal">
   <div class="modal" style="max-width: 480px;">
-    <button class="modal-close" onclick="closeReminderModal()">✕</button>
+    <button class="modal-close" onclick="closeReminderModal()"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
     <h3 id="reminder-modal-title">Add Medicine Reminder</h3>
     <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5;">
       Keep track of your medications and never miss a dose.
@@ -3392,23 +3626,23 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
         <div class="times-grid">
           <label class="time-checkbox">
             <input type="checkbox" name="reminder-times" value="08:00">
-            <span>🌅 Morning (8 AM)</span>
+            <span><svg class="icon icon-sm icon-inline"><use href="#icon-sunrise"/></svg> Morning (8 AM)</span>
           </label>
           <label class="time-checkbox">
             <input type="checkbox" name="reminder-times" value="12:00">
-            <span>☀️ Afternoon (12 PM)</span>
+            <span><svg class="icon icon-sm icon-inline" style="color:#e67e22"><use href="#icon-sun"/></svg> Afternoon (12 PM)</span>
           </label>
           <label class="time-checkbox">
             <input type="checkbox" name="reminder-times" value="14:00">
-            <span>🌤️ Midday (2 PM)</span>
+            <span><svg class="icon icon-sm icon-inline" style="color:#7f8c8d"><use href="#icon-sun-cloud"/></svg> Midday (2 PM)</span>
           </label>
           <label class="time-checkbox">
             <input type="checkbox" name="reminder-times" value="20:00">
-            <span>🌙 Evening (8 PM)</span>
+            <span><svg class="icon icon-sm icon-inline"><use href="#icon-moon"/></svg> Evening (8 PM)</span>
           </label>
           <label class="time-checkbox">
             <input type="checkbox" name="reminder-times" value="22:00">
-            <span>🌛 Night (10 PM)</span>
+            <span><svg class="icon icon-sm icon-inline"><use href="#icon-night"/></svg> Night (10 PM)</span>
           </label>
         </div>
       </div>
@@ -3440,7 +3674,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- DELETE REMINDER CONFIRM MODAL -->
 <div class="modal-bg" id="delete-reminder-modal">
   <div class="modal" style="max-width: 400px; text-align: center;">
-    <div style="font-size: 3rem; margin-bottom: 1rem;">💊</div>
+    <div style="font-size: 3rem; margin-bottom: 1rem;"><svg class="icon icon-2xl icon-inline" style="color: var(--green);"><use href="#icon-pill"/></svg></div>
     <h3 style="margin-bottom: 0.75rem;">Delete Reminder?</h3>
     <p id="delete-reminder-text" style="margin-bottom: 1.5rem;">
       Are you sure you want to delete this medicine reminder?
@@ -3455,17 +3689,17 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- FACILITIES PAGE -->
 <div id="facilities-page" class="page">
   <div class="page-header">
-    <h2 data-i18n="facilities_title">🏥 Healthcare Facilities</h2>
+    <h2 data-i18n="facilities_title"><svg class="icon icon-md icon-inline"><use href="#icon-hospital"/></svg> Healthcare Facilities</h2>
     <p data-i18n="facilities_subtitle">Hospitals, clinics, and pharmacies in Gondar, Ethiopia</p>
   </div>
 
   <div class="facilities-controls">
     <div class="filter-buttons">
       <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
-      <button class="filter-btn" data-filter="hospital" data-i18n="filter_hospital">🏥 Hospitals</button>
-      <button class="filter-btn" data-filter="health_center" data-i18n="filter_health_center">🏨 Health Centers</button>
-      <button class="filter-btn" data-filter="clinic" data-i18n="filter_clinic">🩺 Clinics</button>
-      <button class="filter-btn" data-filter="pharmacy" data-i18n="filter_pharmacy">💊 Pharmacies</button>
+      <button class="filter-btn" data-filter="hospital" data-i18n="filter_hospital"><svg class="icon icon-sm icon-inline"><use href="#icon-hospital"/></svg> Hospitals</button>
+      <button class="filter-btn" data-filter="health_center" data-i18n="filter_health_center"><svg class="icon icon-sm icon-inline"><use href="#icon-health-center"/></svg> Health Centers</button>
+      <button class="filter-btn" data-filter="clinic" data-i18n="filter_clinic"><svg class="icon icon-sm icon-inline"><use href="#icon-stethoscope"/></svg> Clinics</button>
+      <button class="filter-btn" data-filter="pharmacy" data-i18n="filter_pharmacy"><svg class="icon icon-sm icon-inline"><use href="#icon-pill"/></svg> Pharmacies</button>
     </div>
     <div class="search-box">
       <input type="text" id="facility-search" data-i18n-placeholder="search_placeholder" placeholder="Search facilities...">
@@ -3482,15 +3716,15 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div class="facilities-actions">
-    <button id="view-toggle" class="action-btn" data-i18n="view_list">📋 List View</button>
-    <button id="near-me-btn" class="action-btn" data-i18n="find_nearest">📍 Find Nearest</button>
+    <button id="view-toggle" class="action-btn" data-i18n="view_list"><svg class="icon icon-sm icon-inline"><use href="#icon-list"/></svg> List View</button>
+    <button id="near-me-btn" class="action-btn" data-i18n="find_nearest"><svg class="icon icon-sm icon-inline"><use href="#icon-location"/></svg> Find Nearest</button>
   </div>
 </div>
 
 <!-- BOOKING MODAL -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
-    <button class="modal-close" id="modal-close">✕</button>
+    <button class="modal-close" id="modal-close"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
     <h3>Book a consultation</h3>
     <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem">Select a doctor and time to book your appointment.</p>
     <input type="text" id="booking-name" placeholder="Your full name" autocomplete="name">
@@ -3518,14 +3752,14 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- GONDAR HOSPITALS MODAL -->
 <div class="modal-bg" id="hospitals-modal">
   <div class="modal" style="max-width: 520px; max-height: 85vh; overflow-y: auto;">
-    <button class="modal-close" onclick="document.getElementById('hospitals-modal').classList.remove('open')">✕</button>
-    <h3>🏥 Nearby Hospitals in Gondar</h3>
+    <button class="modal-close" onclick="document.getElementById('hospitals-modal').classList.remove('open')"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+    <h3><svg class="icon icon-md icon-inline"><use href="#icon-hospital"/></svg> Nearby Hospitals in Gondar</h3>
     <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem;">
       High severity detected. Please seek immediate medical attention at one of these facilities.
     </p>
 
     <div class="emergency-banner">
-      <span class="icon">🚨</span>
+      <svg class="icon icon-lg icon-inline" fill="#fff"><use href="#icon-alert"/></svg>
       <div>
         <div style="font-weight: 600;">Emergency? Call 907 (Ambulance)</div>
         <div style="font-size: 0.9rem; opacity: 0.9;">Free ambulance service in Gondar city</div>
@@ -3541,7 +3775,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- HEALTH NEWS DETAIL MODAL -->
 <div class="modal-bg" id="news-detail-modal">
   <div class="modal" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
-    <button id="news-detail-close" class="modal-close" onclick="closeNewsDetail()">✕</button>
+    <button id="news-detail-close" class="modal-close" onclick="closeNewsDetail()"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
     <div id="news-detail-content">
       <!-- News detail will be rendered here -->
     </div>
@@ -3551,7 +3785,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- CAMERA MODAL -->
 <div class="camera-modal" id="camera-modal">
   <div class="camera-container">
-    <h3 style="margin-bottom: 15px; font-family: 'DM Serif Display', serif;">📸 Take a Photo</h3>
+    <h3 style="margin-bottom: 15px; font-family: 'DM Serif Display', serif;"><svg class="icon icon-md icon-inline"><use href="#icon-camera-flash"/></svg> Take a Photo</h3>
     <video class="camera-preview" id="camera-video" autoplay playsinline></video>
     <canvas id="camera-canvas" style="display: none;"></canvas>
     <div class="camera-controls">
