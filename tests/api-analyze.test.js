@@ -13,6 +13,7 @@ process.env.RATE_LIMIT_MAX = '100'; // generous for most tests
 process.env.GEMINI_API_KEY = '';
 process.env.GROQ_API_KEY = '';
 process.env.NVIDIA_API_KEY = '';
+process.env.VISION_API_KEY = '';
 
 require('./setup');
 
