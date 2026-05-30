@@ -55,6 +55,45 @@
   vertical-align: middle;
 }
 
+/* Skip to content link (accessibility) */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--green);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 0 0 8px 8px;
+  z-index: 9999;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: none;
+}
+
+/* Focus visible styles (accessibility) */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--green-light), 0 0 0 5px var(--green);
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--green-light), 0 0 0 5px var(--green);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Animated Gradient Background - Light */
 body {
   font-family:'DM Sans',sans-serif;
@@ -490,6 +529,50 @@ textarea::placeholder { color:#aaa; }
 [data-theme="dark"] .btn-secondary:hover { background: rgba(26, 107, 74, 0.3); }
 
 #loading { display:none; text-align:center; padding: 4rem 2rem; max-width: 700px; margin: 0 auto; }
+#loading.skeleton-mode { padding: 2rem; }
+
+/* Skeleton Loading States */
+.skeleton-loader { display: none; }
+.skeleton-mode .spinner-wrap,
+.skeleton-mode .loading-steps { display: none; }
+.skeleton-mode .skeleton-loader { display: block; }
+
+.skeleton {
+  background: linear-gradient(to right, var(--border) 8%, var(--green-light) 18%, var(--border) 33%);
+  background-size: 800px 104px;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% { background-position: -468px 0; }
+  100% { background-position: 468px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background-size: 200% 100%; }
+  .spinner { animation: none; border-top-color: var(--green); }
+  .loading-steps li::before { animation: none !important; }
+  .fadeUp, @keyframes fadeUp, .hero *, [style*="animation"] { animation: none !important; transition: none !important; }
+  .demo-dot { animation: none; }
+  .stagger-item, .history-item, .reminder-item, .appointment-item { animation: none; opacity: 1; }
+}
+
+.skeleton-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 1rem;
+}
+.skeleton-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 1.5rem; }
+.skeleton-pill { height: 20px; width: 100px; }
+.skeleton-title { height: 32px; width: 70%; margin-bottom: 8px; }
+.skeleton-subtitle { height: 16px; width: 50%; opacity: 0.6; }
+.skeleton-bar { height: 10px; border-radius: 5px; margin-top: 12px; }
+.skeleton-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 1rem 0; }
+.skeleton-stat { height: 60px; border-radius: 12px; }
+.skeleton-list { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
+.skeleton-item { height: 24px; border-radius: 6px; }
+
 .spinner { width: 56px; height: 56px; border: 4px solid var(--green-light); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-steps { list-style: none; margin-top: 2rem; text-align: left; max-width: 340px; margin-left: auto; margin-right: auto; }
@@ -499,6 +582,78 @@ textarea::placeholder { color:#aaa; }
 .loading-steps li.active { color: var(--text); font-weight: 500; }
 .loading-steps li.active::before { content: ''; width: 24px; height: 24px; border: 2px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
 .loading-steps li:not(.done):not(.active)::before { content: '○'; width: 24px; text-align: center; }
+
+/* Demo Mode Indicator */
+.demo-indicator {
+  position: fixed;
+  top: 84px;
+  right: 20px;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+  opacity: 0;
+  transform: translateX(100px);
+  transition: all 0.3s ease;
+}
+.demo-indicator.visible { opacity: 1; transform: translateX(0); }
+
+/* Demo Mode Toggle Button */
+.demo-toggle-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  color: #d97706;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.demo-toggle-btn:hover { background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; }
+.demo-toggle-btn.active { background: #f59e0b; color: white; border-color: #f59e0b; }
+.demo-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: demoPulse 2s infinite; }
+@keyframes demoPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Demo Mode Results Styling */
+#results.demo-mode .result-header { border: 2px solid #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.15); }
+.demo-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  font-size: 4rem;
+  font-weight: 900;
+  color: rgba(245, 158, 11, 0.06);
+  pointer-events: none;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  z-index: 0;
+  display: none;
+}
+#results.demo-mode .result-body { position: relative; }
+#results.demo-mode .demo-watermark { display: block; }
+
+/* Staggered Entrance Animations */
+.stagger-item {
+  opacity: 0;
+  animation: fadeUp 0.5s ease forwards;
+  animation-delay: calc(var(--index, 0) * 80ms);
+}
+.history-item, .reminder-item, .appointment-item { animation: fadeUp 0.4s ease forwards; }
 
 #results { display:none; max-width: 720px; margin: 0 auto 2rem; animation: fadeUp 0.5s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
@@ -2894,9 +3049,57 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   .auth-tab { padding: 10px 12px; font-size: 0.85rem; }
 }
 
+/* Print/PDF Export Styles */
+@media print {
+  * { visibility: hidden; }
+  #results, #results * { visibility: visible; }
+  #results {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+    color: #1a1a18 !important;
+    padding: 20px;
+    box-shadow: none;
+    border: none;
+  }
+  #results::before {
+    content: 'MEDISCAN HEALTH REPORT';
+    display: block;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #1a6b4a;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #1a6b4a;
+  }
+  .result-header { background: white !important; border: none; border-bottom: 1px solid #ddd; padding: 15px 0; }
+  .severity-pill { background: #e8f4ef !important; color: #1a6b4a !important; }
+  .disease-name { font-size: 22px; color: #1a1a18; }
+  .disease-subtitle { color: #666; }
+  .stats-row { display: flex; gap: 20px; background: white !important; border: 1px solid #ddd; padding: 15px; margin: 15px 0; }
+  .stat-card { background: #f9f9f9; padding: 10px; border-radius: 8px; }
+  .result-body { background: white !important; padding: 15px 0; }
+  .result-section { border-bottom: 1px solid #eee; padding: 10px 0; }
+  .section-label { color: #1a6b4a; font-weight: bold; }
+  .symptom-chip { background: #e8f4ef !important; border: 1px solid #1a6b4a !important; color: #1a1a18 !important; }
+  .steps-list li { border: none; padding: 5px 0; }
+  .step-num { background: #1a6b4a !important; color: white !important; }
+  .warning-box { background: #fff8f0 !important; border: 1px solid #f5cba7 !important; }
+  .alt-item { border: none; padding: 5px 0; }
+  #chat-section, nav, .hero, .card, .particles, .page > *:not(#results) { display: none !important; }
+  .result-footer { display: none; }
+  .disclaimer { display: block !important; font-size: 10px; color: #999; text-align: center; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }
+}
+#results .disclaimer { display: none; }
+
 </style>
 </head>
 <body>
+<!-- Skip to content (accessibility) -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <!-- SVG Icon Library (hidden) -->
 <svg style="display:none" aria-hidden="true">
   <defs>
@@ -3131,6 +3334,10 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <nav>
   <div class="logo">Medi<span>Scan</span></div>
   <div class="nav-right">
+    <button class="demo-toggle-btn" id="demo-toggle" onclick="toggleDemoMode()" title="Demo Mode - works without internet">
+      <span class="demo-dot"></span>
+      <span id="demo-toggle-text">Demo</span>
+    </button>
     <button class="nav-tab" id="auth-btn" onclick="openAuthModal()" data-i18n="auth_login_register">Login / Register</button>
     <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
@@ -3163,6 +3370,12 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <div class="nav-badge">AI Powered</div>
   </div>
 </nav>
+
+<!-- Demo Mode Floating Indicator -->
+<div class="demo-indicator" id="demo-indicator">
+  <span class="demo-dot"></span>
+  <span>Demo Mode Active</span>
+</div>
 
 <!-- Auth Modal -->
 <div class="auth-modal-overlay" id="auth-modal" onclick="closeAuthModalOnOverlay(event)">
@@ -3202,7 +3415,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 </div>
 
 <!-- SCAN PAGE -->
-<div id="scan-page" class="page active">
+<div id="scan-page" class="page active" role="main" aria-label="Main content">
   <div class="hero">
     <div class="hero-tag" data-i18n="hero_tag">Science Fair Project</div>
     <h1 data-i18n="hero_title">How are you<br><em>feeling?</em></h1>
@@ -3279,18 +3492,43 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div id="loading">
-    <div class="spinner"></div>
-    <p style="font-weight:600;font-size:1.1rem;margin-top:1rem" id="loading-title">Analyzing your information...</p>
-    <p style="color:var(--muted);font-size:0.9rem;margin-top:0.5rem" id="loading-status">Connecting to AI...</p>
-    <ul class="loading-steps">
-      <li id="ls1">Processing uploaded image</li>
-      <li id="ls2">Reading symptom description</li>
-      <li id="ls3">Cross-referencing medical knowledge</li>
-      <li id="ls4">Generating your report</li>
-    </ul>
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <p style="font-weight:600;font-size:1.1rem;margin-top:1rem" id="loading-title">Analyzing your information...</p>
+      <p style="color:var(--muted);font-size:0.9rem;margin-top:0.5rem" id="loading-status">Connecting to AI...</p>
+      <ul class="loading-steps">
+        <li id="ls1">Processing uploaded image</li>
+        <li id="ls2">Reading symptom description</li>
+        <li id="ls3">Cross-referencing medical knowledge</li>
+        <li id="ls4">Generating your report</li>
+      </ul>
+    </div>
+    <!-- Skeleton Loading Screen -->
+    <div class="skeleton-loader">
+      <div class="skeleton-card">
+        <div class="skeleton-header">
+          <div class="skeleton skeleton-pill"></div>
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-subtitle"></div>
+          <div class="skeleton skeleton-bar"></div>
+        </div>
+        <div class="skeleton-stats">
+          <div class="skeleton skeleton-stat"></div>
+          <div class="skeleton skeleton-stat"></div>
+          <div class="skeleton skeleton-stat"></div>
+        </div>
+        <div class="skeleton-list">
+          <div class="skeleton skeleton-item" style="width: 85%;"></div>
+          <div class="skeleton skeleton-item" style="width: 70%;"></div>
+          <div class="skeleton skeleton-item" style="width: 90%;"></div>
+          <div class="skeleton skeleton-item" style="width: 60%;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="results">
+    <div class="demo-watermark">Demo Mode</div>
     <div class="result-header">
       <div class="severity-pill" id="severity-pill"></div>
       <div class="disease-name" id="disease-name"></div>
@@ -3805,6 +4043,145 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 // Use relative URLs for API calls (works on both localhost and Vercel)
 const SERVER_URL = '/api/analyze';
 const CHAT_URL   = '/api/chat';
+
+// Demo Mode State
+let demoMode = false;
+
+// Demo Mode Cases - Ethiopian health context
+const DEMO_CASES = {
+  malaria: {
+    primaryCondition: "Malaria (suspected)",
+    confidence: 82,
+    severity: "medium",
+    subtitle: "Mosquito-borne parasitic infection",
+    description: "Malaria is caused by Plasmodium parasites transmitted through infected female Anopheles mosquito bites. It is endemic in Ethiopia, especially during rainy seasons (June-September). Symptoms typically appear 10-15 days after the infective bite.",
+    symptoms: ["Fever with chills", "Headache", "Profuse sweating", "Nausea and vomiting", "Muscle pain and fatigue"],
+    nextSteps: ["Visit a health center for Rapid Diagnostic Test (RDT) or blood smear", "If positive, begin Artemisinin-based Combination Therapy (ACT) as prescribed", "Rest adequately and stay hydrated", "Use insecticide-treated bed nets to prevent re-infection", "Return if fever persists beyond 48 hours of treatment"],
+    urgentSigns: "Severe headache, confusion, seizures, persistent vomiting, yellowing of skin/eyes, or unconsciousness - seek immediate care.",
+    alternatives: [
+      { name: "Typhoid Fever", confidence: 34 },
+      { name: "Viral Fever", confidence: 22 },
+      { name: "Respiratory Infection", confidence: 15 }
+    ],
+    disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
+  },
+  typhoid: {
+    primaryCondition: "Typhoid Fever (suspected)",
+    confidence: 76,
+    severity: "medium",
+    subtitle: "Bacterial infection from contaminated food/water",
+    description: "Typhoid fever is caused by Salmonella typhi bacteria, typically spread through contaminated food or water. It is common in areas with poor sanitation. Without treatment, it can cause serious complications including internal bleeding.",
+    symptoms: ["Prolonged fever (39-40C)", "Abdominal pain", "Headache", "Weakness and fatigue", "Constipation or diarrhea", "Rose spots on chest"],
+    nextSteps: ["Visit a health center for Widal test or blood culture", "Complete full course of antibiotics (usually ciprofloxacin or azithromycin)", "Drink only clean, boiled water", "Eat easily digestible foods", "Practice strict hand hygiene"],
+    urgentSigns: "High fever above 40C, severe abdominal pain, blood in stool, or signs of dehydration require immediate medical attention.",
+    alternatives: [
+      { name: "Malaria", confidence: 38 },
+      { name: "Gastroenteritis", confidence: 25 },
+      { name: "Tuberculosis", confidence: 12 }
+    ],
+    disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
+  },
+  pneumonia: {
+    primaryCondition: "Pneumonia (suspected)",
+    confidence: 79,
+    severity: "high",
+    subtitle: "Lung infection causing air sac inflammation",
+    description: "Pneumonia is an infection that inflames the air sacs in one or both lungs. The air sacs may fill with fluid or pus, causing cough with phlegm, fever, chills, and difficulty breathing. It can be caused by bacteria, viruses, or fungi.",
+    symptoms: ["Productive cough with yellowish/green phlegm", "Shortness of breath", "Chest pain when breathing", "High fever with chills", "Rapid breathing", "General malaise"],
+    nextSteps: ["Seek medical care within 24 hours for chest X-ray and diagnosis", "Complete prescribed antibiotics for full course", "Get plenty of rest and stay well hydrated", "Use paracetamol for fever management", "Avoid smoking and pollution exposure"],
+    urgentSigns: "Severe difficulty breathing, blue lips or fingertips, confusion, or high fever not responding to medication requires emergency care.",
+    alternatives: [
+      { name: "Acute Bronchitis", confidence: 32 },
+      { name: "Tuberculosis", confidence: 28 },
+      { name: "COVID-19", confidence: 18 }
+    ],
+    disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
+  },
+  uti: {
+    primaryCondition: "Urinary Tract Infection (UTI)",
+    confidence: 85,
+    severity: "low",
+    subtitle: "Bacterial infection of the urinary system",
+    description: "A UTI is an infection in any part of the urinary system - kidneys, ureters, bladder, and urethra. Most infections involve the lower urinary tract (bladder and urethra). Women are at higher risk due to shorter urethra.",
+    symptoms: ["Burning sensation during urination", "Frequent urge to urinate", "Passing small amounts of urine", "Cloudy or strong-smelling urine", "Pelvic pain", "Low-grade fever"],
+    nextSteps: ["Visit a health center for urine dipstick test", "Complete prescribed antibiotics (usually 3-7 days)", "Drink plenty of water (2-3 liters daily)", "Avoid caffeine, alcohol, and spicy foods", "Void bladder after sexual activity"],
+    urgentSigns: "Back pain, fever above 38C, or vomiting may indicate kidney infection - seek prompt medical care.",
+    alternatives: [
+      { name: "Sexually Transmitted Infection", confidence: 22 },
+      { name: "Kidney Stones", confidence: 15 },
+      { name: "Vaginal Infection", confidence: 12 }
+    ],
+    disclaimer: "This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician."
+  }
+};
+
+// Toggle Demo Mode
+function toggleDemoMode() {
+  demoMode = !demoMode;
+  const toggle = document.getElementById('demo-toggle');
+  const indicator = document.getElementById('demo-indicator');
+  const loading = document.getElementById('loading');
+
+  if (demoMode) {
+    toggle.classList.add('active');
+    indicator.classList.add('visible');
+    showToast('Demo Mode enabled - works offline', 'info', 3000);
+  } else {
+    toggle.classList.remove('active');
+    indicator.classList.remove('visible');
+    loading.classList.remove('skeleton-mode');
+    showToast('Demo Mode disabled', 'info', 2000);
+  }
+
+  localStorage.setItem('mediscan_demo_mode', demoMode);
+}
+
+// Load demo mode from localStorage
+function initDemoMode() {
+  const saved = localStorage.getItem('mediscan_demo_mode');
+  if (saved === 'true') {
+    demoMode = true;
+    document.getElementById('demo-toggle').classList.add('active');
+    document.getElementById('demo-indicator').classList.add('visible');
+  }
+}
+
+// Get demo response based on symptoms/body area
+function getDemoResponse(symptoms, bodyArea) {
+  const symptomText = (symptoms || '').toLowerCase();
+  const areaText = (bodyArea || '').toLowerCase();
+
+  // Match based on symptom keywords
+  if (symptomText.includes('fever') || symptomText.includes('chill') || symptomText.includes('malaria')) {
+    return DEMO_CASES.malaria;
+  }
+  if (symptomText.includes('abdominal') || symptomText.includes('stomach') || symptomText.includes('typhoid') || symptomText.includes('diarrhea')) {
+    return DEMO_CASES.typhoid;
+  }
+  if (symptomText.includes('chest') || symptomText.includes('lung') || symptomText.includes('breath') || symptomText.includes('cough') || symptomText.includes('pneumonia')) {
+    return DEMO_CASES.pneumonia;
+  }
+  if (symptomText.includes('urine') || symptomText.includes('urinary') || symptomText.includes('burn') || symptomText.includes('bladder')) {
+    return DEMO_CASES.uti;
+  }
+
+  // Match based on body area
+  if (areaText.includes('chest') || areaText.includes('lung') || areaText.includes('respiratory')) {
+    return DEMO_CASES.pneumonia;
+  }
+  if (areaText.includes('stomach') || areaText.includes('gut') || areaText.includes('abdominal')) {
+    return DEMO_CASES.typhoid;
+  }
+  if (areaText.includes('urinary') || areaText.includes('pelvis')) {
+    return DEMO_CASES.uti;
+  }
+  if (areaText.includes('head') || areaText.includes('nervous') || areaText.includes('whole body')) {
+    return DEMO_CASES.malaria;
+  }
+
+  // Default case
+  return DEMO_CASES.malaria;
+}
 
 // Body heatmap state - using DemoBodyHeatmap
 let bodyHeatmap = null; // Will be DemoBodyHeatmap instance
@@ -4446,7 +4823,34 @@ async function analyze() {
   document.getElementById('chat-section').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
 
-  // Check which AI will be used
+  // Demo Mode - return mock response
+  if (demoMode) {
+    document.getElementById('loading').classList.add('skeleton-mode');
+    document.getElementById('loading-title').textContent = 'Demo Mode - Analyzing...';
+    document.getElementById('loading-status').textContent = 'Using offline medical database';
+
+    // Simulate loading time with skeleton animation
+    await new Promise(r => setTimeout(r, 2000));
+
+    const demoData = getDemoResponse(symptoms, selectedBody);
+    const startTime = Date.now();
+    currentResult = { ...demoData, modelUsed: 'demo', responseTimeMs: 150 };
+
+    // Reset to normal loading style for next time
+    document.getElementById('loading').classList.remove('skeleton-mode');
+    document.getElementById('loading-title').textContent = 'Analyzing your information...';
+
+    await new Promise(r => setTimeout(r, 300));
+    document.getElementById('loading').style.display = 'none';
+
+    showToast('Demo Mode: Showing sample result', 'info', 3000);
+    showResults(currentResult);
+    initChat(currentResult);
+    document.getElementById('results').classList.add('demo-mode');
+    return;
+  }
+
+  // Normal AI analysis (skip API status check in demo mode)
   try {
     const statusRes = await fetch('/api/status');
     const status = await statusRes.json();
@@ -4582,6 +4986,36 @@ async function syncHeatmapAfterAnalysis() {
   }
 }
 
+// Count-up animation for dashboard stats
+function countUp(element, target, duration = 1000) {
+  const start = 0;
+  const startTime = performance.now();
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (prefersReducedMotion) {
+    element.textContent = target;
+    return;
+  }
+
+  function easeOutQuart(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = easeOutQuart(progress);
+    const current = Math.round(start + (target - start) * easedProgress);
+    element.textContent = current;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
 function animateLoadingSteps() {
   const ids = ['ls1','ls2','ls3','ls4']; let i = 0;
   const stepDelay = 1500; // Reduced from 3800ms to better match actual API response times
@@ -4599,11 +5033,8 @@ function animateLoadingSteps() {
 // ── SHOW RESULTS ──
 function showResults(r) {
   document.getElementById('loading').style.display = 'none';
-  if (r.demoMode) {
-    document.getElementById('demo-banner').classList.add('show');
-  } else {
-    document.getElementById('demo-banner').classList.remove('show');
-  }
+  // Remove any previous demo mode styling
+  document.getElementById('results').classList.remove('demo-mode');
   const sMap = { low:['severity-low','Low'], medium:['severity-med','Medium'], high:['severity-high','High'] };
   const [cls, label] = sMap[r.severity] || sMap['medium'];
   const pill = document.getElementById('severity-pill');
@@ -4826,8 +5257,9 @@ function renderHistory() {
   const el = document.getElementById('history-list');
   if (!history.length) { el.innerHTML = '<div class="history-empty"><div style="font-size:2.5rem">📋</div><p>No scans yet. Run your first scan to see history here.</p></div>'; return; }
   const list = document.createElement('div'); list.className = 'history-list';
-  history.forEach(item => {
-    const div = document.createElement('div'); div.className = 'history-item';
+  history.forEach((item, index) => {
+    const div = document.createElement('div'); div.className = 'history-item stagger-item';
+    div.style.setProperty('--index', index);
     div.innerHTML = `<div class="history-icon ${item.severity}">${sevIcons[item.severity]||'⚪'}</div><div class="history-info"><div class="history-name">${item.condition}</div><div class="history-meta">${item.date} at ${item.time}${item.body ? ' · ' + item.body : ''}</div></div><span class="history-sev ${sevCls[item.severity]}">${item.severity}</span>`;
     div.addEventListener('click', () => {
       document.querySelectorAll('.nav-tab').forEach((t,i) => t.classList.toggle('active', i===0));
@@ -4863,10 +5295,9 @@ function renderDashboard() {
   const med   = h.filter(x => x.severity === 'medium').length;
   const low   = h.filter(x => x.severity === 'low').length;
 
-  document.getElementById('dash-total').textContent = total;
-  document.getElementById('dash-high').textContent  = high;
-  document.getElementById('dash-med').textContent   = med;
-  document.getElementById('dash-empty').style.display = total === 0 ? 'block' : 'none';
+  countUp(document.getElementById('dash-total'), total, 800);
+  setTimeout(() => countUp(document.getElementById('dash-high'), high, 600), 100);
+  setTimeout(() => countUp(document.getElementById('dash-med'), med, 600), 200);
   if (total === 0) return;
 
   sevChart = new Chart(document.getElementById('sev-chart').getContext('2d'), {
@@ -6063,6 +6494,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   setLanguage(currentLang);
   initBodyHeatmap();
+  initDemoMode();
   restoreFormState();
   renderHealthNews();
 });
@@ -7144,10 +7576,8 @@ function renderReminders(reminders, container) {
 
   reminders.forEach((reminder, index) => {
     const card = document.createElement('div');
-    card.className = 'reminder-card';
-    card.style.animation = 'fadeUp 0.4s ease';
-    card.style.animationDelay = `${index * 0.1}s`;
-    card.style.animationFillMode = 'both';
+    card.className = 'reminder-card stagger-item';
+    card.style.setProperty('--index', index);
 
     // Format times
     const times = Array.isArray(reminder.times) ? reminder.times : (reminder.times ? JSON.parse(reminder.times) : []);
@@ -7560,8 +7990,8 @@ function renderAppointments(appointments, container) {
 
   appointments.forEach((appointment, index) => {
     const card = document.createElement('div');
-    card.className = 'appointment-card';
-    card.style.animationDelay = `${index * 0.1}s`;
+    card.className = 'appointment-card stagger-item';
+    card.style.setProperty('--index', index);
 
     // Extract doctor info - handle both formats
     const doctorName = appointment.doctor_name || appointment.doctor?.name || 'Doctor';
