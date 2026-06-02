@@ -4536,6 +4536,20 @@ function saveFormState() {
   localStorage.setItem('mediscan_form', JSON.stringify(state));
 }
 
+// Debounced variant for keystroke-driven saves (textarea input). The full
+// saveFormState includes imageBase64 which can be many MB — running it on
+// every keystroke blocks the main thread via sync localStorage writes.
+// Exclude `image` here; the image is saved explicitly when the file is
+// chosen (so a large image is written once, not on every text edit).
+let saveFormStateDebouncedTimer = null;
+function saveFormStateDebounced() {
+  if (saveFormStateDebouncedTimer) clearTimeout(saveFormStateDebouncedTimer);
+  saveFormStateDebouncedTimer = setTimeout(() => {
+    saveFormStateDebouncedTimer = null;
+    saveFormState();
+  }, 400);
+}
+
 function restoreFormState() {
   try {
     const saved = localStorage.getItem('mediscan_form');
@@ -4880,8 +4894,8 @@ document.querySelectorAll('.dur-btn').forEach(b => b.addEventListener('click', (
   saveFormState();
 }));
 
-// Auto-save textarea
-document.getElementById('symptoms-text').addEventListener('input', saveFormState);
+// Auto-save textarea (debounced; image excluded — see saveFormStateDebounced)
+document.getElementById('symptoms-text').addEventListener('input', saveFormStateDebounced);
 
 // Voice input - Polished
 let recognition = null;
@@ -5384,7 +5398,7 @@ async function sendChat() {
   const fullPrompt = chatHistory.map(m => `${m.role === 'user' ? 'Patient' : 'Doctor'}: ${m.content}`).join('\n\n') + '\n\nDoctor:';
 
   try {
-    const res = await fetch(CHAT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt: fullPrompt }) });
+    const res = await fetch(CHAT_URL, { method:'POST', headers:{'Content-Type':'application/json', ...window.getAuthHeaders()}, body:JSON.stringify({ prompt: fullPrompt }) });
     const data = await res.json();
     const reply = data.reply || data.error || 'Could not process that.';
     chatHistory.push({ role:'model', content:reply });
@@ -6680,7 +6694,9 @@ prefersDark.addEventListener('change', (e) => {
   if (!localStorage.getItem('mediscan_theme')) setDarkMode(e.matches);
 });
 
-// Initialize on page load
+// Initialize on page load (single ordered handler — was previously three
+// separate DOMContentLoaded listeners at lines 6698, 7383, and 8610, which
+// caused subtle race conditions during page boot).
 window.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   setLanguage(currentLang);
@@ -6689,7 +6705,30 @@ window.addEventListener('DOMContentLoaded', () => {
   restoreFormState();
   renderHealthNews();
   handleGoogleLoginRedirect();
+  // Restore the session from the HttpOnly refresh cookie (works for
+  // both email/password and Google logins). updateAuthUI is called
+  // after, so the nav button reflects the restored auth state.
+  restoreSession().finally(() => {
+    updateAuthUI();
+    initNearMeButton();
+  });
 });
+
+// Calls /auth/refresh to exchange the HttpOnly refresh cookie for a
+// fresh access token, then stashes the token in memory. Silently no-ops
+// if the user is not logged in or the cookie has expired.
+async function restoreSession() {
+  try {
+    const res = await fetch('/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.token) {
+      window.authToken = data.token;
+    }
+  } catch (e) {
+    // Internal error - user remains logged out
+  }
+}
 </script>
 
 <!-- EMERGENCY FLOATING BUTTON -->
@@ -7362,47 +7401,44 @@ window.onFacilitiesPageShow = function() { fixInitMap(); };
   };
 })();
 
-// News loads via renderHealthNews when dashboard tab is shown
-// No need for separate DOMContentLoaded call
-
-// Also wire the near-me button properly, independent of the facilities tab
-document.addEventListener('DOMContentLoaded', function() {
+// Wires the "Find Nearest Hospital" button on the Facilities page.
+// Called from the unified DOMContentLoaded handler at line 6698.
+function initNearMeButton() {
   const nearBtn = document.getElementById('near-me-btn');
-  if (nearBtn && !nearBtn.dataset.fixBound) {
-    nearBtn.dataset.fixBound = '1';
-    nearBtn.addEventListener('click', function() {
-      if (!fixMap) { alert('Please open the Facilities tab first to load the map.'); return; }
-      if (!navigator.geolocation) { alert('Geolocation not supported by your browser.'); return; }
-      nearBtn.disabled = true; nearBtn.textContent = '📍 Locating…';
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
-          const userIcon = L.divIcon({
-            className:'', iconSize:[20,20], iconAnchor:[10,10],
-            html:'<div style="width:16px;height:16px;border-radius:50%;background:#2980b9;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,128,185,0.4)"></div>'
-          });
-          if (fixMap._userMarker) fixMap._userMarker.remove();
-          fixMap._userMarker = L.marker([uLat, uLng], { icon: userIcon })
-            .addTo(fixMap).bindPopup('📍 You are here').openPopup();
+  if (!nearBtn || nearBtn.dataset.fixBound) return;
+  nearBtn.dataset.fixBound = '1';
+  nearBtn.addEventListener('click', function() {
+    if (!fixMap) { alert('Please open the Facilities tab first to load the map.'); return; }
+    if (!navigator.geolocation) { alert('Geolocation not supported by your browser.'); return; }
+    nearBtn.disabled = true; nearBtn.textContent = '📍 Locating…';
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+        const userIcon = L.divIcon({
+          className:'', iconSize:[20,20], iconAnchor:[10,10],
+          html:'<div style="width:16px;height:16px;border-radius:50%;background:#2980b9;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,128,185,0.4)"></div>'
+        });
+        if (fixMap._userMarker) fixMap._userMarker.remove();
+        fixMap._userMarker = L.marker([uLat, uLng], { icon: userIcon })
+          .addTo(fixMap).bindPopup('📍 You are here').openPopup();
 
-          const sorted = [...FIX_FACILITIES].sort((a,b) => {
-            const dist = (la,lo) => Math.hypot(la-uLat, lo-uLng);
-            return dist(a.lat,a.lng) - dist(b.lat,b.lng);
-          });
-          const nearest = sorted[0];
-          fixMap.fitBounds([[uLat,uLng],[nearest.lat,nearest.lng]], { padding:[60,60] });
-          nearBtn.disabled = false; nearBtn.textContent = '✓ Your Location';
-        },
-        err => {
-          nearBtn.disabled = false; nearBtn.textContent = '📍 Find Nearest';
-          const msgs = {1:'Location permission denied.',2:'Location unavailable.',3:'Request timed out.'};
-          alert(msgs[err.code] || 'Could not get location.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    });
-  }
-});
+        const sorted = [...FIX_FACILITIES].sort((a,b) => {
+          const dist = (la,lo) => Math.hypot(la-uLat, lo-uLng);
+          return dist(a.lat,a.lng) - dist(b.lat,b.lng);
+        });
+        const nearest = sorted[0];
+        fixMap.fitBounds([[uLat,uLng],[nearest.lat,nearest.lng]], { padding:[60,60] });
+        nearBtn.disabled = false; nearBtn.textContent = '✓ Your Location';
+      },
+      err => {
+        nearBtn.disabled = false; nearBtn.textContent = '📍 Find Nearest';
+        const msgs = {1:'Location permission denied.',2:'Location unavailable.',3:'Request timed out.'};
+        alert(msgs[err.code] || 'Could not get location.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
 </script>
 
 <!-- Auth Modal Script -->
@@ -8592,8 +8628,8 @@ document.addEventListener('keydown', function(event) {
   }
 });
 
-// Initialize auth UI on page load
-document.addEventListener('DOMContentLoaded', updateAuthUI);
+// Initialize auth UI on page load (now part of the unified
+// DOMContentLoaded handler at line 6698)
 
 // For API calls that need auth, use this helper
 window.getAuthHeaders = function() {
