@@ -282,37 +282,6 @@ class HeatmapState {
   }
 
   /**
-   * Load state from localStorage
-   * @param {string} key - localStorage key (default: 'mediscan_heatmap_state')
-   * @param {number} ttl - Time-to-live in ms (default: 24 hours)
-   * @returns {HeatmapState} this for chaining
-   */
-  loadFromStorage(key = 'mediscan_heatmap_state', ttl = 24 * 60 * 60 * 1000) {
-    try {
-      const stored = localStorage.getItem(key);
-      if (!stored) return this;
-
-      const data = JSON.parse(stored);
-
-      // Check TTL if timestamp exists
-      if (data.timestamp && Date.now() - data.timestamp > ttl) {
-        console.log('HeatmapState: stored data expired, clearing');
-        localStorage.removeItem(key);
-        return this;
-      }
-
-      return this.fromJSON(data.state || data);
-    } catch (error) {
-      console.error('HeatmapState loadFromStorage error:', error);
-      // Clear corrupted data
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {}
-    }
-    return this;
-  }
-
-  /**
    * Get enhanced format for API submission (matches existing heatmap API)
    * @returns {object|null} Enhanced format or null if no selections
    */

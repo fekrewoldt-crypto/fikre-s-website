@@ -321,6 +321,18 @@ describe('/api/analyze endpoint', () => {
       const res = await analyzeRequest({ symptoms: 'rash-with-image' });
       expect(res.status).toBe(200);
     });
+
+    it('returns 413 with friendly error when body exceeds 4MB limit', async () => {
+      // Simulate a 4.5 MB raw base64 image — Vercel rejects these at the edge
+      // and the local express body-parser does the same with our 4mb cap.
+      const oversizedB64 = 'A'.repeat(4_500_000);
+      const res = await request(app)
+        .post('/api/analyze')
+        .send({ symptoms: 'rash', imageBase64: oversizedB64, imageMimeType: 'image/jpeg' });
+      expect(res.status).toBe(413);
+      expect(res.body.error).toMatch(/too large/i);
+      expect(res.body.error).toMatch(/image|photo|smaller/i);
+    });
   });
 
   describe('Model fallback chain', () => {

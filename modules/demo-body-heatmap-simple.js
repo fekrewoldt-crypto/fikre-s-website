@@ -442,10 +442,18 @@ class DemoBodyHeatmap {
       const tag = document.createElement('div');
       tag.className = 'demo-region-tag';
       tag.style.background = this.getPainColor(intensity);
-      tag.innerHTML = `
-        ${regionName} (${intensity.toFixed(1)})
-        <span class="demo-remove" data-region="${regionId}">✕</span>
-      `;
+
+      // Build tag safely with DOM APIs (avoids XSS via regionName / regionId)
+      const label = document.createElement('span');
+      label.textContent = `${regionName} (${intensity.toFixed(1)})`;
+      tag.appendChild(label);
+
+      const removeBtn = document.createElement('span');
+      removeBtn.className = 'demo-remove';
+      removeBtn.setAttribute('data-region', regionId);
+      removeBtn.textContent = '✕';
+      tag.appendChild(removeBtn);
+
       container.appendChild(tag);
     }
 

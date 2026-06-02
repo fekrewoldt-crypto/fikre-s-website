@@ -920,6 +920,10 @@ class BodyHeatmap {
   }
 
   updateGenderDisplay() {
+    // Kill any in-flight hold interval so it cannot target a region that no
+    // longer exists in the new SVG (prevents ghost clicks on view change).
+    this.clearHoldTimers();
+
     const wrapper = this.container.querySelector('.body-svg-wrapper');
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const borderColor = isDark ? 'rgba(255,255,255,0.15)' : '#ddddd0';
@@ -1004,6 +1008,10 @@ class BodyHeatmap {
   }
 
   updateViewDisplay() {
+    // Kill any in-flight hold interval so it cannot target a region that no
+    // longer exists after switching front/back view (prevents ghost clicks).
+    this.clearHoldTimers();
+
     const frontView = this.container.querySelector('.front-view');
     const backView = this.container.querySelector('.back-view');
 
@@ -1113,31 +1121,54 @@ class BodyHeatmap {
 
     summaryContainer.style.display = 'block';
 
-    chipsContainer.innerHTML = Array.from(this.selectedRegions.entries())
-      .map(([regionId, data]) => {
-        const regionData = this.regions[regionId];
-        if (!regionData) return '';
+    // Clear chips container safely
+    chipsContainer.innerHTML = '';
 
-        const intensity = typeof data === 'object' ? data.intensity : data;
-        const color = this.intensityToColor(intensity);
+    Array.from(this.selectedRegions.entries()).forEach(([regionId, data]) => {
+      const regionData = this.regions[regionId];
+      if (!regionData) return;
 
-        // Calculate number of filled segments for mini bar (10 segments)
-        const filledSegments = Math.round(intensity);
+      const intensity = typeof data === 'object' ? data.intensity : data;
+      const color = this.intensityToColor(intensity);
 
-        return `
-          <div class="summary-chip" data-region="${regionId}" style="border-color: ${color}">
-            <span style="color: ${color}">${regionData.name}</span>
-            <div class="chip-intensity-bar">
-              ${Array.from({ length: 10 }, (_, i) => `
-                <span class="chip-intensity-segment ${i < filledSegments ? 'active' : ''}"
-                      style="background: ${i < filledSegments ? color : ''}"></span>
-              `).join('')}
-            </div>
-            <span class="chip-intensity-value">${intensity.toFixed(1)}</span>
-            <button class="chip-remove" data-region="${regionId}" aria-label="Remove ${regionData.name}">&times;</button>
-          </div>
-        `;
-      }).join('');
+      // Calculate number of filled segments for mini bar (10 segments)
+      const filledSegments = Math.round(intensity);
+
+      // Build chip safely with DOM APIs to avoid XSS
+      const chip = document.createElement('div');
+      chip.className = 'summary-chip';
+      chip.setAttribute('data-region', regionId);
+      chip.style.borderColor = color;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.style.color = color;
+      nameSpan.textContent = regionData.name;
+      chip.appendChild(nameSpan);
+
+      const bar = document.createElement('div');
+      bar.className = 'chip-intensity-bar';
+      for (let i = 0; i < 10; i++) {
+        const seg = document.createElement('span');
+        seg.className = 'chip-intensity-segment' + (i < filledSegments ? ' active' : '');
+        if (i < filledSegments) seg.style.background = color;
+        bar.appendChild(seg);
+      }
+      chip.appendChild(bar);
+
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'chip-intensity-value';
+      valueSpan.textContent = intensity.toFixed(1);
+      chip.appendChild(valueSpan);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'chip-remove';
+      removeBtn.setAttribute('data-region', regionId);
+      removeBtn.setAttribute('aria-label', `Remove ${regionData.name}`);
+      removeBtn.textContent = '×'; // multiplication sign
+      chip.appendChild(removeBtn);
+
+      chipsContainer.appendChild(chip);
+    });
 
     // Attach remove listeners
     chipsContainer.querySelectorAll('.chip-remove').forEach(btn => {
@@ -1280,6 +1311,7 @@ class BodyHeatmap {
    * Cleanup and release resources (for consistency with 3D version)
    */
   cleanup() {
+    this.clearHoldTimers();
     this.clear();
     // Remove any tooltips
     const tooltip = document.getElementById('intensity-tooltip');

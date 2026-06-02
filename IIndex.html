@@ -20,6 +20,21 @@
   --glass: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(255, 255, 255, 0.4);
   --accent-blue: #7292AE; --accent-lavender: #E7E4FD; --soft-teal: #B4CFD8;
+  /* Premium gold accent — warm, complementary to Ethiopian green; used sparingly for elevated touches */
+  --gold: #c9a227; --gold-light: #f4e4a6; --gold-soft: #faf3df;
+  /* Tinted shadows: green-tinted, layered for premium depth (vs flat black) */
+  --shadow-tint-sm: 0 2px 8px rgba(26, 107, 74, 0.10), 0 1px 2px rgba(26, 107, 74, 0.06);
+  --shadow-tint: 0 8px 24px rgba(26, 107, 74, 0.12), 0 2px 6px rgba(26, 107, 74, 0.06);
+  --shadow-tint-lg: 0 20px 50px rgba(26, 107, 74, 0.16), 0 8px 20px rgba(26, 107, 74, 0.08);
+  --shadow-tint-xl: 0 32px 80px rgba(26, 107, 74, 0.20), 0 12px 28px rgba(26, 107, 74, 0.10);
+  /* Motion tokens — Apple-style premium ease, refined durations */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-instant: 120ms;
+  --dur-fast: 200ms;
+  --dur-base: 320ms;
+  --dur-slow: 520ms;
 }
 
 [data-theme="dark"] {
@@ -28,6 +43,11 @@
   --amber: #f39c12; --white: rgba(20, 40, 30, 0.85); --shadow: 0 8px 32px rgba(0,0,0,0.5);
   --glass: rgba(15, 35, 25, 0.75);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --gold: #e8c14a; --gold-light: rgba(232, 193, 74, 0.25); --gold-soft: rgba(232, 193, 74, 0.10);
+  --shadow-tint-sm: 0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-tint: 0 8px 24px rgba(0,0,0,0.40), 0 2px 6px rgba(0,0,0,0.20);
+  --shadow-tint-lg: 0 20px 50px rgba(0,0,0,0.50), 0 8px 20px rgba(0,0,0,0.25);
+  --shadow-tint-xl: 0 32px 80px rgba(0,0,0,0.60), 0 12px 28px rgba(0,0,0,0.30);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +57,11 @@
     --amber: #f39c12; --white: rgba(20, 40, 30, 0.85); --shadow: 0 8px 32px rgba(0,0,0,0.5);
     --glass: rgba(15, 35, 25, 0.75);
     --glass-border: rgba(255, 255, 255, 0.08);
+    --gold: #e8c14a; --gold-light: rgba(232, 193, 74, 0.25); --gold-soft: rgba(232, 193, 74, 0.10);
+    --shadow-tint-sm: 0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.20);
+    --shadow-tint: 0 8px 24px rgba(0,0,0,0.40), 0 2px 6px rgba(0,0,0,0.20);
+    --shadow-tint-lg: 0 20px 50px rgba(0,0,0,0.50), 0 8px 20px rgba(0,0,0,0.25);
+    --shadow-tint-xl: 0 32px 80px rgba(0,0,0,0.60), 0 12px 28px rgba(0,0,0,0.30);
   }
 }
 
@@ -186,9 +211,9 @@ nav {
 [data-theme="dark"] .logo::before { background: var(--green-mid); }
 .logo span { color:var(--text); font-weight: 400; }
 .nav-right { display:flex; align-items:center; gap:10px; }
-.nav-tab { background: rgba(255,255,255,0.3); border: 1px solid var(--glass-border); border-radius: 10px; padding:8px 16px; font-size:0.85rem; font-weight:500; font-family:'DM Sans',sans-serif; color:var(--muted); cursor:pointer; transition:all 0.3s ease; position: relative; }
+.nav-tab { background: rgba(255,255,255,0.3); border: 1px solid var(--glass-border); border-radius: 10px; padding:8px 16px; font-size:0.85rem; font-weight:500; font-family:'DM Sans',sans-serif; color:var(--muted); cursor:pointer; transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out); position: relative; }
 [data-theme="dark"] .nav-tab { background: rgba(0,0,0,0.2); }
-.nav-tab::after { content: ''; position: absolute; bottom: -6px; left: 50%; width: 16px; height: 4px; border-radius: 2px; background: var(--green); transform: translate(-50%, 0) scaleX(0); transform-origin: center; transition: transform 0.25s ease; }
+.nav-tab::after { content: ''; position: absolute; bottom: -6px; left: 50%; width: 16px; height: 4px; border-radius: 2px; background: var(--green); transform: translate(-50%, 0) scaleX(0); transform-origin: center; transition: transform var(--dur-base) var(--ease-out); }
 .nav-tab:hover:not(.active) { border-color:var(--green); color:var(--green); background:var(--green-light); transform: translateY(-1px); }
 .nav-tab.active { border-color:var(--green); color:var(--green); background:var(--green-light); }
 .nav-tab.active::after { transform: translate(-50%, 0) scaleX(1); }
@@ -199,18 +224,23 @@ nav {
 
 /* Enhanced Hero Section - Dribbble Style */
 .hero { text-align: center; padding: 6rem 2rem 4rem; max-width: 700px; margin: 0 auto; }
-.hero-tag { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--green-light) 100%); color: var(--green); font-size: 0.7rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; padding: 10px 20px; border-radius: 50px; margin-bottom: 2rem; border: none; animation: fadeInDown 0.8s ease; box-shadow: 0 4px 12px rgba(26, 107, 74, 0.1); }
+.hero-tag { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--green-light) 60%, var(--gold-soft) 100%); color: var(--green); font-size: 0.7rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; padding: 10px 20px; border-radius: 50px; margin-bottom: 2rem; border: 1px solid rgba(26, 107, 74, 0.12); animation: fadeInDown 0.9s var(--ease-out); box-shadow: 0 4px 14px rgba(26, 107, 74, 0.10), 0 1px 0 rgba(255, 255, 255, 0.6) inset; will-change: transform, opacity; }
+.hero-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.18); flex-shrink: 0; }
+[data-theme="dark"] .hero-tag { border-color: rgba(76, 196, 138, 0.20); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.05) inset; }
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
 }
 
-.hero h1 { font-family:'DM Serif Display',serif; font-size:clamp(2.75rem,6.5vw,4rem); line-height:1.05; color:var(--text); margin-bottom:1.25rem; letter-spacing:-1.5px; animation: fadeInUp 0.8s ease 0.2s both; font-weight: 600; will-change: transform, opacity; }
-.hero h1 em { font-style:italic; color:var(--green); font-weight: 400; }
+.hero h1 { font-family:'DM Serif Display',serif; font-size:clamp(2.75rem,6.5vw,4rem); line-height:1.05; color:var(--text); margin-bottom:1.25rem; letter-spacing:-1.5px; animation: fadeInUp 1s var(--ease-out) 0.15s both; font-weight: 600; will-change: transform, opacity; }
+.hero h1 em { font-style:italic; color:var(--green); font-weight: 400; background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 60%, var(--gold) 100%); -webkit-background-clip: text; background-clip: text; }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .hero h1 em { -webkit-text-fill-color: transparent; }
+}
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-.hero p { font-size:1.05rem; color:var(--muted); line-height:1.7; max-width:520px; margin:0 auto; animation: fadeInUp 0.8s ease 0.4s both; will-change: transform, opacity; }
+.hero p { font-size:1.05rem; color:var(--muted); line-height:1.7; max-width:520px; margin:0 auto; animation: fadeInUp 1s var(--ease-out) 0.35s both; will-change: transform, opacity; }
 
 /* Glassmorphism Cards - Dribbble Style */
 .card {
@@ -222,10 +252,12 @@ nav {
   padding: 2.25rem;
   max-width: 720px;
   margin: 0 auto 1.5rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-tint);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  will-change: transform;
 }
-.card:hover { transform: translateY(-4px) scale(1.005); box-shadow: 0 20px 50px rgba(0,0,0,0.12), 0 8px 20px rgba(26, 107, 74, 0.08); }
+.card:hover { transform: translateY(-4px) scale(1.005); box-shadow: var(--shadow-tint-lg); border-color: rgba(26, 107, 74, 0.18); }
+[data-theme="dark"] .card:hover { border-color: rgba(76, 196, 138, 0.25); }
 
 .card-title { font-weight:600; font-size:1rem; color:var(--text); margin-bottom:1.25rem; display:flex; align-items:center; gap:10px; }
 .step-badge { background: linear-gradient(135deg, var(--green-mid) 0%, var(--green) 100%); color:white; width:28px; height:28px; border-radius:10px; font-size:0.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: 0 4px 12px rgba(26, 107, 74, 0.25); }
@@ -237,22 +269,23 @@ nav {
   padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
   position: relative;
   background: linear-gradient(135deg, rgba(232, 244, 239, 0.4) 0%, rgba(231, 228, 253, 0.3) 50%, rgba(212, 237, 218, 0.2) 100%);
+  will-change: transform;
 }
 [data-theme="dark"] .upload-zone { background: linear-gradient(135deg, rgba(26, 107, 74, 0.12) 0%, rgba(45, 138, 98, 0.08) 100%); }
 .upload-zone:hover {
   border-color: var(--green);
   background: linear-gradient(135deg, rgba(232, 244, 239, 0.7) 0%, rgba(231, 228, 253, 0.5) 50%, rgba(212, 237, 218, 0.4) 100%);
   transform: scale(1.02);
-  box-shadow: 0 8px 32px rgba(26, 107, 74, 0.1);
+  box-shadow: var(--shadow-tint);
 }
 [data-theme="dark"] .upload-zone:hover { background: linear-gradient(135deg, rgba(26, 107, 74, 0.2) 0%, rgba(45, 138, 98, 0.15) 100%); }
 .upload-zone.drag-over { border-color: var(--green); border-style: solid; background: var(--green-light); transform: scale(1.03); }
 [data-theme="dark"] .upload-zone.drag-over { background: rgba(26, 107, 74, 0.25); }
 .upload-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-.upload-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--green-light) 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.75rem; box-shadow: 0 8px 24px rgba(26, 107, 74, 0.12); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.upload-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent-lavender) 0%, var(--green-light) 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; font-size: 1.75rem; box-shadow: 0 8px 24px rgba(26, 107, 74, 0.12); transition: transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out); will-change: transform; }
 .upload-zone:hover .upload-icon { transform: scale(1.1) rotate(-3deg); box-shadow: 0 12px 32px rgba(26, 107, 74, 0.2); }
 .upload-zone p { font-size:0.95rem; color:var(--muted); }
 .upload-zone strong { color:var(--green); }
@@ -271,7 +304,7 @@ nav {
   font-weight: 600;
   cursor: pointer;
   margin-top: 20px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
   box-shadow: 0 8px 24px rgba(114, 146, 174, 0.3);
 }
 .camera-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 32px rgba(114, 146, 174, 0.4); }
@@ -489,7 +522,7 @@ textarea::placeholder { color:#aaa; }
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -512,14 +545,16 @@ textarea::placeholder { color:#aaa; }
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(26, 107, 74, 0.25);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
+  box-shadow: var(--shadow-tint-sm);
+  will-change: transform;
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26, 107, 74, 0.35); }
-.btn-secondary { padding: 0.9rem 1.75rem; background: rgba(255,255,255,0.5); color: var(--green); border: 2px solid var(--green); border-radius: 10px; font-size: 0.95rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(26, 107, 74, 0.08); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26, 107, 74, 0.40), 0 2px 6px rgba(26, 107, 74, 0.20); }
+.btn-primary:active { transform: translateY(0) scale(0.98); transition-duration: var(--dur-instant); }
+.btn-secondary { padding: 0.9rem 1.75rem; background: rgba(255,255,255,0.5); color: var(--green); border: 2px solid var(--green); border-radius: 10px; font-size: 0.95rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out); box-shadow: var(--shadow-tint-sm); will-change: transform; }
 [data-theme="dark"] .btn-secondary { background: rgba(255,255,255,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .btn-secondary:hover { background: var(--green-light); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(26, 107, 74, 0.18); }
-.btn-secondary:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 4px rgba(26, 107, 74, 0.12); }
+.btn-secondary:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 4px rgba(26, 107, 74, 0.12); transition-duration: var(--dur-instant); }
 [data-theme="dark"] .btn-secondary:hover { background: rgba(26, 107, 74, 0.3); box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
 
 #loading { display:none; text-align:center; padding: 4rem 2rem; max-width: 700px; margin: 0 auto; }
@@ -548,6 +583,13 @@ textarea::placeholder { color:#aaa; }
   .fadeUp, .hero *, [style*="animation"] { animation: none !important; transition: none !important; }
   .demo-dot { animation: none; }
   .stagger-item, .history-item, .reminder-item, .appointment-item { animation: none; opacity: 1; }
+  /* Catch-all: shortens any remaining animation/transition to a single frame */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .skeleton-card {
@@ -567,8 +609,36 @@ textarea::placeholder { color:#aaa; }
 .skeleton-list { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
 .skeleton-item { height: 24px; border-radius: 6px; }
 
+/* Skeleton cards for list pages (appointments, reminders) */
+.skeleton-list-cards { display: flex; flex-direction: column; gap: 12px; padding: 0.5rem 0; }
+.skeleton-list-card { height: 96px; border-radius: 12px; }
+.skeleton-list-cards[aria-busy="true"] { contain: layout; }
+
 .spinner { width: 56px; height: 56px; border: 4px solid var(--green-light); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Loading placeholder for #body-heatmap-container while the defer'd
+   heatmap modules download. Reused the existing `@keyframes spin` from
+   above. */
+.heatmap-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2rem;
+  min-height: 280px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.heatmap-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--green-light);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
 .loading-steps { list-style: none; margin-top: 2rem; text-align: left; max-width: 340px; margin-left: auto; margin-right: auto; }
 .loading-steps li { font-size: 0.9rem; color: var(--muted); padding: 8px 0; display: flex; align-items: center; gap: 12px; transition: all 0.3s ease; }
 .loading-steps li.done { color: var(--green); }
@@ -686,11 +756,12 @@ textarea::placeholder { color:#aaa; }
   border-radius: 16px;
   padding: 1.25rem;
   text-align: center;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  box-shadow: var(--shadow-tint-sm);
+  will-change: transform;
 }
 [data-theme="dark"] .stat-card { background: rgba(255,255,255,0.08); }
-.stat-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.9); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.stat-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.9); box-shadow: var(--shadow-tint); }
 [data-theme="dark"] .stat-card:hover { background: rgba(255,255,255,0.15); }
 .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
 .stat-value { font-size: 1.3rem; font-weight: 600; color: var(--text); }
@@ -716,12 +787,12 @@ textarea::placeholder { color:#aaa; }
   color: var(--text);
   opacity: 0;
   transform: translateY(8px);
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+  box-shadow: var(--shadow-tint-sm);
 }
 [data-theme="dark"] .symptom-chip { background: rgba(255,255,255,0.08); border-color: var(--border); }
 .symptom-chip.visible { opacity: 1; transform: none; }
-.symptom-chip:hover { transform: translateY(-2px); background: var(--green-light); border-color: var(--green-mid); box-shadow: 0 4px 12px rgba(26, 107, 74, 0.1); }
+.symptom-chip:hover { transform: translateY(-2px); background: var(--green-light); border-color: var(--green-mid); box-shadow: var(--shadow-tint); }
 
 .steps-list { list-style: none; }
 .steps-list li { font-size: 0.95rem; line-height: 1.7; color: var(--text); padding: 8px 0; display: flex; gap: 12px; align-items: flex-start; opacity: 0; transform: translateX(-8px); transition: all 0.35s ease; }
@@ -836,7 +907,7 @@ textarea::placeholder { color:#aaa; }
 .chat-sug:hover { border-color: var(--green); color: var(--green); background: var(--green-light); transform: translateY(-1px); }
 .chat-input-row { display: flex; gap: 10px; padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: rgba(255,255,255,0.3); }
 [data-theme="dark"] .chat-input-row { background: rgba(0,0,0,0.15); }
-.chat-input { flex: 1; border: 2px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; background: rgba(255,255,255,0.8); color: var(--text); outline: none; transition: all 0.2s ease; }
+.chat-input { flex: 1; border: 2px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; background: rgba(255,255,255,0.8); color: var(--text); outline: none; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 [data-theme="dark"] .chat-input { background: rgba(0,0,0,0.2); }
 .chat-input:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1); }
 .chat-send {
@@ -1129,6 +1200,13 @@ textarea::placeholder { color:#aaa; }
   backdrop-filter: blur(5px);
 }
 .modal-bg.open { display: flex; }
+
+/* Body scroll lock when ANY modal is open (covers all 6 modals uniformly) */
+body:has(.modal-bg.open),
+body:has(.auth-modal-overlay.open),
+body:has(.camera-modal.open) {
+  overflow: hidden;
+}
 .modal {
   background: var(--glass);
   backdrop-filter: blur(30px);
@@ -1143,7 +1221,7 @@ textarea::placeholder { color:#aaa; }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 .modal h3 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; margin-bottom: 0.5rem; }
 .modal p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.25rem; }
-.modal input, .modal select { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; background: rgba(255,255,255,0.5); color: var(--text); margin-bottom: 12px; outline: none; transition: all 0.2s ease; }
+.modal input, .modal select { width: 100%; border: 2px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; background: rgba(255,255,255,0.5); color: var(--text); margin-bottom: 12px; outline: none; transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 [data-theme="dark"] .modal input, [data-theme="dark"] .modal select { background: rgba(0,0,0,0.2); }
 .modal input:focus, .modal select:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1); }
 .modal input[type="date"] { color-scheme: dark; }
@@ -1229,16 +1307,17 @@ textarea::placeholder { color:#aaa; }
 /* Emergency / Hospital Modal */
 .emergency-banner { background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%); color: white; padding: 14px 20px; border-radius: 12px; margin: 1rem 0; display: flex; align-items: center; gap: 12px; font-weight: 500; }
 .emergency-banner .icon { font-size: 1.6rem; }
-.hospital-card { background: rgba(255,255,255,0.5); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 10px 0; transition: all 0.2s ease; }
+.hospital-card { background: rgba(255,255,255,0.5); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 10px 0; transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); will-change: transform; }
 [data-theme="dark"] .hospital-card { background: rgba(255,255,255,0.05); }
-.hospital-card:hover { border-color: var(--green); transform: translateX(4px); background: rgba(255,255,255,0.8); }
+.hospital-card:hover { border-color: var(--green); transform: translateX(4px); background: rgba(255,255,255,0.8); box-shadow: var(--shadow-tint-sm); }
 [data-theme="dark"] .hospital-card:hover { background: rgba(255,255,255,0.12); }
 .hospital-name { font-weight: 600; color: var(--text); margin-bottom: 4px; }
 .hospital-info { font-size: 0.88rem; color: var(--muted); }
-.hospital-phone { display: inline-flex; align-items: center; gap: 6px; background: var(--green); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-top: 10px; text-decoration: none; transition: all 0.2s ease; }
-.hospital-phone:hover { background: var(--green-mid); transform: scale(1.05); }
-.emergency-btn { background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%); color: white; border: none; border-radius: 12px; padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 1rem 0; transition: all 0.3s ease; box-shadow: 0 4px 14px rgba(192, 57, 43, 0.3); }
-.emergency-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4); }
+.hospital-phone { display: inline-flex; align-items: center; gap: 6px; background: var(--green); color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-top: 10px; text-decoration: none; transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
+.hospital-phone:hover { background: var(--green-mid); transform: scale(1.05); box-shadow: var(--shadow-tint-sm); }
+.emergency-btn { background: linear-gradient(90deg, #c0392b 0%, #e74c3c 100%); color: white; border: none; border-radius: 12px; padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 1rem 0; transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); box-shadow: 0 4px 14px rgba(192, 57, 43, 0.3); will-change: transform; }
+.emergency-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4), 0 2px 6px rgba(192, 57, 43, 0.2); }
+.emergency-btn:active { transform: translateY(0) scale(0.98); transition-duration: var(--dur-instant); }
 
 /* Refresh News Button */
 #refresh-news-btn:hover { background: var(--green-mid); transform: scale(1.05); }
@@ -1413,7 +1492,7 @@ textarea::placeholder { color:#aaa; }
 
 /* Language Selector */
 .lang-selector { position: relative; }
-.lang-btn { background: var(--green-light); color: var(--green); border: 2px solid var(--green); border-radius: 10px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
+.lang-btn { background: var(--green-light); color: var(--green); border: 2px solid var(--green); border-radius: 10px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out); }
 .lang-btn:hover { background: var(--green); color: white; transform: translateY(-1px); }
 .lang-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 6px; min-width: 160px; box-shadow: var(--shadow); z-index: 300; }
 .lang-dropdown.show { display: block; animation: fadeUp 0.2s ease; }
@@ -2316,10 +2395,11 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
   background: rgba(255,255,255,0.5);
   color: var(--muted);
   font-family: 'DM Sans', sans-serif;
+  will-change: transform;
 }
 
 [data-theme="dark"] .demo-btn {
@@ -2501,11 +2581,16 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   padding: 2rem;
   max-width: 420px;
   width: 100%;
-  animation: authSlideUp 0.3s ease;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  animation: authSlideUp 0.45s var(--ease-out);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25), 0 8px 20px rgba(26, 107, 74, 0.10);
   position: relative;
 }
 @keyframes authSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .auth-modal { animation: none; }
+  .auth-error.show { animation: none; }
+  .auth-spinner { animation-duration: 1.6s; }
+}
 
 .auth-modal-header {
   display: flex;
@@ -2513,7 +2598,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   justify-content: space-between;
   margin-bottom: 1.5rem;
 }
-.auth-modal-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: var(--text); }
+.auth-modal-title { font-family: 'DM Sans', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
 .auth-modal-close {
   background: rgba(0, 0, 0, 0.1);
   border: none;
@@ -2529,6 +2614,8 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   transition: all 0.2s ease;
 }
 .auth-modal-close:hover { background: rgba(0, 0, 0, 0.2); color: var(--text); }
+[data-theme="dark"] .auth-modal-close { background: rgba(255, 255, 255, 0.1); color: var(--muted); }
+[data-theme="dark"] .auth-modal-close:hover { background: rgba(255, 255, 255, 0.2); color: var(--text); }
 
 .auth-tabs {
   display: flex;
@@ -2541,7 +2628,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 
 .auth-tab {
   flex: 1;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border: none;
   background: transparent;
   border-radius: 10px;
@@ -2577,7 +2664,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   background: rgba(255, 255, 255, 0.6);
   color: var(--text);
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
 [data-theme="dark"] .auth-form-input { background: rgba(0, 0, 0, 0.2); }
 .auth-form-input:focus {
@@ -2590,6 +2677,23 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 [data-theme="dark"] .auth-form-input::placeholder { color: #666; }
 .auth-form-input.error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12); }
 
+/* Field-level error messages */
+.auth-field-error {
+  color: var(--red);
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+  min-height: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+}
+.auth-field-error.show {
+  max-height: 2rem;
+  opacity: 1;
+}
+[data-theme="dark"] .auth-field-error { color: #ff7a6e; }
+
 /* Auth password input with toggle */
 .auth-password-wrapper { position: relative; }
 .auth-password-wrapper .auth-form-input { padding-right: 3rem; }
@@ -2599,6 +2703,146 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   padding: 4px; font-size: 0.9rem; line-height: 1;
 }
 .auth-password-toggle:hover { color: var(--text); }
+
+/* Password strength meter (register mode) */
+.auth-password-strength {
+  display: none;
+  margin-top: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+.auth-password-strength.show { display: flex; }
+.auth-strength-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+[data-theme="dark"] .auth-strength-bar { background: rgba(255, 255, 255, 0.1); }
+.auth-strength-fill {
+  height: 100%;
+  width: 0%;
+  background: transparent;
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+}
+.auth-strength-fill.weak { background: #e74c3c; width: 25%; }
+.auth-strength-fill.fair { background: #f39c12; width: 55%; }
+.auth-strength-fill.good { background: #3498db; width: 80%; }
+.auth-strength-fill.strong { background: var(--green); width: 100%; }
+.auth-strength-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 56px;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+.auth-strength-label.weak { color: #e74c3c; }
+.auth-strength-label.fair { color: #f39c12; }
+.auth-strength-label.good { color: #3498db; }
+.auth-strength-label.strong { color: var(--green); }
+
+/* Forgot password link (login mode only) */
+.auth-forgot-row {
+  text-align: right;
+  margin: -0.25rem 0 0.5rem;
+}
+.auth-forgot-row.hidden { display: none; }
+.auth-forgot-link {
+  font-size: 0.825rem;
+  color: var(--green);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.auth-forgot-link:hover {
+  color: var(--green-mid);
+  text-decoration: underline;
+}
+.auth-forgot-link:focus-visible {
+  outline: 2px solid var(--green-mid);
+  outline-offset: 2px;
+}
+
+/* Verification pending state (post-registration) */
+.auth-verify {
+  text-align: center;
+  padding: 0.75rem 0.25rem 0.25rem;
+}
+.auth-verify-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--green-light);
+  color: var(--green);
+}
+.auth-verify-icon svg { width: 32px; height: 32px; }
+.auth-verify-message { margin-bottom: 0.5rem; color: var(--text); }
+.auth-verify-email {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin: 0.75rem 0;
+  font-weight: 500;
+  word-break: break-all;
+}
+.auth-verify-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+.auth-verify-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+.auth-verify-resend-btn,
+.auth-verify-back-btn {
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+}
+.auth-verify-resend-btn {
+  color: var(--primary, var(--green));
+  border: 1px solid var(--primary, var(--green));
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.auth-verify-resend-btn:hover { background: var(--green-light); }
+.auth-verify-resend-btn:disabled { opacity: 0.6; cursor: not-allowed; background: transparent; }
+.auth-verify-back-btn {
+  color: var(--muted);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+.auth-verify-back-btn:hover { color: var(--text); }
+.auth-verify-status {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  min-height: 1.2em;
+  color: var(--muted);
+}
+.auth-verify-status.success { color: var(--green); }
+.auth-verify-status.error { color: var(--red); }
 
 /* Profile Page Form Styles */
 .form-group {
@@ -2673,8 +2917,9 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   padding: 1.25rem;
-  transition: all 0.3s ease;
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
   position: relative;
+  will-change: transform;
 }
 
 .reminder-card:hover {
@@ -3296,6 +3541,11 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <symbol id="icon-circle-green" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="#4CAF50"/>
     </symbol>
+    <!-- Mail / Envelope (used for verification pending state) -->
+    <symbol id="icon-mail" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7l9 6 9-6"/>
+      <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
     <!-- Circle Yellow (Warning/Medium) -->
     <symbol id="icon-circle-yellow" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="#FFC107"/>
@@ -3456,8 +3706,8 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <h2 class="auth-modal-title" id="auth-modal-title">Login</h2>
       <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     </div>
-    <div id="auth-error" class="auth-error"></div>
-    <div id="auth-success" class="auth-success"></div>
+    <div id="auth-error" class="auth-error" role="alert" aria-live="assertive" aria-atomic="true"></div>
+    <div id="auth-success" class="auth-success" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="toggleAuthMode('login')">Login</button>
       <button class="auth-tab" id="tab-register" onclick="toggleAuthMode('register')">Register</button>
@@ -3466,15 +3716,25 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <div class="auth-form-group">
         <label class="auth-form-label" for="auth-email">Email</label>
         <input type="email" id="auth-email" class="auth-form-input" placeholder="you@example.com" required autocomplete="email">
+        <div class="auth-field-error" id="auth-error-email" aria-live="polite"></div>
       </div>
       <div class="auth-password-wrapper">
         <label class="auth-form-label" for="auth-password">Password</label>
-        <input type="password" id="auth-password" class="auth-form-input" placeholder="Enter your password" required autocomplete="current-password">
+        <input type="password" id="auth-password" class="auth-form-input" placeholder="Enter your password" required autocomplete="current-password" aria-describedby="auth-password-strength">
         <button type="button" class="auth-password-toggle" onclick="togglePasswordVisibility('auth-password', this)" aria-label="Show password"><svg class="icon icon-md icon-inline" aria-hidden="true"><use href="#icon-eye"/></svg></button>
+      </div>
+      <div class="auth-password-strength" id="auth-password-strength">
+        <div class="auth-strength-bar"><div class="auth-strength-fill" id="auth-strength-fill"></div></div>
+        <span class="auth-strength-label" id="auth-strength-label" aria-live="polite"></span>
+      </div>
+      <div class="auth-field-error" id="auth-error-password" aria-live="polite"></div>
+      <div class="auth-forgot-row" id="auth-forgot-row">
+        <a class="auth-forgot-link" onclick="handleForgotPassword()" role="button" tabindex="0">Forgot password?</a>
       </div>
       <div class="auth-form-group" id="confirm-password-group" style="display: none;">
         <label class="auth-form-label" for="auth-confirm-password">Confirm Password</label>
         <input type="password" id="auth-confirm-password" class="auth-form-input" placeholder="Confirm your password" autocomplete="new-password">
+        <div class="auth-field-error" id="auth-error-confirm-password" aria-live="polite"></div>
       </div>
       <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
         <span id="auth-btn-text">Login</span>
@@ -3908,8 +4168,11 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 
   <div id="reminders-loading" class="appointments-loading" style="display: none;">
-    <div class="spinner"></div>
-    <p style="margin-top: 1rem;">Loading reminders...</p>
+    <div class="skeleton-list-cards" aria-busy="true" aria-label="Loading reminders">
+      <div class="skeleton skeleton-list-card"></div>
+      <div class="skeleton skeleton-list-card"></div>
+      <div class="skeleton skeleton-list-card"></div>
+    </div>
   </div>
 
   <div id="reminders-not-logged-in" class="appointments-not-logged-in" style="display: none;">
@@ -4127,12 +4390,16 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   </div>
 </div>
 
-<!-- Body Heatmap Components - Using Demo Body Heatmap -->
-<script src="modules/heatmap-state.js"></script>
-<script src="modules/body-heatmap.js"></script>
-<script src="modules/body-heatmap-muscles.js"></script>
-<script src="modules/heatmap-switcher.js"></script>
-<script src="modules/demo-body-heatmap-simple.js"></script>
+<!-- Body Heatmap Components - Using Demo Body Heatmap.
+     `defer` keeps execution order so module dependencies stay safe, but
+     the browser downloads them in parallel without blocking HTML parsing.
+     This is the key change that lets initBodyHeatmap() resolve within its
+     1.5s polling budget on slow 3G networks. -->
+<script src="modules/heatmap-state.js" defer></script>
+<script src="modules/body-heatmap.js" defer></script>
+<script src="modules/body-heatmap-muscles.js" defer></script>
+<script src="modules/heatmap-switcher.js" defer></script>
+<script src="modules/demo-body-heatmap-simple.js" defer></script>
 
 <!-- Hospital Map Components -->
 <script src="hospital-map.js"></script>
@@ -4302,6 +4569,54 @@ let selectedBody = '', selectedDuration = '';
 let currentResult = null, chatHistory = [];
 let altsChart = null, sevChart = null, timeChart = null;
 
+// Hard cap for the base64 portion of any uploaded image. The Vercel serverless
+// runtime rejects request bodies above ~4.5 MB with 413 FUNCTION_PAYLOAD_TOO_LARGE
+// — and a 3-4 MB base64 image plus the prompt + heatmap payload trips that limit
+// for real phone photos. We compress to fit comfortably under that ceiling.
+const MAX_IMAGE_BASE64_BYTES = 1_500_000; // 1.5 MB base64 ~= 1.1 MB binary
+
+// Progressively downscale + re-encode an HTMLImageElement (or canvas) until the
+// resulting base64 JPEG fits under MAX_IMAGE_BASE64_BYTES. Returns the base64
+// data URL on success or null if the source can't be encoded.
+async function compressImageToLimit(source, startMaxDim = 1200, startQuality = 0.85) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  let dim = startMaxDim;
+  let quality = startQuality;
+  // Three passes: shrink dim and quality if the result is still too big.
+  for (let pass = 0; pass < 3; pass++) {
+    let { width, height } = source;
+    if (width > dim || height > dim) {
+      if (width > height) { height = Math.round(height * dim / width); width = dim; }
+      else { width = Math.round(width * dim / height); height = dim; }
+    }
+    canvas.width = width;
+    canvas.height = height;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(source, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const base64 = dataUrl.split(',')[1] || '';
+    if (base64.length * 0.75 <= MAX_IMAGE_BASE64_BYTES) return dataUrl;
+    // Tighten for next pass
+    dim = Math.max(320, Math.round(dim * 0.75));
+    quality = Math.max(0.4, quality - 0.15);
+  }
+  // Last attempt at the tightest settings
+  let { width, height } = source;
+  if (width > dim || height > dim) {
+    if (width > height) { height = Math.round(height * dim / width); width = dim; }
+    else { width = Math.round(width * dim / height); height = dim; }
+  }
+  canvas.width = width;
+  canvas.height = height;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(source, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 // Camera functionality
 let stream = null;
 
@@ -4346,39 +4661,24 @@ function capturePhoto() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
 
-  // Compress the image
-  const maxDim = 1200;
-  let width = canvas.width;
-  let height = canvas.height;
-
-  if (width > maxDim || height > maxDim) {
-    if (width > height) {
-      height *= maxDim / width;
-      width = maxDim;
-    } else {
-      width *= maxDim / height;
-      height = maxDim;
+  // Compress the image. We progressively shrink + lower quality until the
+  // base64 fits under MAX_IMAGE_BASE64_BYTES (see compressImageToLimit).
+  compressImageToLimit(canvas).then(compressed => {
+    if (!compressed) {
+      showToast('Could not process the photo. Please try again.', 'error');
+      closeCamera();
+      return;
     }
-  }
+    imageBase64 = compressed.split(',')[1];
+    imageMimeType = 'image/jpeg';
 
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = width;
-  tempCanvas.height = height;
-  const tempCtx = tempCanvas.getContext('2d');
-  tempCtx.fillStyle = '#fff';
-  tempCtx.fillRect(0, 0, width, height);
-  tempCtx.drawImage(canvas, 0, 0, width, height);
+    document.getElementById('preview-img').src = compressed;
+    document.getElementById('preview-container').style.display = 'block';
 
-  const compressed = tempCanvas.toDataURL('image/jpeg', 0.85);
-  imageBase64 = compressed.split(',')[1];
-  imageMimeType = 'image/jpeg';
-
-  document.getElementById('preview-img').src = compressed;
-  document.getElementById('preview-container').style.display = 'block';
-
-  saveFormState();
-  closeCamera();
-  showToast('Photo captured successfully!', 'success');
+    saveFormState();
+    closeCamera();
+    showToast('Photo captured successfully!', 'success');
+  });
 }
 
 // Gondar Hospitals - loaded from JSON file
@@ -4524,13 +4824,19 @@ function saveFormState() {
     bodySelections = enhanced.regions || [];
   }
 
+  // Persist image only if it's small. Photos from the camera / file picker
+  // are already compressed to < 1.5 MB base64 by compressImageToLimit, but
+  // a stale state from an older session might still be large. Drop anything
+  // over 600 KB base64 to keep localStorage writes under ~5 MB total.
+  const persistedImage = imageBase64 && imageBase64.length <= 600_000 ? imageBase64 : null;
+
   const state = {
     symptoms: document.getElementById('symptoms-text').value,
     body: bodyArea,
     bodySelections: bodySelections,
     heatmapMode: heatmapMode,
     duration: selectedDuration,
-    image: imageBase64,
+    image: persistedImage,
     timestamp: Date.now()
   };
   localStorage.setItem('mediscan_form', JSON.stringify(state));
@@ -4681,25 +4987,20 @@ function processFile(f) {
   r.onload = ev => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const maxDim = 800; // Reduced from 1200 for faster uploads
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) { height *= maxDim / width; width = maxDim; }
-        else { width *= maxDim / height; height = maxDim; }
-      }
-      canvas.width = width;
-      canvas.height = height;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      const compressed = canvas.toDataURL('image/jpeg', 0.75); // Reduced from 0.85 for smaller file size
-      imageBase64 = compressed.split(',')[1];
-      imageMimeType = 'image/jpeg';
-      document.getElementById('preview-img').src = compressed;
-      document.getElementById('preview-container').style.display = 'block';
-      saveFormState();
+      // Same progressive compressor as capturePhoto() — cap at
+      // MAX_IMAGE_BASE64_BYTES so the request body stays under Vercel's
+      // 4.5 MB limit on production deploys.
+      compressImageToLimit(img, 1024, 0.8).then(compressed => {
+        if (!compressed) {
+          showToast('Could not process the image. Please try a different one.', 'error');
+          return;
+        }
+        imageBase64 = compressed.split(',')[1];
+        imageMimeType = 'image/jpeg';
+        document.getElementById('preview-img').src = compressed;
+        document.getElementById('preview-container').style.display = 'block';
+        saveFormState();
+      });
     };
     img.src = ev.target.result;
   };
@@ -4723,17 +5024,35 @@ async function initBodyHeatmap() {
     return;
   }
 
+  // Show a loading placeholder so the user has visual feedback while
+  // the heatmap module (a defer'd <script>) downloads and initializes.
+  // Built with DOM API rather than innerHTML to avoid any XSS surface.
+  const skeleton = document.createElement('div');
+  skeleton.className = 'heatmap-loading-skeleton';
+  skeleton.setAttribute('aria-label', 'Loading body heatmap');
+  skeleton.setAttribute('role', 'status');
+  const spinner = document.createElement('div');
+  spinner.className = 'heatmap-loading-spinner';
+  skeleton.appendChild(spinner);
+  const text = document.createElement('p');
+  text.textContent = 'Loading body heatmap…';
+  skeleton.appendChild(text);
+  container.appendChild(skeleton);
+
   try {
-    // Wait for HeatmapSwitcher to be loaded via <script> tag
-    // Poll for up to 3 seconds for the module to initialize
+    // Wait for HeatmapSwitcher to be loaded via defer'd <script> tag.
+    // Poll for up to 1.5s for the module to register on window.
+    // On slow 3G the modules can take a few seconds; the polling timeout
+    // is intentionally tight so we fall through to the silent legacy
+    // fallback quickly instead of showing an error toast.
     let waitCount = 0;
-    while (typeof HeatmapSwitcher === 'undefined' && waitCount < 30) {
+    while (typeof HeatmapSwitcher === 'undefined' && waitCount < 15) {
       await new Promise(resolve => setTimeout(resolve, 100));
       waitCount++;
     }
 
     if (typeof HeatmapSwitcher === 'undefined') {
-      throw new Error('HeatmapSwitcher module failed to load within 3 seconds');
+      throw new Error('HeatmapSwitcher module failed to load within 1.5 seconds');
     }
 
     // Load saved selections from localStorage
@@ -4782,6 +5101,10 @@ async function initBodyHeatmap() {
       bodyHeatmap.setSelections(savedSelections);
     }
 
+    // Clear the loading skeleton before init() — the switcher rebuilds the
+    // container contents itself, so any leftover skeleton would be visible
+    // until that rebuild finishes.
+    container.innerHTML = '';
     await bodyHeatmap.init();
 
     window.mediscanBodyHeatmap = bodyHeatmap;
@@ -4793,23 +5116,16 @@ async function initBodyHeatmap() {
     showToast('Body heatmap loaded successfully', 'success', 2000);
 
   } catch (error) {
-    // Internal error - user notified with specific message
     console.error('initBodyHeatmap failed:', error);
-
-    // Specific error messages based on failure type
-    let errorMessage = 'Body heatmap failed to initialize.';
-    if (error.message.includes('timeout')) {
-      errorMessage = 'Body heatmap loading timed out. Please refresh the page.';
-    } else if (error.message.includes('module failed to load')) {
-      errorMessage = 'Heatmap module failed to load. Check your connection.';
-    }
-
-    showToast(errorMessage, 'error', 4000);
-
-    // Show legacy body grid as fallback
-    document.getElementById('legacy-body-grid').style.display = 'grid';
-    document.getElementById('body-heatmap-container').style.display = 'none';
-    showToast('Using legacy body selection mode.', 'warning', 3000);
+    // Silent fallback: switch to legacy body grid. On slow networks the
+    // heatmap modules can take a few seconds to download, and showing an
+    // error toast here just frustrates users — the legacy grid works fine.
+    const heatmapContainer = document.getElementById('body-heatmap-container');
+    const legacyGrid = document.getElementById('legacy-body-grid');
+    if (heatmapContainer) heatmapContainer.style.display = 'none';
+    if (legacyGrid) legacyGrid.style.display = 'grid';
+    // Subtle notification — keeps the user informed without screaming "error"
+    showToast('Using simplified body selection. Heatmap is still loading in the background.', 'info', 2500);
   }
 }
 
@@ -5102,18 +5418,32 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
     if (body.length > 50000) {
       document.getElementById('loading-status').textContent += ` (${(body.length/1024/1024).toFixed(1)}MB upload)`;
     }
-    const res = await fetch(SERVER_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+    // Pre-flight size check: Vercel serverless rejects request bodies above
+    // ~4.5 MB at the edge with a 413 FUNCTION_PAYLOAD_TOO_LARGE that's
+    // confusing to surface as "Internal server error". Catch it client-side
+    // and ask the user to drop the image or shorten their text.
+    if (body.length > 4_000_000) {
+      throw new Error('Request is too large. Please remove the image, use a smaller photo, or shorten your description.');
+    }
+    const res = await fetch(SERVER_URL, { method:'POST', headers:{'Content-Type': 'application/json'}, body });
     // Read raw text first so we can show a useful message even on non-JSON
-    // responses (e.g. 429 rate-limit bodies are plain text).
+    // responses (e.g. 413 FUNCTION_PAYLOAD_TOO_LARGE bodies are plain text
+    // — Vercel's edge rejects oversized requests before the function runs).
     const rawText = await res.text();
     let data;
     try {
       data = rawText ? JSON.parse(rawText) : {};
     } catch (parseErr) {
+      if (res.status === 413 || /FUNCTION_PAYLOAD_TOO_LARGE|Request Entity Too Large/i.test(rawText)) {
+        throw new Error('Image is too large for our server. Please use a smaller photo or describe your symptoms in text.');
+      }
       if (!res.ok) {
         throw new Error(rawText.trim() || 'Server error');
       }
       throw new Error('Unexpected response from server');
+    }
+    if (res.status === 413 || /FUNCTION_PAYLOAD_TOO_LARGE|Request Entity Too Large/i.test(rawText)) {
+      throw new Error('Image is too large for our server. Please use a smaller photo or describe your symptoms in text.');
     }
     if (!res.ok) throw new Error(data?.error || rawText.trim() || 'Server error');
     currentResult = data;
@@ -5246,7 +5576,13 @@ function showResults(r) {
   stepsEl.innerHTML = '';
   (r.nextSteps || []).forEach((s, i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span class="step-num">${i+1}</span><span>${s}</span>`;
+    const num = document.createElement('span');
+    num.className = 'step-num';
+    num.textContent = String(i + 1);
+    const text = document.createElement('span');
+    text.textContent = s;
+    li.appendChild(num);
+    li.appendChild(text);
     stepsEl.appendChild(li);
     setTimeout(() => li.classList.add('visible'), 200 + i * 100);
   });
@@ -5441,7 +5777,41 @@ function renderHistory() {
   history.forEach((item, index) => {
     const div = document.createElement('div'); div.className = 'history-item stagger-item';
     div.style.setProperty('--index', index);
-    div.innerHTML = `<div class="history-icon ${item.severity}">${sevIcons[item.severity]||'⚪'}</div><div class="history-info"><div class="history-name">${item.condition}</div><div class="history-meta">${item.date} at ${item.time}${item.body ? ' · ' + item.body : ''}</div></div><span class="history-sev ${sevCls[item.severity]}">${item.severity}</span>`;
+
+    // Build icon container
+    const iconWrap = document.createElement('div');
+    iconWrap.className = 'history-icon';
+    if (item.severity) iconWrap.classList.add(item.severity);
+    if (sevIcons[item.severity]) {
+      // sevIcons is static SVG markup from this file (no user data)
+      iconWrap.innerHTML = sevIcons[item.severity];
+    } else {
+      iconWrap.textContent = '⚪';
+    }
+
+    // Build info container
+    const info = document.createElement('div');
+    info.className = 'history-info';
+    const name = document.createElement('div');
+    name.className = 'history-name';
+    name.textContent = item.condition || '';
+    const meta = document.createElement('div');
+    meta.className = 'history-meta';
+    const metaBase = (item.date || '') + ' at ' + (item.time || '');
+    meta.textContent = item.body ? metaBase + ' · ' + item.body : metaBase;
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    // Build severity badge
+    const sev = document.createElement('span');
+    sev.className = 'history-sev';
+    if (sevCls[item.severity]) sev.classList.add(sevCls[item.severity]);
+    sev.textContent = item.severity || '';
+
+    div.appendChild(iconWrap);
+    div.appendChild(info);
+    div.appendChild(sev);
+
     div.addEventListener('click', () => {
       document.querySelectorAll('.nav-tab').forEach((t,i) => t.classList.toggle('active', i===0));
       showPage('scan', document.querySelector('.nav-tab[data-page="scan"]'));
@@ -7447,12 +7817,30 @@ function initNearMeButton() {
 window.authToken = null;
 window.currentUser = null;
 let authMode = 'login';
+let lastFocusedElement = null;
+
+function authKeydownHandler(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeAuthModal();
+  }
+}
 
 function openAuthModal() {
   const modal = document.getElementById('auth-modal');
   if (modal) {
+    lastFocusedElement = document.activeElement;
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', authKeydownHandler);
+    // Live password strength: refresh on every keystroke
+    const passwordInput = document.getElementById('auth-password');
+    if (passwordInput && !passwordInput.dataset.strengthListener) {
+      passwordInput.addEventListener('input', () => {
+        if (typeof updatePasswordStrength === 'function') updatePasswordStrength();
+      });
+      passwordInput.dataset.strengthListener = 'true';
+    }
     // Focus email input
     setTimeout(() => document.getElementById('auth-email')?.focus(), 100);
   }
@@ -7463,11 +7851,19 @@ function closeAuthModal() {
   if (modal) {
     modal.classList.remove('open');
     document.body.style.overflow = '';
+    document.removeEventListener('keydown', authKeydownHandler);
     // Clear error/success messages
     hideAuthError();
     hideAuthSuccess();
     // Reset form elements
     resetAuthModal();
+    // Clear input values so the next user/session starts fresh
+    clearAuthFormValues();
+    // Restore focus to the element that opened the modal
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+      lastFocusedElement = null;
+    }
   }
 }
 
@@ -7486,7 +7882,6 @@ function toggleAuthMode(mode) {
   const confirmGroup = document.getElementById('confirm-password-group');
   const authSwitch = document.getElementById('auth-switch');
   const passwordInput = document.getElementById('auth-password');
-  const authForm = document.getElementById('auth-form');
 
   if (mode === 'login') {
     tabLogin?.classList.add('active');
@@ -7494,9 +7889,10 @@ function toggleAuthMode(mode) {
     title.textContent = 'Login';
     btnText.textContent = 'Login';
     confirmGroup.style.display = 'none';
-    passwordInput.removeAttribute('required');
+    passwordInput.setAttribute('autocomplete', 'current-password');
+    document.getElementById('auth-forgot-row')?.classList.remove('hidden');
     authSwitch.innerHTML = '<span>Don\'t have an account? <a onclick="toggleAuthMode(\'register\')">Register</a></span>';
-    // Remove confirm password validator from form
+    // Remove confirm password validator from form (confirm only matters in register)
     const confirmInput = document.getElementById('auth-confirm-password');
     if (confirmInput) confirmInput.removeAttribute('required');
   } else {
@@ -7505,9 +7901,13 @@ function toggleAuthMode(mode) {
     title.textContent = 'Create Account';
     btnText.textContent = 'Register';
     confirmGroup.style.display = 'block';
-    passwordInput.setAttribute('required', '');
+    passwordInput.setAttribute('required', 'required');
+    passwordInput.setAttribute('autocomplete', 'new-password');
+    document.getElementById('auth-forgot-row')?.classList.add('hidden');
     authSwitch.innerHTML = '<span>Already have an account? <a onclick="toggleAuthMode(\'login\')">Login</a></span>';
   }
+  // Refresh password strength meter visibility/state
+  if (typeof updatePasswordStrength === 'function') updatePasswordStrength();
 }
 
 function togglePasswordVisibility(inputId, btn) {
@@ -7557,6 +7957,134 @@ function hideAuthSuccess() {
   }
 }
 
+// Field-level error helpers
+function showFieldError(fieldId, message) {
+  const errorEl = document.getElementById(`auth-error-${fieldId}`);
+  const inputEl = document.getElementById(`auth-${fieldId}`);
+  if (errorEl) {
+    errorEl.textContent = message;
+    errorEl.classList.add('show');
+  }
+  if (inputEl) {
+    inputEl.classList.add('error');
+    if (!inputEl.dataset.errorListener) {
+      inputEl.addEventListener('input', () => {
+        errorEl?.classList.remove('show');
+        inputEl.classList.remove('error');
+      });
+      inputEl.dataset.errorListener = 'true';
+    }
+  }
+}
+
+// Forgot password handler
+async function handleForgotPassword() {
+  const emailInput = document.getElementById('auth-email');
+  const email = emailInput?.value.trim();
+  hideAuthError();
+  hideAuthSuccess();
+  clearFieldErrors();
+
+  if (!email) {
+    showFieldError('email', 'Enter your email above, then click "Forgot password?" again.');
+    emailInput?.focus();
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldError('email', 'Please enter a valid email address first.');
+    emailInput?.focus();
+    return;
+  }
+
+  const link = document.querySelector('.auth-forgot-link');
+  if (link) {
+    link.setAttribute('aria-busy', 'true');
+    link.style.pointerEvents = 'none';
+    link.textContent = 'Sending…';
+  }
+  try {
+    const res = await fetch('/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    // Always show generic success to prevent email enumeration
+    showAuthSuccess(data.message || 'If an account exists for that email, a password reset link has been sent.');
+  } catch (err) {
+    showAuthError('Cannot reach the server. Please check your connection and try again.');
+  } finally {
+    if (link) {
+      link.removeAttribute('aria-busy');
+      link.style.pointerEvents = '';
+      link.textContent = 'Forgot password?';
+    }
+  }
+}
+
+function clearFieldErrors() {
+  document.querySelectorAll('.auth-field-error').forEach(el => {
+    el.classList.remove('show');
+    el.textContent = '';
+  });
+  document.querySelectorAll('.auth-form-input').forEach(el => el.classList.remove('error'));
+}
+
+// Clear all input values in the auth form. Called on close and on logout
+// so a previous user's email/password never leaks into the next session.
+function clearAuthFormValues() {
+  const fields = ['auth-email', 'auth-password', 'auth-confirm-password'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+// Password strength (register mode only)
+function calculatePasswordStrength(password) {
+  if (!password) return { score: 0, label: '', className: '' };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  // Penalize common weak patterns
+  if (/^(password|12345678|qwerty|admin|letmein)/i.test(password)) score = Math.max(0, score - 2);
+
+  if (score <= 1) return { score: 1, label: 'Weak', className: 'weak' };
+  if (score === 2) return { score: 2, label: 'Fair', className: 'fair' };
+  if (score === 3) return { score: 3, label: 'Good', className: 'good' };
+  return { score: 4, label: 'Strong', className: 'strong' };
+}
+
+function updatePasswordStrength() {
+  const strengthEl = document.getElementById('auth-password-strength');
+  const fillEl = document.getElementById('auth-strength-fill');
+  const labelEl = document.getElementById('auth-strength-label');
+  const password = document.getElementById('auth-password')?.value || '';
+
+  if (authMode !== 'register') {
+    strengthEl?.classList.remove('show');
+    return;
+  }
+  strengthEl?.classList.add('show');
+
+  const { label, className } = calculatePasswordStrength(password);
+  ['weak', 'fair', 'good', 'strong'].forEach(c => {
+    fillEl?.classList.remove(c);
+    labelEl?.classList.remove(c);
+  });
+  if (!password) {
+    if (fillEl) fillEl.style.width = '0%';
+    if (labelEl) labelEl.textContent = '';
+    return;
+  }
+  fillEl?.classList.add(className);
+  labelEl?.classList.add(className);
+  if (labelEl) labelEl.textContent = label;
+}
+
 function showVerificationPending(message) {
   const form = document.getElementById('auth-form');
   const modalTitle = document.getElementById('auth-modal-title');
@@ -7579,22 +8107,18 @@ function showVerificationPending(message) {
     const registeredEmail = (document.getElementById('auth-email')?.value || '').trim();
     const safeEmail = registeredEmail.replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
     successEl.innerHTML = `
-      <div style="text-align: center; padding: 1rem 0;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">&#128231;</div>
-        <p style="margin-bottom: 0.5rem;">${message || 'Registration successful. Please check your email.'}</p>
-        ${safeEmail ? `<p style="font-size: 0.95rem; color: var(--text); margin: 0.75rem 0; font-weight: 500;">${safeEmail}</p>` : ''}
-        <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem;">
-          We sent a verification link. Click the link in the email to activate your account.
-        </p>
-        <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
-          <button type="button" class="auth-resend-btn" id="auth-resend-btn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
-            Resend verification email
-          </button>
-          <button type="button" class="auth-back-login-btn" id="auth-back-login-btn" style="background: transparent; color: var(--muted); border: none; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.85rem; text-decoration: underline;">
-            Back to login
-          </button>
+      <div class="auth-verify">
+        <div class="auth-verify-icon" aria-hidden="true">
+          <svg class="icon icon-xl" focusable="false"><use href="#icon-mail"/></svg>
         </div>
-        <p id="auth-resend-status" style="font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em;"></p>
+        <p class="auth-verify-message">${message || 'Registration successful. Please check your email.'}</p>
+        ${safeEmail ? `<p class="auth-verify-email">${safeEmail}</p>` : ''}
+        <p class="auth-verify-hint">We sent a verification link. Click the link in the email to activate your account.</p>
+        <div class="auth-verify-actions">
+          <button type="button" class="auth-verify-resend-btn" id="auth-resend-btn">Resend verification email</button>
+          <button type="button" class="auth-verify-back-btn" id="auth-back-login-btn">Back to login</button>
+        </div>
+        <p id="auth-resend-status" class="auth-verify-status"></p>
       </div>
     `;
     successEl.classList.add('show');
@@ -7606,7 +8130,10 @@ function showVerificationPending(message) {
         if (!registeredEmail) return;
         resendBtn.disabled = true;
         const statusEl = document.getElementById('auth-resend-status');
-        if (statusEl) statusEl.textContent = 'Sending…';
+        if (statusEl) {
+          statusEl.classList.remove('success', 'error');
+          statusEl.textContent = 'Sending…';
+        }
         try {
           const res = await fetch('/auth/resend-verification', {
             method: 'POST',
@@ -7616,19 +8143,19 @@ function showVerificationPending(message) {
           const data = await res.json();
           if (res.ok) {
             if (statusEl) {
-              statusEl.style.color = 'var(--success, #16a34a)';
+              statusEl.classList.add('success');
               statusEl.textContent = data.message || 'Verification email sent. Check your inbox.';
             }
           } else {
             if (statusEl) {
-              statusEl.style.color = 'var(--danger, #dc2626)';
+              statusEl.classList.add('error');
               statusEl.textContent = data.error || 'Failed to resend. Please try again later.';
             }
             resendBtn.disabled = false;
           }
         } catch (err) {
           if (statusEl) {
-            statusEl.style.color = 'var(--danger, #dc2626)';
+            statusEl.classList.add('error');
             statusEl.textContent = 'Cannot reach the server. Check your connection.';
           }
           resendBtn.disabled = false;
@@ -8167,7 +8694,7 @@ async function loadAppointments() {
   const emptyState = document.getElementById('appointments-empty');
   const h2 = document.querySelector('#appointments-page .dash-intro h2');
 
-  container.innerHTML = '<div class="appointments-loading"><div class="spinner"></div><p style="margin-top: 1rem;">Loading appointments...</p></div>';
+  container.innerHTML = '<div class="skeleton-list-cards" aria-busy="true" aria-label="Loading appointments"><div class="skeleton skeleton-list-card"></div><div class="skeleton skeleton-list-card"></div><div class="skeleton skeleton-list-card"></div></div>';
 
   if (!window.authToken) {
     // User not logged in - show login prompt
@@ -8361,20 +8888,39 @@ async function handleAuthSubmit(event) {
   const password = document.getElementById('auth-password')?.value;
   const confirmPassword = document.getElementById('auth-confirm-password')?.value;
 
-  if (!email || !password) {
-    showAuthError('Please fill in all required fields.');
-    return;
+  clearFieldErrors();
+
+  // Field-level validation
+  let firstInvalid = null;
+  const focusIfInvalid = (id) => { if (!firstInvalid) firstInvalid = id; };
+
+  if (!email) {
+    showFieldError('email', 'Please enter your email.');
+    focusIfInvalid('auth-email');
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldError('email', 'Please enter a valid email address.');
+    focusIfInvalid('auth-email');
+  }
+
+  if (!password) {
+    showFieldError('password', 'Please enter a password.');
+    focusIfInvalid('auth-password');
   }
 
   if (authMode === 'register') {
-    if (password.length < 8) {
-      showAuthError('Password must be at least 8 characters.');
-      return;
+    if (password && password.length < 8) {
+      showFieldError('password', 'Password must be at least 8 characters.');
+      focusIfInvalid('auth-password');
     }
-    if (password !== confirmPassword) {
-      showAuthError('Passwords do not match.');
-      return;
+    if (password && password !== confirmPassword) {
+      showFieldError('confirm-password', 'Passwords do not match.');
+      focusIfInvalid('auth-confirm-password');
     }
+  }
+
+  if (firstInvalid) {
+    document.getElementById(firstInvalid)?.focus();
+    return;
   }
 
   setAuthLoading(true);
@@ -8467,6 +9013,9 @@ async function handleLogout() {
 
   window.authToken = null;
   window.currentUser = null;
+
+  // Clear any values left in the auth form so the next session is fresh
+  clearAuthFormValues();
 
   // Close dropdown if open
   const dropdown = document.querySelector('.nav-user-dropdown');

@@ -725,6 +725,7 @@ class BodyHeatmapMuscles {
    * Cleanup and dispose resources
    */
   cleanup() {
+    this.clearHoldTimers();
     this.clear();
     this.musclePaths.clear();
   }

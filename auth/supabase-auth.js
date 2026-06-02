@@ -55,6 +55,15 @@ const resendLimiter = rateLimit({
   message: 'Too many resend attempts. Please wait a few minutes and try again.'
 });
 
+// Forgot-password limiter: 5 per 10 minutes. Same rationale as resend.
+const forgotLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many password reset requests. Please wait a few minutes and try again.'
+});
+
 // ------------------------------------------------------------------
 // Auto-admin helper: check if this is the first user in the system.
 // Grants admin to the first user; subsequent users get 'student' role.
@@ -591,6 +600,51 @@ router.post('/resend-verification', resendLimiter, async (req, res) => {
   } catch (err) {
     console.error('Resend verification error:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ------------------------------------------------------------------
+// Forgot password – POST /auth/forgot-password
+// Sends a password recovery email via Supabase. Always returns a
+// generic success message to prevent email-enumeration attacks.
+// ------------------------------------------------------------------
+router.post('/forgot-password', forgotLimiter, async (req, res) => {
+  const { email } = req.body || {};
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!EMAIL_REGEX.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  const generic = { message: 'If an account exists for that email, a password reset link has been sent.' };
+
+  // In test mode, simulate success without hitting Supabase
+  if (process.env.NODE_ENV === 'test') {
+    return res.json(generic);
+  }
+
+  try {
+    // Build a redirect URL that lands the user back on the app.
+    // The token will be in the URL hash, which the client picks up.
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const redirectTo = `${proto}://${host}/`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+      // Log the internal detail but never leak it to the caller.
+      console.error('Reset password error:', error.message);
+      // Still return generic to prevent enumeration
+    }
+
+    return res.json(generic);
+  } catch (err) {
+    console.error('Reset password error:', err);
+    // Generic success even on internal error to prevent enumeration
+    return res.json(generic);
   }
 });
 

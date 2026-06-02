@@ -61,7 +61,23 @@ function createApp(options = {}) {
   });
 
 // 1. Body parsing
-app.use(express.json({ limit: '20mb' }));
+// Vercel serverless rejects request bodies above ~4.5 MB at the edge with a
+// plain-text 413 FUNCTION_PAYLOAD_TOO_LARGE response that's surfaced to
+// users as a confusing "Internal server error". We cap the JSON body to
+// 4 MB to match the practical Vercel limit, and let express return a clean
+// 413 with a JSON error body that the frontend can present sensibly.
+app.use(express.json({ limit: '4mb' }));
+
+// Express's default PayloadTooLargeError handler returns HTML. Override it
+// with a clean JSON error so the frontend can show a friendly message.
+app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Image is too large for our server. Please use a smaller photo or describe your symptoms in text.'
+    });
+  }
+  return next(err);
+});
 // Parse cookies manually
 app.use((req, res, next) => {
   req.cookies = {};
@@ -156,13 +172,109 @@ const csrfProtection = (req, res, next) => {
 };
 
 // 6. Static file serving
+// On Vercel serverless the project root isn't included in the function bundle,
+// so express.static(path.join(__dirname)) sees an empty directory and every
+// request 404s. We work around this by serving an explicit allowlist of
+// assets the app actually needs (PNGs, modules, locales, etc.) and letting
+// unknown paths fall through to the API routes.
 const publicDir = path.join(__dirname);
-app.use(express.static(publicDir));
+
+// Reject obvious path-traversal attempts BEFORE the static middleware sees
+// them. express.static and Express itself will normalize `..` segments, but
+// doing the check up-front keeps any future static source from being able
+// to read files outside the project root.
+app.use((req, res, next) => {
+  const decoded = decodeURIComponent(req.path || '');
+  if (decoded.includes('..') || decoded.includes('\0')) {
+    return res.status(400).json({ error: 'Invalid path' });
+  }
+  next();
+});
+
+app.use(express.static(publicDir, {
+  // Don't serve dotfiles (e.g. .env) even if they exist in the project root
+  dotfiles: 'deny',
+  // Don't generate a directory index
+  index: false,
+  // No Last-Modified; keep responses cacheable for 5 min
+  maxAge: '5m'
+}));
+
+const STATIC_CONTENT_TYPES = {
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg':  'image/svg+xml',
+  '.css':  'text/css; charset=utf-8',
+  '.js':   'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.ico':  'image/x-icon',
+  '.html': 'text/html; charset=utf-8'
+};
+
+// Whitelist of root-relative file paths the app is allowed to fetch.
+// Add new static assets here when they're introduced — keeps us off
+// any "list a directory" path-traversal surface.
+const STATIC_ASSET_WHITELIST = new Set([
+  '/male-front.png',
+  '/male-back.png',
+  '/female-front.png',
+  '/female-back.png',
+  '/reference-male.png',
+  '/hospital-map.css',
+  '/hospital-map.js',
+  '/timeline.js',
+  '/modules/body-heatmap.js',
+  '/modules/body-heatmap-muscles.js',
+  '/modules/heatmap-switcher.js',
+  '/modules/heatmap-state.js',
+  '/modules/demo-body-heatmap-simple.js',
+  '/modules/nvidiaVisionClient.js',
+  '/modules/translations.js',
+  '/locales/am.json'
+]);
+
+app.get('/modules/:file', (req, res, next) => {
+  const safe = String(req.params.file || '').replace(/[^a-zA-Z0-9._-]/g, '');
+  if (!safe) return next();
+  const reqPath = '/modules/' + safe;
+  if (!STATIC_ASSET_WHITELIST.has(reqPath)) return next();
+  const filePath = path.join(__dirname, 'modules', safe);
+  if (!fs.existsSync(filePath)) return next();
+  res.set('Content-Type', STATIC_CONTENT_TYPES['.js']);
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.sendFile(filePath);
+});
+
+app.get('/locales/:file', (req, res, next) => {
+  const safe = String(req.params.file || '').replace(/[^a-zA-Z0-9._-]/g, '');
+  if (!safe) return next();
+  const reqPath = '/locales/' + safe;
+  if (!STATIC_ASSET_WHITELIST.has(reqPath)) return next();
+  const filePath = path.join(__dirname, 'locales', safe);
+  if (!fs.existsSync(filePath)) return next();
+  res.set('Content-Type', STATIC_CONTENT_TYPES['.json']);
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.sendFile(filePath);
+});
+
+app.get(/^\/(male-(front|back)\.png|female-(front|back)\.png|reference-male\.png|hospital-map\.(css|js)|timeline\.js)$/, (req, res) => {
+  const reqPath = req.path;
+  if (!STATIC_ASSET_WHITELIST.has(reqPath)) return res.status(404).end();
+  const filePath = path.join(publicDir, reqPath);
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+  const ext = path.extname(reqPath).toLowerCase();
+  res.set('Content-Type', STATIC_CONTENT_TYPES[ext] || 'application/octet-stream');
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.sendFile(filePath);
+});
 
 // 6. Request logging (after helmet and static)
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  if (process.env.NODE_ENV !== 'production') {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -231,10 +343,14 @@ async function checkOllama() {
     if (response.ok) {
       const data = await response.json();
       ollamaAvailable = true;
-      console.log('Ollama available with models:', data.models?.map(m => m.name).join(', '));
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Ollama available with models:', data.models?.map(m => m.name).join(', '));
+      }
     }
   } catch (e) {
-    console.log('Ollama not running. Start with: ollama serve');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Ollama not running. Start with: ollama serve');
+    }
   }
 }
 checkOllama();
@@ -249,14 +365,12 @@ const { analyzeWithNvidiaVision } = require('./modules/nvidiaVisionClient.js');
 
 // ===== Model Configuration =====
 const MODEL_PRIORITY = ['groq', 'nvidia', 'gemini', 'ollama', 'demo'];
-const IMAGE_MODEL_PRIORITY = ['vista3d', 'gemini'];
 
 const MODEL_CAPABILITIES = {
   gemini: { supportsImages: true },
   nvidia: { supportsImages: false },
   groq: { supportsImages: false },
   ollama: { supportsImages: false },
-  vista3d: { supportsImages: true },
   demo: { supportsImages: false }
 };
 
@@ -637,7 +751,9 @@ Rules:
     }
     return result;
   } catch (e) {
-    console.log('Ollama returned invalid JSON, falling back to demo data');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Ollama returned invalid JSON, falling back to demo data');
+    }
     throw new Error('Ollama JSON parse failed: ' + e.message);
   }
 }
@@ -662,11 +778,13 @@ async function chatWithOllama(prompt) {
 // ===== Gemini (Primary) =====
 async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
   if (!genAI) throw new Error('Gemini not configured');
-  console.log('Gemini Request:', {
-    model: 'gemini-2.0-flash',
-    hasImage: !!imageBase64,
-    promptLength: prompt?.length
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Gemini Request:', {
+      model: 'gemini-2.0-flash',
+      hasImage: !!imageBase64,
+      promptLength: prompt?.length
+    });
+  }
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash',
@@ -685,7 +803,9 @@ async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
   try {
     const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
     const responseText = result.response.text();
-    console.log('Gemini Response:', { length: responseText.length, model: 'gemini-2.0-flash' });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Gemini Response:', { length: responseText.length, model: 'gemini-2.0-flash' });
+    }
     return extractJSON(responseText);
   } catch (error) {
     console.error('Gemini Error Details:', {
@@ -724,10 +844,12 @@ async function analyzeWithOpenAI(prompt, imageBase64, imageMimeType) {
 // ===== Groq (Secondary) =====
 async function analyzeWithGroq(prompt) {
   if (!groq) throw new Error('Groq not configured');
-  console.log('Groq Request:', {
-    model: 'llama-3.3-70b-versatile',
-    promptLength: prompt?.length
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Groq Request:', {
+      model: 'llama-3.3-70b-versatile',
+      promptLength: prompt?.length
+    });
+  }
 
   try {
     const response = await groq.chat.completions.create({
@@ -741,7 +863,9 @@ async function analyzeWithGroq(prompt) {
     });
 
     const responseText = response.choices[0].message.content;
-    console.log('Groq Response:', { length: responseText.length, model: 'llama-3.3-70b' });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Groq Response:', { length: responseText.length, model: 'llama-3.3-70b' });
+    }
     return extractJSON(responseText);
   } catch (error) {
     console.error('Groq Error Details:', {
@@ -756,10 +880,12 @@ async function analyzeWithGroq(prompt) {
 // ===== NVIDIA (Secondary) =====
 async function analyzeWithNvidia(prompt) {
   if (!nvidia) throw new Error('NVIDIA not configured');
-  console.log('NVIDIA Request:', {
-    model: 'openai/gpt-oss-120b',
-    promptLength: prompt?.length
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('NVIDIA Request:', {
+      model: 'openai/gpt-oss-120b',
+      promptLength: prompt?.length
+    });
+  }
 
   try {
     const response = await nvidia.chat.completions.create({
@@ -773,7 +899,9 @@ async function analyzeWithNvidia(prompt) {
     });
 
     const responseText = response.choices[0].message.content;
-    console.log('NVIDIA Response:', { length: responseText.length, model: 'nvidia' });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('NVIDIA Response:', { length: responseText.length, model: 'nvidia' });
+    }
     return extractJSON(responseText);
   } catch (error) {
     console.error('NVIDIA Error Details:', {
@@ -925,7 +1053,9 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
     const cacheKey = getCacheKey(symptoms, bodyArea);
     const cached = getCached(cacheKey);
     if (cached) {
-      console.log('Cache hit for:', symptoms.slice(0, 30) + '...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Cache hit for:', symptoms.slice(0, 30) + '...');
+      }
       const normalizedCached = normalizeAIResponse({ ...cached, cached: true });
       const translatedCached = await translateResult(normalizedCached, lang);
       return res.json(translatedCached);
@@ -987,13 +1117,17 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   // Text-only / symptom path
   for (const modelName of MODEL_PRIORITY) {
     if (modelName !== 'demo' && !isModelAvailable(modelName)) {
-      console.log(modelName + ' rate limited, skipping...');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(modelName + ' rate limited, skipping...');
+      }
       continue;
     }
 
     if (imageBase64 && MODEL_CAPABILITIES[modelName]?.supportsImages === false) {
       if (!symptoms || !symptoms.trim()) {
-        console.log(modelName + ' does not support images and no symptoms text, skipping...');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(modelName + ' does not support images and no symptoms text, skipping...');
+        }
         continue;
       }
     }
@@ -1023,13 +1157,17 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
           result = await analyzeWithOllama(prompt);
           break;
         case 'demo':
-          console.log('Using demo/mock diagnosis as fallback');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Using demo/mock diagnosis as fallback');
+          }
           result = getMockDiagnosis(symptoms, bodyArea);
           break;
       }
 
       const duration = Date.now() - startTime;
-      console.log('Used ' + modelName + ' (' + duration + 'ms)');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Used ' + modelName + ' (' + duration + 'ms)');
+      }
 
       const recommendedFacilities = recommendFacilities(result.severity, result.primaryCondition);
 
@@ -1061,7 +1199,9 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   }
 
   // Final fallback
-  console.log('All AI models failed, using demo mode as final fallback');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('All AI models failed, using demo mode as final fallback');
+  }
   const demoResult = getMockDiagnosis(symptoms, bodyArea);
   const recommendedFacilities = recommendFacilities(demoResult.severity, demoResult.primaryCondition);
   const fallbackResponse = normalizeAIResponse({
@@ -1088,20 +1228,27 @@ const demoReplies = [
 
 app.post('/api/chat', aiLimiter, verifyToken, requireVerifiedEmail, async (req, res) => {
   const { prompt } = req.body;
+  const lang = (req.body && req.body.lang) ? req.body.lang : 'en';
+
+  // Build the response through a single path so the reply can be translated
+  // before being sent (chat is silent for non-English users otherwise).
+  let reply = null;
+  let modelUsed = null;
 
   if (process.env.GEMINI_API_KEY && isModelAvailable('gemini')) {
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { temperature: 0.7, maxOutputTokens: 512 } });
       const result = await model.generateContent(prompt);
       incrementModel('gemini');
-      return res.json({ reply: result.response.text().trim(), modelUsed: 'gemini' });
+      reply = result.response.text().trim();
+      modelUsed = 'gemini';
     } catch (error) {
       console.log('Gemini chat failed:', error.message);
       if (error.message && (error.message.includes('429') || error.message.includes('quota'))) exhaustModel('gemini');
     }
   }
 
-  if (process.env.GROQ_API_KEY && isModelAvailable('groq')) {
+  if (reply === null && process.env.GROQ_API_KEY && isModelAvailable('groq')) {
     try {
       const response = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
@@ -1113,24 +1260,32 @@ app.post('/api/chat', aiLimiter, verifyToken, requireVerifiedEmail, async (req, 
         ]
       });
       incrementModel('groq');
-      return res.json({ reply: response.choices[0].message.content.trim(), modelUsed: 'groq' });
+      reply = response.choices[0].message.content.trim();
+      modelUsed = 'groq';
     } catch (error) {
       console.log('Groq chat failed:', error.message);
       if (error.message && (error.message.includes('429') || error.message.includes('quota'))) exhaustModel('groq');
     }
   }
 
-  if (ollamaAvailable) {
+  if (reply === null && ollamaAvailable) {
     try {
-      const reply = await chatWithOllama(prompt);
-      return res.json({ reply, modelUsed: 'ollama' });
+      reply = await chatWithOllama(prompt);
+      modelUsed = 'ollama';
     } catch (error) {
       console.log('Ollama chat failed:', error.message);
     }
   }
 
-  const randomReply = demoReplies[Math.floor(Math.random() * demoReplies.length)];
-  res.json({ reply: randomReply, modelUsed: 'demo' });
+  if (reply === null) {
+    reply = demoReplies[Math.floor(Math.random() * demoReplies.length)];
+    modelUsed = 'demo';
+  }
+
+  // Translate the reply to the user's language (no-op for 'en').
+  // Falls back to the original English string if translation fails.
+  const translatedReply = await translateText(reply, lang);
+  res.json({ reply: translatedReply, modelUsed });
 });
 
 // GET /api/health-news
