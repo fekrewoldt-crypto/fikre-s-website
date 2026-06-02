@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MediScan — AI Health Identification</title>
+<meta name="description" content="MediScan is an AI-powered medical diagnostic assistant — describe symptoms, upload photos, get instant health insights.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+Ethiopic:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,7 +15,7 @@
 <style>
 :root {
   --bg: #f5f2ec; --green: #1a6b4a; --green-light: #e8f4ef; --green-mid: #2d8a62;
-  --text: #1a1a18; --muted: #6b6b60; --border: #ddddd0; --red: #c0392b;
+  --text: #1a1a18; --muted: #58584e; --border: #ddddd0; --red: #c0392b;
   --amber: #d4720a; --white: rgba(255, 255, 255, 0.85); --shadow: 0 12px 40px rgba(0,0,0,0.08);
   --glass: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(255, 255, 255, 0.4);
@@ -99,7 +102,7 @@ body {
   font-family:'DM Sans',sans-serif;
   background: linear-gradient(135deg, #e8f4ef 0%, #d4edda 25%, #c5e8d5 50%, #e8f4ef 75%, #f0f7f4 100%);
   background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
+  animation: gradientBG 60s ease forwards; /* single pass — stops after complete */
   color:var(--text);
   min-height:100vh;
   position: relative;
@@ -110,14 +113,9 @@ body {
 [data-theme="dark"] body {
   background: linear-gradient(135deg, #1a3d2e 0%, #0d2418 25%, #1a3328 50%, #142d22 75%, #1a3d2e 100%);
   background-size: 400% 400%;
+  animation: gradientBG 60s ease forwards;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body {
-    background: linear-gradient(135deg, #1a3d2e 0%, #0d2418 25%, #1a3328 50%, #142d22 75%, #1a3d2e 100%);
-    background-size: 400% 400%;
-  }
-}
 
 @keyframes gradientBG {
   0% { background-position: 0% 50%; }
@@ -181,14 +179,19 @@ nav {
   position: sticky;
   top: 0;
   z-index: 200;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.04), 0 1px 0 rgba(0,0,0,0.02) inset, 0 2px 12px -4px var(--green);
 }
-.logo { font-family:'DM Serif Display',serif; font-size:1.6rem; color:var(--green); letter-spacing:-0.5px; font-weight: 600; }
+.logo { font-family:'DM Serif Display',serif; font-size:1.6rem; color:var(--green); letter-spacing:-0.5px; font-weight: 600; display: inline-flex; align-items: center; }
+.logo::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 10px; box-shadow: 0 0 0 3px var(--green-light); flex-shrink: 0; }
+[data-theme="dark"] .logo::before { background: var(--green-mid); }
 .logo span { color:var(--text); font-weight: 400; }
 .nav-right { display:flex; align-items:center; gap:10px; }
-.nav-tab { background: rgba(255,255,255,0.3); border: 1px solid var(--glass-border); border-radius: 10px; padding:8px 16px; font-size:0.85rem; font-weight:500; font-family:'DM Sans',sans-serif; color:var(--muted); cursor:pointer; transition:all 0.3s ease; }
+.nav-tab { background: rgba(255,255,255,0.3); border: 1px solid var(--glass-border); border-radius: 10px; padding:8px 16px; font-size:0.85rem; font-weight:500; font-family:'DM Sans',sans-serif; color:var(--muted); cursor:pointer; transition:all 0.3s ease; position: relative; }
 [data-theme="dark"] .nav-tab { background: rgba(0,0,0,0.2); }
-.nav-tab:hover,.nav-tab.active { border-color:var(--green); color:var(--green); background:var(--green-light); transform: translateY(-1px); }
+.nav-tab::after { content: ''; position: absolute; bottom: -6px; left: 50%; width: 16px; height: 4px; border-radius: 2px; background: var(--green); transform: translate(-50%, 0) scaleX(0); transform-origin: center; transition: transform 0.25s ease; }
+.nav-tab:hover:not(.active) { border-color:var(--green); color:var(--green); background:var(--green-light); transform: translateY(-1px); }
+.nav-tab.active { border-color:var(--green); color:var(--green); background:var(--green-light); }
+.nav-tab.active::after { transform: translate(-50%, 0) scaleX(1); }
 .nav-badge { background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%); color: white; font-size:0.72rem; font-weight:600; padding:4px 12px; border-radius:20px; box-shadow: 0 2px 8px rgba(26, 107, 74, 0.3); }
 
 .page { display:none; position: relative; z-index: 1; }
@@ -203,11 +206,11 @@ nav {
   50% { transform: translateY(-10px); }
 }
 
-.hero h1 { font-family:'DM Serif Display',serif; font-size:clamp(2.75rem,6.5vw,4rem); line-height:1.05; color:var(--text); margin-bottom:1.25rem; letter-spacing:-1.5px; animation: fadeInUp 0.8s ease 0.2s both; font-weight: 600; }
+.hero h1 { font-family:'DM Serif Display',serif; font-size:clamp(2.75rem,6.5vw,4rem); line-height:1.05; color:var(--text); margin-bottom:1.25rem; letter-spacing:-1.5px; animation: fadeInUp 0.8s ease 0.2s both; font-weight: 600; will-change: transform, opacity; }
 .hero h1 em { font-style:italic; color:var(--green); font-weight: 400; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-.hero p { font-size:1.05rem; color:var(--muted); line-height:1.7; max-width:520px; margin:0 auto; animation: fadeInUp 0.8s ease 0.4s both; }
+.hero p { font-size:1.05rem; color:var(--muted); line-height:1.7; max-width:520px; margin:0 auto; animation: fadeInUp 0.8s ease 0.4s both; will-change: transform, opacity; }
 
 /* Glassmorphism Cards - Dribbble Style */
 .card {
@@ -400,7 +403,8 @@ textarea::placeholder { color:#aaa; }
 }
 
 /* 2D/Muscles Mode Toggle */
-#body-heatmap-container .mode-toggle {
+#body-heatmap-container .mode-toggle,
+.heatmap-wrapper > .mode-toggle {
   display: flex;
   gap: 8px;
   margin-bottom: 0.75rem;
@@ -448,17 +452,6 @@ textarea::placeholder { color:#aaa; }
 
 .mode-toggle-btn .mode-icon {
   font-size: 1.1rem;
-}
-
-/* Muscles mode indicator (anatomical view) */
-.mode-toggle-btn[data-mode="muscles"].active {
-  background: linear-gradient(135deg, rgba(212, 114, 174, 0.15) 0%, rgba(180, 146, 216, 0.2) 100%);
-  border-color: #9b59b6;
-  color: #8e44ad;
-}
-
-[data-theme="dark"] .mode-toggle-btn[data-mode="muscles"].active {
-  background: linear-gradient(135deg, rgba(157, 89, 182, 0.25) 0%, rgba(142, 68, 173, 0.2) 100%);
 }
 
 .body-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:0.75rem; }
@@ -523,10 +516,11 @@ textarea::placeholder { color:#aaa; }
   box-shadow: 0 4px 12px rgba(26, 107, 74, 0.25);
 }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26, 107, 74, 0.35); }
-.btn-secondary { padding: 0.9rem 1.75rem; background: rgba(255,255,255,0.5); color: var(--green); border: 2px solid var(--green); border-radius: 10px; font-size: 0.95rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.3s ease; }
-[data-theme="dark"] .btn-secondary { background: rgba(255,255,255,0.08); }
-.btn-secondary:hover { background: var(--green-light); transform: translateY(-2px); }
-[data-theme="dark"] .btn-secondary:hover { background: rgba(26, 107, 74, 0.3); }
+.btn-secondary { padding: 0.9rem 1.75rem; background: rgba(255,255,255,0.5); color: var(--green); border: 2px solid var(--green); border-radius: 10px; font-size: 0.95rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(26, 107, 74, 0.08); }
+[data-theme="dark"] .btn-secondary { background: rgba(255,255,255,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.btn-secondary:hover { background: var(--green-light); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(26, 107, 74, 0.18); }
+.btn-secondary:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 4px rgba(26, 107, 74, 0.12); }
+[data-theme="dark"] .btn-secondary:hover { background: rgba(26, 107, 74, 0.3); box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
 
 #loading { display:none; text-align:center; padding: 4rem 2rem; max-width: 700px; margin: 0 auto; }
 #loading.skeleton-mode { padding: 2rem; }
@@ -551,7 +545,7 @@ textarea::placeholder { color:#aaa; }
   .skeleton { animation: none; background-size: 200% 100%; }
   .spinner { animation: none; border-top-color: var(--green); }
   .loading-steps li::before { animation: none !important; }
-  .fadeUp, @keyframes fadeUp, .hero *, [style*="animation"] { animation: none !important; transition: none !important; }
+  .fadeUp, .hero *, [style*="animation"] { animation: none !important; transition: none !important; }
   .demo-dot { animation: none; }
   .stagger-item, .history-item, .reminder-item, .appointment-item { animation: none; opacity: 1; }
 }
@@ -666,7 +660,7 @@ textarea::placeholder { color:#aaa; }
   padding: 2.25rem;
   border-bottom: none;
 }
-.severity-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 1rem; }
+.severity-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 1rem; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.06); }
 .severity-low { background: linear-gradient(135deg, #e8f4ef 0%, #d4edda 100%); color: var(--green); }
 .severity-med { background: linear-gradient(135deg, #fef3e2 0%, #fdebd0 100%); color: var(--amber); }
 .severity-high { background: linear-gradient(135deg, #fde8e6 0%, #fadbd8 100%); color: var(--red); }
@@ -1162,7 +1156,7 @@ textarea::placeholder { color:#aaa; }
 .demo-badge { background: #f39c12; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle; }
 
 /* Toast notifications */
-.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+.toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
 
 .toast {
   background: var(--glass);
@@ -2594,6 +2588,17 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 [data-theme="dark"] .auth-form-input:focus { background: rgba(0, 0, 0, 0.3); }
 .auth-form-input::placeholder { color: #aaa; }
 [data-theme="dark"] .auth-form-input::placeholder { color: #666; }
+.auth-form-input.error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12); }
+
+/* Auth password input with toggle */
+.auth-password-wrapper { position: relative; }
+.auth-password-wrapper .auth-form-input { padding-right: 3rem; }
+.auth-password-toggle {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  padding: 4px; font-size: 0.9rem; line-height: 1;
+}
+.auth-password-toggle:hover { color: var(--text); }
 
 /* Profile Page Form Styles */
 .form-group {
@@ -2916,6 +2921,48 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   transform: none;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+.auth-divider span { padding: 0 0.75rem; }
+
+.auth-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.auth-google-btn:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.auth-google-btn:active { transform: scale(0.98); }
+.auth-google-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
 .auth-error {
   background: linear-gradient(135deg, rgba(253, 232, 230, 0.9) 0%, rgba(250, 219, 216, 0.9) 100%);
   border: 1px solid rgba(192, 57, 43, 0.3);
@@ -3105,22 +3152,22 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <defs>
     <!-- Camera -->
     <symbol id="icon-camera" viewBox="0 0 24 24">
-      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z"/>
+      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
     </symbol>
     <!-- Camera with flash -->
     <symbol id="icon-camera-flash" viewBox="0 0 24 24">
-      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z"/>
+      <path d="M12 15.2c1.6 0 2.9-.7 3.8-1.8.3-.4.3-1 0-1.4l-2.8-4c-.4-.6-1.1-.9-1.8-.9s-1.4.3-1.8.9l-2.8 4c-.3.4-.3 1 0 1.4.9 1.1 2.2 1.8 3.8 1.8h5.6m6-15.2H5.4c-.8 0-1.5.3-2 .9l-1.4 2v11c0 .6.4 1 1 1h20c.6 0 1-.4 1-1v-11l-1.4-2c-.5-.6-1.2-.9-2-.9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
       <circle cx="17" cy="7" r="2" fill="#f39c12"/>
     </symbol>
     <!-- Microphone -->
     <symbol id="icon-microphone" viewBox="0 0 24 24">
-      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </symbol>
     <!-- Microscope/Scan -->
     <symbol id="icon-microscope" viewBox="0 0 24 24">
-      <circle cx="10" cy="10" r="4"/>
-      <path d="M10 14v6m0 0c-2 0-4-2-4-4m4 4c2 0 4-2 4-4M6 18H4m16 0h-2m-2.5-2.5L18 8l-1.5-1.5M6 8.5L4.5 7 6 5.5"/>
+      <circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 14v6m0 0c-2 0-4-2-4-4m4 4c2 0 4-2 4-4M6 18H4m16 0h-2m-2.5-2.5L18 8l-1.5-1.5M6 8.5L4.5 7 6 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </symbol>
     <!-- Calendar -->
     <symbol id="icon-calendar" viewBox="0 0 24 24">
@@ -3145,12 +3192,12 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     </symbol>
     <!-- Moon -->
     <symbol id="icon-moon" viewBox="0 0 24 24">
-      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
     <!-- Sun -->
     <symbol id="icon-sun" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </symbol>
     <!-- Refresh -->
     <symbol id="icon-refresh" viewBox="0 0 24 24">
@@ -3257,6 +3304,16 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <symbol id="icon-circle-red" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="#f44336"/>
     </symbol>
+    <!-- Eye (Show password) -->
+    <symbol id="icon-eye" viewBox="0 0 24 24">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    <!-- Eye Off (Hide password) -->
+    <symbol id="icon-eye-off" viewBox="0 0 24 24">
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
     <!-- Circle Gray (Neutral) -->
     <symbol id="icon-circle-gray" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="#9E9E9E"/>
@@ -3316,11 +3373,26 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <path d="M6 20a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="2"/>
       <path d="M8 10h4m1 0h3" stroke="currentColor" stroke-width="2"/>
     </symbol>
+    <!-- Severity: Low (green checkmark) -->
+    <symbol id="icon-severity-low" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#22C55E"/>
+      <path d="M7 12l3 3 7-7" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <!-- Severity: Medium (amber exclamation) -->
+    <symbol id="icon-severity-medium" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#F59E0B"/>
+      <path d="M12 8v5m0 3h.01" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <!-- Severity: High (red alert) -->
+    <symbol id="icon-severity-high" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#EF4444"/>
+      <path d="M12 8v5m0 3h.01" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
   </defs>
 </svg>
 
 <div class="ethiopian-accent"></div>
-<div class="toast-container" id="toast-container"></div>
+<div class="toast-container" id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Floating Particles -->
 <div class="particles">
@@ -3339,14 +3411,14 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <span id="demo-toggle-text">Demo</span>
     </button>
     <button class="nav-tab" id="auth-btn" onclick="openAuthModal()" data-i18n="auth_login_register">Login / Register</button>
-    <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan">New Scan</button>
+    <button class="nav-tab active" data-page="scan" onclick="showPage('scan',this)" data-i18n="nav_new_scan" aria-current="page">New Scan</button>
     <button class="nav-tab" data-page="history" onclick="showPage('history',this)" data-i18n="nav_history">History</button>
     <button class="nav-tab" data-page="dashboard" onclick="showPage('dashboard',this)" data-i18n="nav_dashboard">Dashboard</button>
     <button class="nav-tab" data-page="profile" onclick="showPage('profile',this)" data-i18n="nav_profile">Profile</button>
     <button class="nav-tab" data-page="appointments" onclick="showPage('appointments',this)" data-i18n="nav_appointments"><svg class="icon icon-sm icon-inline"><use href="#icon-calendar"/></svg> Appointments</button>
     <button class="nav-tab" data-page="reminders" onclick="showPage('reminders',this)" data-i18n="nav_reminders"><svg class="icon icon-sm icon-inline"><use href="#icon-pill"/></svg> Reminders</button>
     <button class="nav-tab" data-page="facilities" onclick="showPage('facilities',this)" data-i18n="nav_facilities"><svg class="icon icon-sm icon-inline"><use href="#icon-hospital"/></svg> Facilities</button>
-    <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode"><svg class="icon icon-sm icon-inline"><use href="#icon-moon"/></svg></button>
+    <button class="nav-tab" id="theme-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode"><svg class="icon icon-sm icon-inline"><use href="#icon-moon"/></svg></button>
     <div class="lang-selector">
       <button class="lang-btn" id="lang-btn" onclick="toggleLangDropdown()">
         <span class="lang-flag" id="current-lang-flag">EN</span>
@@ -3382,7 +3454,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   <div class="auth-modal" onclick="event.stopPropagation()">
     <div class="auth-modal-header">
       <h2 class="auth-modal-title" id="auth-modal-title">Login</h2>
-      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     </div>
     <div id="auth-error" class="auth-error"></div>
     <div id="auth-success" class="auth-success"></div>
@@ -3393,21 +3465,33 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <form id="auth-form" onsubmit="handleAuthSubmit(event)">
       <div class="auth-form-group">
         <label class="auth-form-label" for="auth-email">Email</label>
-        <input type="email" id="auth-email" class="auth-form-input" placeholder="you@example.com" required>
+        <input type="email" id="auth-email" class="auth-form-input" placeholder="you@example.com" required autocomplete="email">
       </div>
-      <div class="auth-form-group">
+      <div class="auth-password-wrapper">
         <label class="auth-form-label" for="auth-password">Password</label>
-        <input type="password" id="auth-password" class="auth-form-input" placeholder="Enter your password" required>
+        <input type="password" id="auth-password" class="auth-form-input" placeholder="Enter your password" required autocomplete="current-password">
+        <button type="button" class="auth-password-toggle" onclick="togglePasswordVisibility('auth-password', this)" aria-label="Show password"><svg class="icon icon-md icon-inline" aria-hidden="true"><use href="#icon-eye"/></svg></button>
       </div>
       <div class="auth-form-group" id="confirm-password-group" style="display: none;">
         <label class="auth-form-label" for="auth-confirm-password">Confirm Password</label>
-        <input type="password" id="auth-confirm-password" class="auth-form-input" placeholder="Confirm your password">
+        <input type="password" id="auth-confirm-password" class="auth-form-input" placeholder="Confirm your password" autocomplete="new-password">
       </div>
       <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
         <span id="auth-btn-text">Login</span>
         <div class="auth-spinner" id="auth-spinner" style="display: none;"></div>
       </button>
     </form>
+    <div class="auth-divider"><span data-i18n="auth_or">or</span></div>
+    <button type="button" class="auth-google-btn" id="auth-google-btn" onclick="signInWithGoogle()" aria-label="Sign in with Google">
+      <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        <path fill="none" d="M0 0h48v48H0z"/>
+      </svg>
+      <span data-i18n="auth_google_signin">Sign in with Google</span>
+    </button>
     <div class="auth-switch" id="auth-switch">
       <span>Don't have an account? <a onclick="toggleAuthMode('register')">Register</a></span>
     </div>
@@ -3437,7 +3521,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       </button>
       <div id="preview-container">
         <img id="preview-img" src="" alt="Preview">
-        <button class="remove-img" id="remove-img">✕</button>
+        <button class="remove-img" id="remove-img" aria-label="Remove image">✕</button>
       </div>
     </div>
 
@@ -3458,7 +3542,17 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     <div class="card">
       <div class="card-title"><div class="step-badge">3</div>Where on the body?</div>
 
-      <div id="body-heatmap-container"></div>
+      <div class="heatmap-wrapper">
+        <div class="heatmap-mode-toggle" id="heatmap-mode-toggle" role="tablist" aria-label="Body heatmap mode">
+          <button type="button" class="mode-toggle-btn active" data-mode="2d" role="tab" aria-selected="true">
+            <span class="mode-icon" aria-hidden="true">▦</span> 2D
+          </button>
+          <button type="button" class="mode-toggle-btn" data-mode="demo" role="tab" aria-selected="false">
+            <span class="mode-icon" aria-hidden="true">📋</span> Legacy
+          </button>
+        </div>
+        <div id="body-heatmap-container"></div>
+      </div>
       <!-- Legacy body grid kept for backward compatibility, hidden by default -->
       <div class="body-grid" id="legacy-body-grid" style="display: none;">
         <button class="body-btn" data-val="skin / face">Skin / Face</button>
@@ -3621,7 +3715,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <div id="dashboard-page" class="page">
   <div class="dash-intro">
     <h2 id="dash-welcome-heading">Health Dashboard</h2>
-    <p>Patterns across all your scans</p>
+    <p data-i18n="dash_subtitle">Patterns across all your scans</p>
   </div>
   <div class="dash-cards">
     <div class="dash-card"><div class="num" id="dash-total">0</div><div class="lbl">Total scans</div></div>
@@ -3828,7 +3922,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- MEDICINE REMINDER MODAL -->
 <div class="modal-bg" id="reminder-modal">
   <div class="modal" style="max-width: 480px;">
-    <button class="modal-close" onclick="closeReminderModal()"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+    <button class="modal-close" onclick="closeReminderModal()" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     <h3 id="reminder-modal-title">Add Medicine Reminder</h3>
     <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5;">
       Keep track of your medications and never miss a dose.
@@ -3962,7 +4056,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- BOOKING MODAL -->
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
-    <button class="modal-close" id="modal-close"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+    <button class="modal-close" id="modal-close" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     <h3>Book a consultation</h3>
     <p style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem">Select a doctor and time to book your appointment.</p>
     <input type="text" id="booking-name" placeholder="Your full name" autocomplete="name">
@@ -3990,7 +4084,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- GONDAR HOSPITALS MODAL -->
 <div class="modal-bg" id="hospitals-modal">
   <div class="modal" style="max-width: 520px; max-height: 85vh; overflow-y: auto;">
-    <button class="modal-close" onclick="document.getElementById('hospitals-modal').classList.remove('open')"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+    <button class="modal-close" onclick="document.getElementById('hospitals-modal').classList.remove('open')" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     <h3><svg class="icon icon-md icon-inline"><use href="#icon-hospital"/></svg> Nearby Hospitals in Gondar</h3>
     <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem;">
       High severity detected. Please seek immediate medical attention at one of these facilities.
@@ -4013,7 +4107,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 <!-- HEALTH NEWS DETAIL MODAL -->
 <div class="modal-bg" id="news-detail-modal">
   <div class="modal" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
-    <button id="news-detail-close" class="modal-close" onclick="closeNewsDetail()"><svg class="icon icon-md" fill="currentColor"><use href="#icon-close"/></svg></button>
+    <button id="news-detail-close" class="modal-close" onclick="closeNewsDetail()" aria-label="Close dialog"><svg class="icon icon-md icon-inline"><use href="#icon-close"/></svg></button>
     <div id="news-detail-content">
       <!-- News detail will be rendered here -->
     </div>
@@ -4021,19 +4115,23 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 </div>
 
 <!-- CAMERA MODAL -->
-<div class="camera-modal" id="camera-modal">
+<div class="camera-modal" id="camera-modal" role="dialog" aria-modal="true" aria-label="Take a photo">
   <div class="camera-container">
     <h3 style="margin-bottom: 15px; font-family: 'DM Serif Display', serif;"><svg class="icon icon-md icon-inline"><use href="#icon-camera-flash"/></svg> Take a Photo</h3>
     <video class="camera-preview" id="camera-video" autoplay playsinline></video>
     <canvas id="camera-canvas" style="display: none;"></canvas>
     <div class="camera-controls">
-      <button class="camera-close-btn" onclick="closeCamera()">Cancel</button>
-      <button class="camera-capture-btn" id="camera-capture" onclick="capturePhoto()" title="Take Photo"></button>
+      <button class="camera-close-btn" onclick="closeCamera()" aria-label="Cancel and close camera">Cancel</button>
+      <button class="camera-capture-btn" id="camera-capture" onclick="capturePhoto()" aria-label="Capture photo"></button>
     </div>
   </div>
 </div>
 
 <!-- Body Heatmap Components - Using Demo Body Heatmap -->
+<script src="modules/heatmap-state.js"></script>
+<script src="modules/body-heatmap.js"></script>
+<script src="modules/body-heatmap-muscles.js"></script>
+<script src="modules/heatmap-switcher.js"></script>
 <script src="modules/demo-body-heatmap-simple.js"></script>
 
 <!-- Hospital Map Components -->
@@ -4211,6 +4309,10 @@ function openCamera() {
   const modal = document.getElementById('camera-modal');
   const video = document.getElementById('camera-video');
 
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Camera not supported in this browser', 'warning');
+    return;
+  }
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
     .then(mediaStream => {
       stream = mediaStream;
@@ -4219,7 +4321,6 @@ function openCamera() {
     })
     .catch(err => {
       showToast('Could not access camera: ' + err.message, 'error');
-      console.error('Camera error:', err);
     });
 }
 
@@ -4313,10 +4414,8 @@ async function loadHospitalData() {
       }));
 
     hospitalsDataLoaded = true;
-    console.log(`Loaded ${GONDAR_HOSPITALS.length} hospitals for emergency modal`);
     return GONDAR_HOSPITALS;
   } catch (error) {
-    console.error('Error loading hospital data:', error);
     // Fallback to embedded data if fetch fails
     GONDAR_HOSPITALS = getFallbackHospitalData();
     hospitalsDataLoaded = true;
@@ -4416,7 +4515,7 @@ function isLikelyInGondar() {
 function saveFormState() {
   // Get body area from heatmap if available, otherwise use legacy
   let bodyArea = selectedBody;
-  let bodySelections = [];
+  bodySelections = [];
   let heatmapMode = 'demo';
 
   if (window.mediscanBodyHeatmap && window.mediscanBodyHeatmap.getEnhancedFormat()) {
@@ -4446,8 +4545,7 @@ function restoreFormState() {
     try {
       state = JSON.parse(saved);
     } catch (parseError) {
-      console.error('Failed to parse saved form state:', parseError);
-      // Corrupted data - clear it
+      // Internal error - form cleared, user notified
       localStorage.removeItem('mediscan_form');
       showToast('Saved form data was corrupted and has been cleared.', 'error');
       return;
@@ -4477,7 +4575,7 @@ function restoreFormState() {
             bodyRestored = true;
             restoredCount++;
           } catch (heatmapError) {
-            console.error('Failed to restore body heatmap selections:', heatmapError);
+            // Internal error - fallback to legacy selection
           }
         }
         if (!bodyRestored && state.body) {
@@ -4514,7 +4612,7 @@ function restoreFormState() {
         document.getElementById('preview-container').style.display = 'block';
         restoredCount++;
       } catch (imgError) {
-        console.error('Failed to restore saved image:', imgError);
+        // Internal error - image not restored, user notified
         showToast('Saved image could not be restored.', 'error');
       }
     }
@@ -4524,17 +4622,25 @@ function restoreFormState() {
       showToast(`Restored ${restoredCount} field(s) from your previous session.`, 'success', 3000);
     }
   } catch (e) {
-    console.error('Restore form state failed:', e);
+    // Internal error - session not restored, user notified
     showToast('Could not restore your previous session. Please start fresh.', 'error');
   }
 }
 
 // ── NAVIGATION ──
+const REQUIRES_AUTH = ['history', 'dashboard', 'profile', 'appointments', 'reminders'];
 function showPage(name, btn) {
+  // Auth gate: protected pages must have a logged-in user
+  if (REQUIRES_AUTH.includes(name) && !window.authToken) {
+    if (typeof openAuthModal === 'function') {
+      openAuthModal();
+    }
+    return;
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); t.removeAttribute('aria-current'); });
   document.getElementById(name + '-page').classList.add('active');
-  if (btn) btn.classList.add('active');
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-current', 'page'); }
   if (name === 'history') renderHistory();
   if (name === 'dashboard') renderDashboard();
   if (name === 'profile') loadProfile();
@@ -4596,33 +4702,25 @@ document.querySelectorAll('.body-btn').forEach(b => b.addEventListener('click', 
   saveFormState();
 }));
 
-// Initialize body heatmap on page load - using DemoBodyHeatmap
+// Initialize body heatmap on page load - using HeatmapSwitcher (orchestrates 2D / Muscles / Demo)
 async function initBodyHeatmap() {
   const container = document.getElementById('body-heatmap-container');
   if (!container) {
-    console.error('Body heatmap container not found');
     return;
   }
 
-  console.log('initBodyHeatmap called, DemoBodyHeatmap:', typeof DemoBodyHeatmap);
-
   try {
-    // Wait for ES module to be loaded (demo-body-heatmap-simple.js is type="module")
+    // Wait for HeatmapSwitcher to be loaded via <script> tag
     // Poll for up to 3 seconds for the module to initialize
     let waitCount = 0;
-    while (typeof DemoBodyHeatmap === 'undefined' && waitCount < 30) {
+    while (typeof HeatmapSwitcher === 'undefined' && waitCount < 30) {
       await new Promise(resolve => setTimeout(resolve, 100));
       waitCount++;
-      if (waitCount % 5 === 0) {
-        console.log(`Waiting for DemoBodyHeatmap... ${waitCount}/30`);
-      }
     }
 
-    if (typeof DemoBodyHeatmap === 'undefined') {
-      throw new Error('DemoBodyHeatmap module failed to load within 3 seconds');
+    if (typeof HeatmapSwitcher === 'undefined') {
+      throw new Error('HeatmapSwitcher module failed to load within 3 seconds');
     }
-
-    console.log('DemoBodyHeatmap loaded successfully');
 
     // Load saved selections from localStorage
     let savedSelections = [];
@@ -4635,54 +4733,28 @@ async function initBodyHeatmap() {
         }
       }
     } catch (e) {
-      console.warn('Failed to load saved heatmap selections:', e);
+      // Silent fallback - saved selections will just be empty
     }
 
-    // Create DemoBodyHeatmap instance
-    bodyHeatmap = new DemoBodyHeatmap('body-heatmap-container', {
-      onSelectionChange: (data) => {
-        // Deep clone to ensure proper state sync
-        bodySelections = JSON.parse(JSON.stringify(data.regions || []));
+    // Wire the static 2D / Muscles / Legacy mode toggle (now a sibling of
+    // the container, placed in the HTML, so it survives innerHTML clears).
+    // Done after init() below so the switcher is ready when the user clicks.
+    bodyHeatmap = new HeatmapSwitcher('body-heatmap-container', {
+      onSelectionChange: (regions, mode) => {
+        // `regions` is the array of {area, intensity, name} from the underlying
+        // 2D or Muscles heatmap. Normalize to the same shape that
+        // saveFormState / restoreFormState expect.
+        const regionsArr = Array.isArray(regions) ? regions : (regions && regions.regions) || [];
+        bodySelections = JSON.parse(JSON.stringify(regionsArr));
 
-        // Update legacy selectedBody for API compatibility
-        if (data.regions && data.regions.length > 0) {
-          const primary = data.regions.reduce((max, s) => s.intensity > max.intensity ? s : max, data.regions[0]);
-          const areaMap = {
-            'head': 'head / nervous',
-            'neck': 'head / nervous',
-            'chest': 'chest / lungs',
-            'abdomen': 'stomach / gut',
-            'pelvis': 'stomach / gut',
-            'groin': 'stomach / gut',
-            'left-shoulder': 'arms / hands',
-            'right-shoulder': 'arms / hands',
-            'left-upper-arm': 'arms / hands',
-            'right-upper-arm': 'arms / hands',
-            'left-elbow': 'arms / hands',
-            'right-elbow': 'arms / hands',
-            'left-forearm': 'arms / hands',
-            'right-forearm': 'arms / hands',
-            'left-wrist': 'arms / hands',
-            'right-wrist': 'arms / hands',
-            'left-hand': 'arms / hands',
-            'right-hand': 'arms / hands',
-            'left-upper-leg': 'legs / feet',
-            'right-upper-leg': 'legs / feet',
-            'left-knee': 'legs / feet',
-            'right-knee': 'legs / feet',
-            'left-lower-leg': 'legs / feet',
-            'right-lower-leg': 'legs / feet',
-            'left-ankle': 'legs / feet',
-            'right-ankle': 'legs / feet',
-            'left-foot': 'legs / feet',
-            'right-foot': 'legs / feet',
-            'upper-back': 'back',
-            'lower-back': 'back',
-            'buttocks': 'legs / feet',
-            'left-hip': 'legs / feet',
-            'right-hip': 'legs / feet'
-          };
-          selectedBody = areaMap[primary.area] || 'other / unsure';
+        // Update legacy selectedBody for API compatibility. The switcher
+        // exposes a unified getLegacyFormat() that maps the active mode's
+        // area ids to the legacy body strings.
+        if (regionsArr.length > 0) {
+          const enhanced = (bodyHeatmap && typeof bodyHeatmap.getEnhancedFormat === 'function')
+            ? bodyHeatmap.getEnhancedFormat()
+            : null;
+          selectedBody = (enhanced && enhanced.legacyBodyArea) || 'other / unsure';
         } else {
           selectedBody = '';
         }
@@ -4691,14 +4763,24 @@ async function initBodyHeatmap() {
       initialSelection: savedSelections
     });
 
+    // Hydrate the switcher with saved selections
+    if (savedSelections.length > 0) {
+      bodyHeatmap.setSelections(savedSelections);
+    }
+
+    await bodyHeatmap.init();
+
     window.mediscanBodyHeatmap = bodyHeatmap;
     window.mediscanBodyHeatmapSwitcher = bodyHeatmap;
 
-    console.log('Demo body heatmap initialized successfully');
+    // Wire the static mode toggle now that the switcher is ready
+    wireHeatmapModeToggle();
+
     showToast('Body heatmap loaded successfully', 'success', 2000);
 
   } catch (error) {
-    console.error('Failed to initialize demo body heatmap:', error);
+    // Internal error - user notified with specific message
+    console.error('initBodyHeatmap failed:', error);
 
     // Specific error messages based on failure type
     let errorMessage = 'Body heatmap failed to initialize.';
@@ -4715,6 +4797,79 @@ async function initBodyHeatmap() {
     document.getElementById('body-heatmap-container').style.display = 'none';
     showToast('Using legacy body selection mode.', 'warning', 3000);
   }
+}
+
+// Wires the static 2D / Muscles / Legacy mode toggle (a sibling of
+// #body-heatmap-container in the HTML). Recreates the switcher when
+// needed so clicking 2D / Muscles after Legacy still works.
+function wireHeatmapModeToggle() {
+  const toggle = document.getElementById('heatmap-mode-toggle');
+  if (!toggle) return;
+  if (toggle.dataset.wired === 'true') return;
+  toggle.dataset.wired = 'true';
+
+  const container = document.getElementById('body-heatmap-container');
+  if (!container) return;
+
+  toggle.querySelectorAll('.mode-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const mode = btn.dataset.mode;
+
+      // Active state styling
+      toggle.querySelectorAll('.mode-toggle-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+
+      try {
+        if (mode === 'demo') {
+          // Demo (Legacy) mode: destroy any current switcher, render the
+          // legacy demo heatmap into the (now empty) container.
+          if (window.mediscanBodyHeatmap && typeof window.mediscanBodyHeatmap.destroy === 'function') {
+            await window.mediscanBodyHeatmap.destroy();
+          }
+          if (typeof DemoBodyHeatmap !== 'undefined') {
+            window.mediscanBodyHeatmap = new DemoBodyHeatmap('body-heatmap-container', {
+              initialSelection: bodySelections || []
+            });
+          }
+        } else {
+          // 2d or muscles: need a HeatmapSwitcher. If the current instance
+          // is a DemoBodyHeatmap (no setMode), recreate the switcher.
+          if (!window.mediscanBodyHeatmap || typeof window.mediscanBodyHeatmap.setMode !== 'function') {
+            if (window.mediscanBodyHeatmap && typeof window.mediscanBodyHeatmap.destroy === 'function') {
+              await window.mediscanBodyHeatmap.destroy();
+            }
+            window.mediscanBodyHeatmap = new HeatmapSwitcher('body-heatmap-container', {
+              onSelectionChange: (regions, currentMode) => {
+                // Same callback shape as initBodyHeatmap: normalize regions,
+                // update bodySelections + selectedBody, persist.
+                const regionsArr = Array.isArray(regions) ? regions : (regions && regions.regions) || [];
+                bodySelections = JSON.parse(JSON.stringify(regionsArr));
+                if (regionsArr.length > 0) {
+                  const enhanced = (window.mediscanBodyHeatmap && typeof window.mediscanBodyHeatmap.getEnhancedFormat === 'function')
+                    ? window.mediscanBodyHeatmap.getEnhancedFormat()
+                    : null;
+                  selectedBody = (enhanced && enhanced.legacyBodyArea) || 'other / unsure';
+                } else {
+                  selectedBody = '';
+                }
+                saveFormState();
+              },
+              initialSelection: bodySelections || []
+            });
+            await window.mediscanBodyHeatmap.init();
+          }
+          await window.mediscanBodyHeatmap.setMode(mode);
+        }
+      } catch (err) {
+        console.error('Mode switch failed:', err);
+        showToast('Failed to switch heatmap mode', 'error', 2500);
+      }
+    });
+  });
 }
 
 // Duration buttons
@@ -4757,7 +4912,7 @@ function initVoiceInput() {
   };
 
   recognition.onerror = (e) => {
-    console.error('Speech error:', e.error);
+    // Internal error - user notified
     showToast('Voice recognition error. Please try again.', 'error');
     stopRecording();
   };
@@ -4914,7 +5069,8 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
       imageBase64,
       imageMimeType,
       symptoms,
-      bodyArea: selectedBody
+      bodyArea: selectedBody,
+      lang: currentLang  // Used by server to translate result content via Google Cloud Translation
     };
 
     // Add enhanced heatmap data if available
@@ -4933,10 +5089,21 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
       document.getElementById('loading-status').textContent += ` (${(body.length/1024/1024).toFixed(1)}MB upload)`;
     }
     const res = await fetch(SERVER_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || 'Server error');
+    // Read raw text first so we can show a useful message even on non-JSON
+    // responses (e.g. 429 rate-limit bodies are plain text).
+    const rawText = await res.text();
+    let data;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (parseErr) {
+      if (!res.ok) {
+        throw new Error(rawText.trim() || 'Server error');
+      }
+      throw new Error('Unexpected response from server');
+    }
+    if (!res.ok) throw new Error(data?.error || rawText.trim() || 'Server error');
     currentResult = data;
-    const modelDisplay = data.modelUsed === 'gemini' ? 'Gemini AI' : data.modelUsed === 'ollama' ? 'Ollama AI' : data.modelUsed === 'claude' ? 'Claude AI' : data.modelUsed === 'openai' ? 'OpenAI' : 'Demo mode';
+    const modelDisplay = data.modelUsed === 'gemini' ? 'Gemini AI' : data.modelUsed === 'groq' ? 'Groq AI' : data.modelUsed === 'nvidia' ? 'NVIDIA AI' : data.modelUsed === 'ollama' ? 'Ollama AI' : data.modelUsed === 'claude' ? 'Claude AI' : data.modelUsed === 'openai' ? 'OpenAI' : 'Demo mode';
     document.getElementById('loading-status').textContent = `Analyzed with ${modelDisplay} (${data.responseTimeMs}ms)`;
     await new Promise(r => setTimeout(r, 500));
     saveToHistory(data, symptoms, selectedBody, selectedDuration);
@@ -4951,7 +5118,6 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form-section').style.display = 'block';
     showToast('Analysis failed: ' + err.message, 'error', 6000);
-    console.error('Analysis error:', err);
   }
 }
 
@@ -4976,13 +5142,12 @@ async function syncHeatmapAfterAnalysis() {
         });
 
         if (!response.ok) {
-          console.warn('Heatmap sync failed:', response.status);
+          // Silent failure - heatmap sync is non-critical
         }
       }
     }
   } catch (error) {
-    console.warn('Heatmap sync error:', error);
-    // Don't show toast for sync failures - this is non-critical
+    // Silent failure - heatmap sync is non-critical
   }
 }
 
@@ -5039,7 +5204,7 @@ function showResults(r) {
   const [cls, label] = sMap[r.severity] || sMap['medium'];
   const pill = document.getElementById('severity-pill');
   pill.className = 'severity-pill ' + cls;
-  pill.textContent = label + ' risk';
+  pill.innerHTML = `<svg class="icon icon-sm" aria-hidden="true"><use href="#icon-severity-${r.severity}"/></svg><span>${label} risk</span>`;
 
   document.getElementById('disease-name').textContent = r.primaryCondition || 'Unknown';
   document.getElementById('disease-subtitle').textContent = r.subtitle || '';
@@ -5213,9 +5378,7 @@ async function sendChat() {
   // Remove oldest messages when exceeding limit (keep most recent 20)
   const MAX_CHAT_HISTORY = 20;
   if (chatHistory.length > MAX_CHAT_HISTORY) {
-    const removedCount = chatHistory.length - MAX_CHAT_HISTORY;
-    chatHistory.splice(0, removedCount);
-    console.log(`Chat history bounded: removed ${removedCount} oldest message(s), now at ${chatHistory.length} messages`);
+    chatHistory.splice(0, chatHistory.length - MAX_CHAT_HISTORY);
   }
 
   const fullPrompt = chatHistory.map(m => `${m.role === 'user' ? 'Patient' : 'Doctor'}: ${m.content}`).join('\n\n') + '\n\nDoctor:';
@@ -5249,10 +5412,14 @@ function saveToHistory(result, symptoms, body, duration) {
 function getHistory() { try { return JSON.parse(localStorage.getItem('mediscan_history') || '[]'); } catch { return []; } }
 function clearHistory() { if (confirm('Clear all scan history?')) { localStorage.removeItem('mediscan_history'); renderHistory(); renderDashboard(); } }
 
-const sevIcons = { low:'🟢', medium:'🟡', high:'🔴' };
+const sevIcons = { low:'<svg class="icon" aria-hidden="true"><use href="#icon-severity-low"/></svg>', medium:'<svg class="icon" aria-hidden="true"><use href="#icon-severity-medium"/></svg>', high:'<svg class="icon" aria-hidden="true"><use href="#icon-severity-high"/></svg>' };
 const sevCls   = { low:'severity-low', medium:'severity-med', high:'severity-high' };
 
 function renderHistory() {
+  if (!window.authToken) {
+    // Auth gate: should not be reachable via showPage guard, but defense in depth
+    return;
+  }
   const history = getHistory();
   const el = document.getElementById('history-list');
   if (!history.length) { el.innerHTML = '<div class="history-empty"><div style="font-size:2.5rem">📋</div><p>No scans yet. Run your first scan to see history here.</p></div>'; return; }
@@ -5274,6 +5441,9 @@ function renderHistory() {
 
 // ── DASHBOARD ──
 function renderDashboard() {
+  if (!window.authToken) {
+    return;
+  }
   const h = getHistory();
   if (sevChart) { sevChart.destroy(); sevChart = null; }
   if (timeChart) { timeChart.destroy(); timeChart = null; }
@@ -5388,7 +5558,6 @@ async function renderHealthNews() {
       container.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">No health news available at this time.</div>';
     }
   } catch (error) {
-    console.error('Failed to load health news:', error);
     // Fallback to static news
     container.innerHTML = HEALTH_NEWS.map((news, index) => `
       <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
@@ -5504,8 +5673,8 @@ function showNewsDetail(index) {
           <li>Primary care consultations</li>
           <li>Maternal and child health services</li>
           <li>Family planning</li>
-          <>Laboratory services</li>
-         >Emergency care (limited hours)</li>
+          <li>Laboratory services</li>
+          <li>Emergency care (limited hours)</li>
         </ul>
         <p><strong>Impact:</strong></p>
         <p>This expansion reduces travel time for Azezo residents who previously had to travel to Gondar for basic healthcare services. The facility will employ 15 healthcare professionals including doctors, nurses, and lab technicians.</p>
@@ -5670,8 +5839,11 @@ const TRANSLATIONS = {
     nav_dashboard: "Dashboard",
     nav_profile: "Profile",
     nav_appointments: "Appointments",
-    nav_facilities: "F3E5 Facilities",
+    nav_facilities: " Facilities",
+    nav_reminders: "Reminders",
     auth_login_register: "Login / Register",
+    auth_or: "or",
+    auth_google_signin: "Sign in with Google",
     // Hero section
     hero_tag: "Science Fair Project",
     hero_title: "How are you\nfeeling?",
@@ -5697,7 +5869,7 @@ const TRANSLATIONS = {
     dur_2_plus_weeks: "2+ weeks",
     dur_chronic: "Chronic",
     // Submit
-    analyze_symptoms: "F52C Analyze symptoms",
+    analyze_symptoms: " Analyze symptoms",
     // Loading
     loading_title: "Analyzing your information...",
     loading_status: "Connecting to AI...",
@@ -5715,10 +5887,10 @@ const TRANSLATIONS = {
     section_next_steps: "Recommended next steps",
     section_urgent: "When to seek urgent care",
     section_alternatives: "Other possible conditions",
-    emergency_immediate: "F3E5 Immediate Medical Care Recommended",
+    emergency_immediate: " Immediate Medical Care Recommended",
     emergency_subtitle: "This condition may require prompt medical attention. Below are hospitals in Gondar with emergency services.",
     btn_view_hospitals: "View Nearby Hospitals",
-    facilities_recommended: "F4CD Recommended Healthcare Facilities",
+    facilities_recommended: " Recommended Healthcare Facilities",
     facilities_subtitle: "Based on your condition, these facilities in Gondar are best suited for your needs.",
     btn_book: "Book a consultation",
     btn_export: "Export PDF",
@@ -5747,41 +5919,41 @@ const TRANSLATIONS = {
     dash_medium: "Medium severity",
     chart_severity_dist: "Severity distribution",
     chart_scans_over_time: "Scans over time (last 7 days)",
-    news_title: "F4F0 Health News & Alerts",
+    news_title: " Health News & Alerts",
     btn_refresh: "🔄 Refresh",
     dash_empty: "No scan data yet. Run your first scan to populate the dashboard.",
     loading_health_news: "Loading health news...",
     no_health_news: "No health news available at this time.",
     // Facilities
-    facilities_title: "F3E5 Healthcare Facilities",
+    facilities_title: " Healthcare Facilities",
     facilities_subtitle: "Hospitals, clinics, and pharmacies in Gondar, Ethiopia",
     filter_all: "All",
-    filter_hospital: "F3E5 Hospitals",
-    filter_health_center: "F3E6 Health Centers",
-    filter_clinic: "FA7A Clinics",
-    filter_pharmacy: "F48A Pharmacies",
+    filter_hospital: " Hospitals",
+    filter_health_center: " Health Centers",
+    filter_clinic: " Clinics",
+    filter_pharmacy: " Pharmacies",
     search_placeholder: "Search facilities...",
-    view_list: "F4CB List View",
-    find_nearest: "F4CD Find Nearest",
+    view_list: " List View",
+    find_nearest: " Find Nearest",
     // Modal
     modal_book_title: "Book a consultation",
     modal_book_desc: "Demo booking form. In a real telemedicine system, this connects to an available doctor.",
     modal_confirm: "Confirm booking",
     // Hospitals modal
-    hospitals_title: "F3E5 Nearby Hospitals in Gondar",
+    hospitals_title: " Nearby Hospitals in Gondar",
     hospitals_subtitle: "High severity detected. Please seek immediate medical attention at one of these facilities.",
     emergency_call: "Emergency? Call 907 (Ambulance)",
     emergency_sub: "Free ambulance service in Gondar city",
     // News detail
     btn_close: "Close",
     btn_learn_more: "Learn More",
-    source: "F4DA Source",
+    source: " Source",
     // SOS modal
     sos_title: "🚨 Emergency Help",
     sos_subtitle: "Nearby hospitals in Gondar",
     sos_call_ambulance: "📞 Call Ambulance: 907",
     sos_call_free: "Free emergency service · Gondar City",
-    locate_nearest: "F4CD Find Nearest to Me",
+    locate_nearest: " Find Nearest to Me",
     sos_locating: "Getting your location…",
     sorted_distance: "Sorted nearest to your location",
     sorted_center: "Sorted from Gondar city center",
@@ -5805,417 +5977,432 @@ const TRANSLATIONS = {
   },
   am: {
     // Navigation
-    nav_new_scan: "አեմ ንዋሳ",
-    nav_history: "ኛሪሺ",
-    nav_dashboard: "ዚሺቤርዓ",
-    nav_facilities: "ኛቀጥዋና F3E5",
-    auth_login_register: "ጓት / ጨሚቁድን",
+    nav_new_scan: "አዲስ ስካን",
+    nav_history: "ታሪክ",
+    nav_dashboard: "ዳሽቦርድ",
+    nav_facilities: "ተቋማት",
+    nav_profile: "መገለጫ",
+    nav_appointments: "ቀጠሮዎች",
+    nav_reminders: "ማስታወሻዎች",
+    auth_login_register: "ግባ / ይመዝጉ",
+    auth_or: "ወይም",
+    auth_google_signin: "በ Google ይግቡ",
     // Hero section
-    hero_tag: "የሴኣንስ ትሪቀዪ ፕሪናዚእነ",
-    hero_title: "ጭቤቅት\nጭጋቅ \��ስማ?",
-    hero_desc: "የጭቃታኛዕኛዥ \��ደምለጺ \��ይማ ፎቶ ያስገቡ። ምን እየሆነ እንደሆነ እንረዳዎታለን።",
+    hero_tag: "የሳይንስ ውድድር ፕሮጀክት",
+    hero_title: "እንዴት\nይሰማዎታል?",
+    hero_desc: "ምልክቶችዎን ይግለጹ ወይም ፎቶ ይስቀሉ። ምን እየሆነ እንደሆነ እንረዳዎታለን።",
     // Step 1: Upload
-    step1_title: "ፕቶ ያስገቡ (አማማኛሳን ግን የሚመከር)",
-    upload_click: "ፊዋን \��ጉዑល",
-    upload_or: "លይማ ይጎትቱ እና ይጣሉ",
-    upload_hint: "ታንኣለጽኦኛመርቀሃሎም — ማኛንየ ዘርአ ቁሩብ",
-    camera_take_photo: "ቀባ ይልስሙ",
+    step1_title: "ፎቶ ይስቀሉ (አማራጭ ነገር ግን የሚመከር)",
+    upload_click: "ለመስቀል ጠቅ ያድርጉ",
+    upload_or: "ወይም ይጎትቱና ይጥሉ",
+    upload_hint: "ቆዳ፣ አይን፣ ቁስል፣ ሽፍታ — ማንኛውም የሚታይ ሁኔታ",
+    camera_take_photo: "በካሜራ ፎቶ ያንሱ",
     // Step 2: Symptoms
-    step2_title: "የጭቃታኛዕኘን ምልክቶች ይግለጹ",
-    symptoms_placeholder: "ፊምሳሌ። ታንኣቀሽ ኝስ \��ና \��ናት ይዛለሁ...",
-    voice_tap_speak: "ፋስልስሽ ይጠሩ",
+    step2_title: "ምልክቶችዎን ይግለጹ",
+    symptoms_placeholder: "ለምሳሌ፡ ለ3 ቀናት ያህል በክንዴ ላይ ሽፍታ አለኝ...",
+    voice_tap_speak: "ለመናገር ይንኩ",
     // Step 3: Body area
-    step3_title: "ማልዋዎቅ \��ንታይ ነው?",
+    step3_title: "የትኛው የሰውነት ክፍል ነው?",
     // Step 4: Duration
-    step4_title: "የምልክቶችን ከምን ያህል ጊዜ አላችሁ?",
-    dur_under24h: "24 ቅናት በታች",
+    step4_title: "ምልክቶቹ ምን ያህል ጊዜ ነበሩ?",
+    dur_under24h: "ከ24 ሰዓት በታች",
     dur_1_3_days: "1-3 ቀናት",
     dur_4_7_days: "4-7 ቀናት",
     dur_1_2_weeks: "1-2 ሳምንታት",
     dur_2_plus_weeks: "2+ ሳምንታት",
-    dur_chronic: "ወረፈር",
+    dur_chronic: "ሥርዓታዊ",
     // Submit
-    analyze_symptoms: "ንዋሳና \��ንታኔ",
+    analyze_symptoms: "ምልክቶቹን ተንትን",
     // Loading
-    loading_title: "አቄንምስር እየሆነ ነው...",
-    loading_status: "F916 ጋር እየተገናኘ ነው...",
-    ls1: "የስልስር ምስል እየተሠራ ነው",
-    ls2: "የምልክት መግለጫ እየተሠቀለ ነው",
-    ls3: "ኛማክ እየታወቀ ነው",
-    ls4: "የሪፖርት እየተዘጋጀ ነው",
+    loading_title: "መረጃዎ እየተተነተነ ነው...",
+    loading_status: "ከ AI ጋር እየተገናኘ ነው...",
+    ls1: "የተሰቀለው ምስል እየተሰራ ነው",
+    ls2: "የምልክቶቹ መግለጫ እየተነበበ ነው",
+    ls3: "ከሕክምና እውቀት ጋር እየተመሳከረ ነው",
+    ls4: "ሪፖርትዎ እየተዘጋጀ ነው",
     // Results
-    ai_confidence: "AI ትኩረት",
-    stat_severity: "እኖቀያ",
-    stat_confidence: "ወኛተማ",
-    stat_conditions: "ኛሚሽማዎች ተለክተዋል",
-    section_what_is_it: "\D9ንዘነ?",
-    section_symptoms: "እኖ�1240�12EB ምልክቶች",
-    section_next_steps: "የተከተል የሚሆኑ እርምጃዎች",
-    section_urgent: "\ኣስቸኳይ እንክብለት መፈለግ",
-    section_alternatives: "የሌላ የሚችሉ ሁኔታዎች",
-    emergency_immediate: "F3E5 አስሲዥ የሕክምና እርዳታ ይመከራል",
-    emergency_subtitle: "ታህህ ሁኔታ ፈጣን የሕክምና እርምጃ ሊያስፈልግ ይችላል። ቶዋር ከሚገኙ ሆስፒታሎች አንዱን ይጎብኙ።",
-    btn_view_hospitals: "F4CD የቅርብ ሆስፒታሎችን ይመልከቱ",
-    facilities_recommended: "F4CD የተመከሩ የጤና አገልግሎቶች",
-    facilities_subtitle: "የሁኔታዎ ላይ በመመስረት፤ \��ነዚህ በቶዋር ውስጥ ለእርስዎ በቂ ናቸው።",
-    btn_book: "\ነጋሪ ይያዙ",
-    btn_export: "PDF አውጣ",
+    ai_confidence: "የ AI መተማመን",
+    stat_severity: "ክብደት",
+    stat_confidence: "መተማመን",
+    stat_conditions: "የተመለከቱ ሁኔታዎች",
+    section_what_is_it: "ይህ ምንድነው?",
+    section_symptoms: "ዋና ምልክቶች",
+    section_next_steps: "የሚመከሩ ቀጣይ እርምጃዎች",
+    section_urgent: "አስቸኳይ እንክብካቤ መፈለግ ያለበት ጊዜ",
+    section_alternatives: "ሌሎች ሊሆኑ የሚችሉ ሁኔታዎች",
+    emergency_immediate: "አስቸኳይ የሕክምና እርዳታ ይመከራል",
+    emergency_subtitle: "ይህ ሁኔታ ፈጣን የሕክምና እርምጃ ሊያስፈልግ ይችላል። ከዚህ በታች አደጋ ጊዜ አገልግሎት ያላቸው የጎንደር ሆስፒታሎች አሉ።",
+    btn_view_hospitals: "የቅርብ ሆስፒታሎችን ይመልከቱ",
+    facilities_recommended: "የሚመከሩ የጤና ተቋማት",
+    facilities_subtitle: "በሁኔታዎ ላይ በመመስረት እነዚህ የጎንደር ተቋማት ለእርስዎ ተስማሚ ናቸው።",
+    btn_book: "ቀጠሮ ይያዙ",
+    btn_export: "እንደ PDF ያውርዱ",
     btn_new_scan: "አዲስ ስካን",
-    result_severity_low: "ቻቅተኛ አደጋ",
-    result_severity_med: "ኖኰለማ አደጋ",
-    result_severity_high: "እሴሽዥ አደጋ",
+    result_severity_low: "ዝቅተኛ አደጋ",
+    result_severity_med: "መካከለኛ አደጋ",
+    result_severity_high: "ከፍተኛ አደጋ",
     // Chat
-    chat_title: "አማታዊ ጥያቄ ይጠይቁ",
-    chat_subtitle: "AI ቀሪቃ \��ኪም",
-    chat_placeholder: "ዘንየኛ ነገር ሁሉ ይጠይቁ...",
-    chat_send: "\ላክ",
-    chat_sug_contagious: "ቻስፋይ?",
-    chat_sug_causes: "ዘዘነ?",
-    chat_sug_medicine: "ዘጥ \��ኪም ይረዣል?",
-    chat_sug_recovery: "\ምን ያህል ጊዜ?",
+    chat_title: "ተጨማሪ ጥያቄ ይጠይቁ",
+    chat_subtitle: "የ AI ሕክምና ረድኤት",
+    chat_placeholder: "ስለዚህ ሁኔታ ማንኛውንም ነገር ይጠይቁ...",
+    chat_send: "ላክ",
+    chat_sug_contagious: "ይህ ሊተላለፍ ይችላል?",
+    chat_sug_causes: "ምን ያህል ከባድ ነው?",
+    chat_sug_medicine: "ምን መድኃኒት ይረዳል?",
+    chat_sug_recovery: "ለማገገም ምን ያህል ጊዜ ይወስዳል?",
     // History page
-    history_title: "ኛሪሺ ስካን",
-    history_clear: "\ሁሉንም አስወግድ",
-    history_empty: "\ስካን የለም። \ለመጀመር የመጀመሪያውን ስካን ያሂዱ።",
+    history_title: "የስካን ታሪክ",
+    history_clear: "ሁሉንም አጥፋ",
+    history_empty: "እስከ ዛሬ ምንም ስካን የለም። ታሪክ ለማየት የመጀመሪያውን ስካን ያድርጉ።",
     // Dashboard
-    dash_title: "F4CC የጤና ዓቤርዓ",
-    dash_subtitle: "የሁሉ ስካንዎት ንዑስ ሁኔታዎች",
-    dash_total: "F4CB ጠቅላላ ስካንዎች",
-    dash_high: "F534 \��ፍተኛ አደጋ",
-    dash_medium: "F7E1 \��ካከለኛ አደጋ",
-    chart_severity_dist: "እሴቶሳ ስርጭት",
-    chart_scans_over_time: "\ስካኑ በጊዜ (የመጨረሻ 7 ቀናት)",
-    news_title: "F4F0 የጤና ዜናዎች እና ማስታወቂያዎች",
-    btn_refresh: "🔄 እንደገና",
-    dash_empty: "\ስካን ውሂብ የለም። \ለመጀመር የመጀመሪያውን ስካን ያሂዱ።",
-    loading_health_news: "አቄንምስር እየሆነ ነው...",
-    no_health_news: "\ጤና ዜና በዚህ ጊዜ የለም።",
+    dash_title: "የጤና ዳሽቦርድ",
+    dash_subtitle: "በሁሉም ስካኖችዎ ላይ ያሉ ቅጦች",
+    dash_total: "ጠቅላላ ስካኖች",
+    dash_high: "ከፍተኛ ክብደት",
+    dash_medium: "መካከለኛ ክብደት",
+    chart_severity_dist: "የክብደት ስርጭት",
+    chart_scans_over_time: "ስካኖች በጊዜ (ያለፉት 7 ቀናት)",
+    news_title: "የጤና ዜናዎች እና ማስታወቂያዎች",
+    btn_refresh: "🔄 እንደገና ይሙሉ",
+    dash_empty: "ምንም የስካን ውሂብ የለም። ዳሽቦርድ ለመሙላት የመጀመሪያውን ስካን ያድርጉ።",
+    loading_health_news: "የጤና ዜናዎች እየተጫኑ ነው...",
+    no_health_news: "በዚህ ጊዜ ምንም የጤና ዜና የለም።",
     // Facilities
-    facilities_title: "F3E5 የጤና አገልግሎቶች",
-    facilities_subtitle: "ቶዋር፡ ሆስፒታሎች፣ ክሊኒኮች እና ፋርማሲዎች",
-    filter_all: "\ሁሉ",
-    filter_hospital: "F3E5 F3E5",
-    filter_health_center: "F3E6 F3E6",
-    filter_clinic: "FA7A FA7A",
-    filter_pharmacy: "F48A F48A",
-    search_placeholder: "F50D ፈልግ...",
-    view_list: "F4CB ዝርዝር ርዕስ",
-    find_nearest: "F4CD ቅርብ ይፈልጉ",
+    facilities_title: "የጤና ተቋማት",
+    facilities_subtitle: "ሆስፒታሎች፣ ክሊኒኮች እና ፋርማሲዎች በጎንደር፣ ኢትዮጵያ",
+    filter_all: "ሁሉ",
+    filter_hospital: "ሆስፒታሎች",
+    filter_health_center: "የጤና ማዕከላት",
+    filter_clinic: "ክሊኒኮች",
+    filter_pharmacy: "ፋርማሲዎች",
+    search_placeholder: "ተቋማትን ይፈልጉ...",
+    view_list: "ዝርዝር እይ",
+    find_nearest: "ቅርብ ይፈልጉ",
     // Modal
-    modal_book_title: "\ነጋሪ ይያዙ",
-    modal_book_desc: "አማሳየት የነጋሪ ፎርም። \በእውነተኛ የቲለሜዲሲን ስርዓት፤ \��ህ ከተጀመረ ሐኪም ጋር ይገናኛል።",
-    modal_confirm: "\ነጋሪ ይረጋገጥ",
+    modal_book_title: "ቀጠሮ ይያዙ",
+    modal_book_desc: "የሙከራ ቅጽ ነው። በእውነተኛ የቴሌሜዲሲን ስርዓት ውስጥ ይህ ከሚገኝ ሐኪም ጋር ይያያል።",
+    modal_confirm: "ቀጠሮ ያረጋግጡ",
     // Hospitals modal
-    hospitals_title: "F3E5 ቶዋር ውስጥ የቅርብ ሆስፒታሎች",
-    hospitals_subtitle: "F534 \��ፍተኛ አደጋ ተገኝቷል። \እባክዎ በነዚህ ሆስፒታሎች ውስጥ ፈጣን የሕክምና እርዳታ ይፈልጉ።",
+    hospitals_title: "በጎንደር ያሉ ቅርብ ሆስፒታሎች",
+    hospitals_subtitle: "ከፍተኛ ክብደት ተገኝቷል። እባክዎ ከነዚህ ተቋማት ውስጥ ፈጣን የሕክምና እርዳታ ያግኙ።",
     emergency_call: "አስቸኳይ? 907 (አምቡላንስ) ይደውሉ",
-    emergency_sub: "\ነፃ የድንገት አገልግሎት · ቶዋር ከተማ",
+    emergency_sub: "በጎንደር ከተማ ውስጥ ነጻ የአምቡላንስ አገልግሎት",
     // News detail
-    btn_close: "\ዝጋ",
-    btn_learn_more: "\ተጨማሪ ይማሩ",
-    source: "F4DA \ምንጭ",
+    btn_close: "ዝጋ",
+    btn_learn_more: "ተጨማሪ ይወዱ",
+    source: "ምንጭ",
     // SOS modal
     sos_title: "🚨 አስቸኳይ እርዳታ",
-    sos_subtitle: "ቶዋር ውስጥ የቅርብ ሆስፒታሎች",
-    sos_call_ambulance: "📞 \��ምቡላንስ ይደውሉ: 907",
-    sos_call_free: "\ነፃ \��ድንገት አገልግሎት · ቶዋር ከተማ",
-    locate_nearest: "F4CD ለእኔ ቅርብ ይፈልጉ",
-    sos_locating: "F4CD አካባቢዎን እየተላኩ ነው...",
-    sorted_distance: "የአካባቢዎ ቅርብ ሆነው ተደርድረዋል",
-    sorted_center: "የቶዋር ከተማ ማዕከል ከተሰላ ተደርድረዋል",
+    sos_subtitle: "በጎንደር ያሉ ቅርብ ሆስፒታሎች",
+    sos_call_ambulance: "📞 አምቡላንስ ይደውሉ: 907",
+    sos_call_free: "ነጻ የአደጋ ጊዜ አገልግሎት · ጎንደር ከተማ",
+    locate_nearest: "ለእኔ ቅርብ ይፈልጉ",
+    sos_locating: "አካባቢዎ እየተገኘ ነው...",
+    sorted_distance: "ከአካባቢዎ ቅርብ ተደርድረዋል",
+    sorted_center: "ከጎንደር ከተማ ማዕከል ተደርድረዋል",
     // Chat input placeholder
-    chat_input_placeholder: "ዘንየኛ ነገር ሁሉ ይጠይቁ...",
+    chat_input_placeholder: "ስለዚህ ሁኔታ ማንኛውንም ነገር ይጠይቁ...",
     // Camera
-    camera_title: "📷 ቀባ ይልስሙ",
-    camera_cancel: "\ሰርዝ",
+    camera_title: "📷 ፎቶ ያንሱ",
+    camera_cancel: "ሰርዝ",
     // Common
-    loading: "አቄንምስር እየሆነ ነው...",
-    error: "ጣጋተት ተፈጥሯል",
-    retry: "\እንደገና ይሞክሩ",
-    logout: "F6AA \ይውጡ",
-    save: "አፕዋጽ",
-    cancel: "ጫት",
-    confirmed: "\ተረጋግጧል",
-    days: "ስናት",
-    weeks: "F4C6",
-    months: "F4C5",
-    years: "F4C6",
+    loading: "እየተጫነ ነው...",
+    error: "ስህተት ተከስቷል",
+    retry: "እንደገና ይሞክሩ",
+    logout: "ይውጡ",
+    save: "አስቀምጥ",
+    cancel: "ሰርዝ",
+    confirmed: "ተረጋግጧል",
+    days: "ቀናት",
+    weeks: "ሳምንታት",
+    months: "ወራት",
+    years: "ዓመታት",
   },
   om: {
     // Navigation
-    nav_new_scan: "Barbaaduu Haaraa",
-    nav_history: "Odeeffannoo",
-    nav_dashboard: "Daashboardii",
-    nav_facilities: "F3E5 Mogaalota",
-    auth_login_register: "Seenaa / Galaana",
+    nav_new_scan: "Skaanii Haaraa",
+    nav_history: "Seenaa",
+    nav_dashboard: "Daashboordii",
+    nav_facilities: "Magaalota",
+    nav_profile: "Profaayilii",
+    nav_appointments: "Beellama",
+    nav_reminders: "Yaadannoo",
+    auth_login_register: "Seeni / Galmaa'i",
+    auth_or: "yookaan",
+    auth_google_signin: "Gooogle Seen",
     // Hero section
-    hero_tag: "Piroojektii Saayinsii Fayiiri",
+    hero_tag: "Pirojektii Saayinsii",
     hero_title: "Akkam\njirta?",
-    hero_desc: "Mallattoolee kee ibsi ykn suuraa galchi. Maal ta'aa jiru si hubachiifna.",
+    hero_desc: "Mallattoolee kee ibsi yookaan suuraa olfe'i. Maal ta'aa jiru si gargaaruuf.",
     // Step 1: Upload
-    step1_title: "Suuraa Galchi (filannoodhaaf garagalchi)",
-    upload_click: "Suura cuufi",
-    upload_or: "ykn qara qalbi",
-    upload_hint: "Qobboo, ija, madaa, rashi — haala kamiyyuu mul'atu",
-    camera_take_photo: "Suura Fudhadhu",
+    step1_title: "Suuraa Olfe'i (filannoodhaan garagalchi)",
+    upload_click: "Olfe'uuf cuqaasi",
+    upload_or: "yookaan harkaan kaasi",
+    upload_hint: "Gogaa, ija, madaa, raashii — haala kamiyyuu mul'atu",
+    camera_take_photo: "Kaameeraan Suuraa Fudhi",
     // Step 2: Symptoms
-    step2_title: "Mallattoolee Keeri Ibsi",
-    symptoms_placeholder: "Fkn. Rashii qophee kootti ji'a 3 arraa...",
-    voice_tap_speak: "Dubbachuu danda'u",
+    step2_title: "Mallattoolee Kee Ibsi",
+    symptoms_placeholder: "Fkn. guyyaa 3 darbe harka koo irratti raashii qaba...",
+    voice_tap_speak: "Dubbachuuf tuqi",
     // Step 3: Body area
-    step3_title: "Eenyatti?",
+    step3_title: "Saala qaama kam irra?",
     // Step 4: Duration
-    step4_title: "Yeroon ittiin ramadama?",
-    dur_under24h: "24 sa'a'a gadii",
-    dur_1_3_days: "1-3 Guyyaa",
-    dur_4_7_days: "4-7 Guyyaa",
-    dur_1_2_weeks: "1-2 Torbee",
-    dur_2_plus_weeks: "2+ Torbee",
-    dur_chronic: "Duraa",
+    step4_title: "Yeroo hangami mallattoon kun si qabe?",
+    dur_under24h: "Sa'aatii 24 gadi",
+    dur_1_3_days: "Guyyaa 1-3",
+    dur_4_7_days: "Guyyaa 4-7",
+    dur_1_2_weeks: "Torban 1-2",
+    dur_2_plus_weeks: "Torban 2+",
+    dur_chronic: "Yeroo dheeraa",
     // Submit
-    analyze_symptoms: "F52C Qoorannoo",
+    analyze_symptoms: "Mallattoo qoradhu",
     // Loading
-    loading_title: "Qoorannoo jira...",
-    loading_status: "AI waliin walqabsiisa jira...",
-    ls1: "Suuraa sirra oolchu",
-    ls2: "Ibsa mallattoo turka",
-    ls3: "Ogbarruun fayyaa ragaa",
-    ls4: "Bu'aa qoobannoo",
+    loading_title: "Odeeffannoo kee qorachaa jira...",
+    loading_status: "AI waliin walqabachaa jira...",
+    ls1: "Suuraa fe'ame hojjechuu",
+    ls2: "Ibsa mallattoo dubbisuu",
+    ls3: "Beekumsa fayyaa waliin walbira qabuu",
+    ls4: "Gabaasa kee qopheessuu",
     // Results
-    ai_confidence: "I bullsita AI",
-    stat_severity: "Hiritsa",
-    stat_confidence: "I bullsita",
-    stat_conditions: "Haalaawwan rafame",
+    ai_confidence: "Itti amanamummaa AI",
+    stat_severity: "Cimina",
+    stat_confidence: "Itti amanamummaa",
+    stat_conditions: "Haalawwan sakatta'aman",
     section_what_is_it: "Maali?",
-    section_symptoms: "Mallattoolee calqabame",
-    section_next_steps: "Sagantaa urratti hordofii",
-    section_urgent: "Yeroo Tokkoon yaaluuf",
-    section_alternatives: "Haalo bu'aa kanbiru",
-    emergency_immediate: "F3E5 Gara bu'aa medikaliliif",
-    emergency_subtitle: "Haala kanaaf gargaara medikalii dachaa yaalaa.",
-    btn_view_hospitals: "Hoospitalii dachaa ilaaluu",
-    facilities_recommended: "F4CD Mogaalota Fayyaa",
-    facilities_subtitle: "Haalli kee irratti hundaa'u, mogaalottawanii gonde." ,
-    btn_book: "Karoo fudhadhuu",
+    section_symptoms: "Mallattoolee ijoo",
+    section_next_steps: "Tarkaanfii itti aanu",
+    section_urgent: "Yeroo gargaarsa hatattamaa barbaaduu",
+    section_alternatives: "Haalawwan biraa ta'uu danda'an",
+    emergency_immediate: "Gargaarsa Medikaalaa Hatattamaa Gorfama",
+    emergency_subtitle: "Haalli kun tarkaanfii medikaalaa hatattamaa barbaachisuu danda'a. Hospitaalota Gondar keessa jiran gargaarsa hatattamaa qaban asii gadiitti.",
+    btn_view_hospitals: "Hospitaalota Dhihoo Ilaali",
+    facilities_recommended: "Magaalota Fayyaa Gorfaman",
+    facilities_subtitle: "Haala kee irratti hundaa'uun, magaalotni kun Gondar keessa jiran siif mijan.",
+    btn_book: "Beellama Qabadhu",
     btn_export: "PDF Baasi",
-    btn_new_scan: "Scan haaraa",
-    result_severity_low: "Hiritsa gadii",
-    result_severity_med: "Hiritsa gidduti",
-    result_severity_high: "Hiritsa oli",
+    btn_new_scan: "Skaanii haaraa",
+    result_severity_low: "Cimina gadi aanaa",
+    result_severity_med: "Cimina giddugaleessa",
+    result_severity_high: "Cimina ol aanaa",
     // Chat
-    chat_title: "Gaaffii boodaaf - gaaffii",
-    chat_subtitle: "Deggeetti AI",
-    chat_placeholder: "Haalchi waa'ee haala kanaa gaaffi...",
+    chat_title: "Gaaffii itti aanu gaafadhu",
+    chat_subtitle: "Gargaaraa Medikaalaa AI",
+    chat_placeholder: "Waa'ee haala kanaa waan kamiyyuu gaafadhu...",
     chat_send: "Ergi",
-    chat_sug_contagious: "Viristuu?",
-    chat_sug_causes: "Maaliif?",
-    chat_sug_medicine: "Qoricha ownaa?",
-    chat_sug_recovery: "Yeroon fedha?",
+    chat_sug_contagious: "Kun daddarbaa dha?",
+    chat_sug_causes: "Maal kan taasise?",
+    chat_sug_medicine: "Qorichni kami gargaara?",
+    chat_sug_recovery: "Yeroon fayyuuf hangamii?",
     // History page
-    history_title: "Scan dhageenya",
-    history_clear: "Hundaa rucisi",
-    history_empty: "Scna hin jiru. Scna duraa golchuuf.",
+    history_title: "Seenaa Skanii",
+    history_clear: "Hunda haquu",
+    history_empty: "Skaanii hin jiru. Jalqabuuf skanii jalqabaa hojjedhu.",
     // Dashboard
-    dash_title: "Dashboodii Fayyaa",
-    dash_subtitle: "Mijjaala scan keessaa",
-    dash_total: "Scan giddugaleessa",
-    dash_high: "Hiritsa oli",
-    dash_medium: "Hiritsa gidduti",
-    chart_severity_dist: "Hiritsa qoodu",
-    chart_scans_over_time: "Scan al ti 7 guyyaa",
-    news_title: "F4F0 Bahee Fayyaa",
-    btn_refresh: "🔄 Ergaa",
-    dash_empty: "Ragaan scan hin jiru. Scna duraa golchuuf.",
-    loading_health_news: "Bahee fayyaa sirra jira...",
-    no_health_news: "Baheyyi fayyaa hin jiru.",
+    dash_title: "Daashboordii Fayyaa",
+    dash_subtitle: "Skanota kee hunda irratti akkaataa",
+    dash_total: "Skanota waliigalaa",
+    dash_high: "Cimina olaanaa",
+    dash_medium: "Cimina giddugaleessa",
+    chart_severity_dist: "Qoodinsa ciminaa",
+    chart_scans_over_time: "Skanota yeroo irratti (guyyoota 7 darban)",
+    news_title: "Oduu fi Beeksisa Fayyaa",
+    btn_refresh: "🔄 Haaromsi",
+    dash_empty: "Ragaa skanii hin jiru. Daashboordii guutuuf skanii jalqabaa hojjedhu.",
+    loading_health_news: "Oduu fayyaa fe'achaa jira...",
+    no_health_news: "Yeroo kana oduu fayyaa hin jiru.",
     // Facilities
-    facilities_title: "F3E5 Mogaalota Fayyaa",
-    facilities_subtitle: "Hoospitaalaa, kiliinikaa fi phaarmaasii Gondeer keessatti",
+    facilities_title: "Magaalota Fayyaa",
+    facilities_subtitle: "Hospitaalota, kiliinikotaa fi faarmaasii Gondar, Itoophiyaa",
     filter_all: "Hunda",
-    filter_hospital: "F3E5 Hoospitaalaa",
-    filter_health_center: "F3E6 Kaantara Fayyaa",
-    filter_clinic: "FA7A Kiliinikaa",
-    filter_pharmacy: "F48A Pharamaasii",
-    search_placeholder: "Mogaala gaafachuu...",
-    view_list: "F4CB Mogaala ilaaluu",
-    find_nearest: "F4CD Nagaan danda'u",
+    filter_hospital: "Hospitaalota",
+    filter_health_center: "Wiirtuuwwan Fayyaa",
+    filter_clinic: "Kiliinikota",
+    filter_pharmacy: "Faarmaasii",
+    search_placeholder: "Magaalota barbaadi...",
+    view_list: "Ilaalcha Tarree",
+    find_nearest: "Dhihoo barbaadi",
     // Modal
-    modal_book_title: "Karoo fudhadhuu",
-    modal_book_desc: "Fakkeenyi gaaffii. Haalreeshaan, DHCP waliin.",
-    modal_confirm: "Karoo mirkanneessi",
+    modal_book_title: "Beellama qabadhu",
+    modal_book_desc: "Unkaa demo. Sirna teelee medikaalaa dhugaa keessatti, kun hakiima jiru waliin walqabata.",
+    modal_confirm: "Beellama mirkaneessi",
     // Hospitals modal
-    hospitals_title: "F3E5 Hoospitaalaa dachaa Gondeer",
-    hospitals_subtitle: "Hiritsa guddittii. Gargaara medikalii dachaa barreeffamu.",
-    emergency_call: "Madaallii? 907 (Ambulansii)",
-    emergency_sub: "Adeemsa dachaa Gondeer keessatti",
+    hospitals_title: "Hospitaalota Gondar Keessaa Dhihoo",
+    hospitals_subtitle: "Cimina olaanaa argame. Maaloo hospitaalota kana keessaa tarkaanfii medikaalaa hatattamaa argadhu.",
+    emergency_call: "Hatattamaa? 907 (Ambulaansii) Bilbili",
+    emergency_sub: "Tajaajila ambulaansii bilisaa magaalaa Gondar",
     // News detail
-    btn_close: "Cuudhuu",
-    btn_learn_more: "Barnoota dabalataa",
-    source: "F4DA Bulchiinsaa",
+    btn_close: "Cufi",
+    btn_learn_more: "Dabalata Baradhu",
+    source: "Maddeen",
     // SOS modal
-    sos_title: "🚨 Gargaara adda",
-    sos_subtitle: "Hoospitaalaa dachaa Gondeer keessatti",
-    sos_call_ambulance: "📞 Ambulansii: 907",
-    sos_call_free: "Adeemsa dachaa Gondeer keessatti",
-    locate_nearest: "F4CD Dannaan dachaa",
-    sos_locating: "Iddoon kee argamaa jira...",
-    sorted_distance: "Iddoo kee dachaa qabame",
-    sorted_center: "Gondeer iddoo kaazawaa",
+    sos_title: "🚨 Gargaarsa Hatattamaa",
+    sos_subtitle: "Hospitaalota Gondar keessaa dhihoo",
+    sos_call_ambulance: "📞 Ambulaansii Bilbili: 907",
+    sos_call_free: "Tajaajila hatattamaa bilisaa · Magaalaa Gondar",
+    locate_nearest: "Naaf dhihoo barbaadi",
+    sos_locating: "Iddoo kee barbaachaa jira...",
+    sorted_distance: "Iddoo keetti dhihoo ta'anii tarreefaman",
+    sorted_center: "Wiirtuu magaalaa Gondar irraa tarreefaman",
     // Chat input placeholder
-    chat_input_placeholder: "Haalchi waa'ee haala kanaa...",
+    chat_input_placeholder: "Waa'ee haala kanaa waan kamiyyuu gaafadhu...",
     // Camera
-    camera_title: "📷 Suura Fudhadhuu",
-    camera_cancel: "Sodaa",
+    camera_title: "📷 Suuraa Fudhi",
+    camera_cancel: "Dhiisi",
     // Common
-    loading: "Sirra jira...",
-    error: "Dhaggeeffamerr",
+    loading: "Fe'aa jira...",
+    error: "Dogoggorri uumame",
     retry: "Irra deebi'i",
-    logout: "Murtii",
-    save: "Qabsi",
-    cancel: "Sodaa",
-    confirmed: "Mirkanneffamame",
-    days: "guyyaa",
-    weeks: "torbee",
-    months: "ji'a",
+    logout: "Ba'i",
+    save: "Ol kaa'i",
+    cancel: "Dhiisi",
+    confirmed: "Mirkanaa'e",
+    days: "guyyoota",
+    weeks: "torbanoota",
+    months: "ji'oota",
     years: "waggoota",
   },
   ti: {
     // Navigation
-    nav_new_scan: "ንባዕና ትንቀቁ",
-    nav_history: "ቱቢሪን",
-    nav_dashboard: "ዚቤርዓ",
-    nav_facilities: "F3E5 ኔዐጥቀና",
-    auth_login_register: "አታና / አባንቂያን",
+    nav_new_scan: "ስካን ሓድነት",
+    nav_history: "ታሪኽ",
+    nav_dashboard: "ዳሽቦርድ",
+    nav_facilities: "ትካላት",
+    nav_profile: "መግለጺ",
+    nav_appointments: "ቀጠሮታት",
+    nav_reminders: "ምዝታኣት",
+    auth_login_register: "እተው / ተመዝገቡ",
+    auth_or: "ወይድህ",
+    auth_google_signin: "ብGoogle እተው",
     // Hero section
-    hero_tag: "ፐሪናዚእነ ሴንስ F9EE",
-    hero_title: "ኤኖቅ\nአያያዲ?",
-    hero_desc: "የቱኖዕምለጽ \��ይም ስእሊ ኣእትይ። እንታይ ኸይኑ ከም ዘሎ ንሕበረካ።",
+    hero_tag: "ፕሮጀክት ውድድር ሳይንስ",
+    hero_title: "ከመይ\nስምዒኻ?",
+    hero_desc: "ምልክታትካ ገለጽወይ ስእሊ ኣስተሓልፍ። እንታይ ከም ዘሎ ንሕበረኻ።",
     // Step 1: Upload
-    step1_title: "F4F7 ስእሊ ኣእትይ (አማማምግም ግን ዝመርጽ)",
-    upload_click: "ኖምዕ \��ሽቶዎ ይጉዐዙ",
-    upload_or: "លይማ ስኒ ኣጥፍእዎ",
-    upload_hint: "ታንኣእድርሻ — ዝርእት እንኮል",
-    camera_take_photo: "F4F7 ፎቶ ኣንሶ",
+    step1_title: "ስእሊ ኣስተሓልፍ (ምርጫ ግን ዝምረጽ)",
+    upload_click: "ንምስተሓልፍ ጠውቆ",
+    upload_or: "ወይ ደርቆ ወርድኦ",
+    upload_hint: "ቆዳ፣ ኣዒንቲ፣ ቁስል፣ ሽፍታ — ዝተራእየ ኩነታት",
+    camera_take_photo: "ብካሜራ ስእሊ ወስድ",
     // Step 2: Symptoms
-    step2_title: "የቱኖዕ \��ልክታትካ ገለጽ",
-    symptoms_placeholder: "አኖኰምሳ ራሽ አን \��ብ 3 ምስሕት ኣለኒ...",
-    voice_tap_speak: "ፋውበቅ \��ደይ",
+    step2_title: "ምልክታትካ ገለጽ",
+    symptoms_placeholder: "ኣብነት፡ ኣብ ኢደይ ን3 መዓልቲ ሽፍታ ኣለኒ...",
+    voice_tap_speak: "ንምዝራብ ንካይ",
     // Step 3: Body area
-    step3_title: "ዘንታስድ?",
+    step3_title: "ኣበይ እዩ ኣብ ኣካልኻ?",
     // Step 4: Duration
-    step4_title: "አኖኰምስሕት እንታይ ነብሩ?",
-    dur_under24h: "24 መዓልቲ በታች",
-    dur_1_3_days: "1-3 ምስሕት",
-    dur_4_7_days: "4-7 ምስሕት",
-    dur_1_2_weeks: "1-2 ሳምንት",
-    dur_2_plus_weeks: "2+ ሳምንት",
-    dur_chronic: "ወቁረፈር",
+    step4_title: "ምልክታት ንንውሓት ድሕሪ ምስታይ ኣለዉ?",
+    dur_under24h: "ካብ 24 ሰዓት ኣታዊ",
+    dur_1_3_days: "1-3 መዓልታት",
+    dur_4_7_days: "4-7 መዓልታት",
+    dur_1_2_weeks: "1-2 ሰሙናት",
+    dur_2_plus_weeks: "2+ ሰሙናት",
+    dur_chronic: "ዘይቋረጽ",
     // Submit
-    analyze_symptoms: "ንቀንኒ \��ኒያ",
+    analyze_symptoms: "ምልክታት መርምር",
     // Loading
-    loading_title: "አቄንምስር እየተሆነ ነው...",
-    loading_status: "አሕሪማኒያ AI...",
-    ls1: "የስር \��እሊ እየተሠራ ነው",
-    ls2: "የያ዗ መግለጫ እየተሠቀለ ነው",
-    ls3: "ኛሟኵ እየለከበ ነው",
-    ls4: "የኖቲሪት እየተዘጋጀ ነው",
+    loading_title: "ሓበሬታኻ ይብርሃይ ኣሎ...",
+    loading_status: "ምስ AI ይራኸብ ኣሎ...",
+    ls1: "ዝተሰተለ ስእሊ ይሰርሕ ኣሎ",
+    ls2: "ገለጺ ምልክታት ይነበይ ኣሎ",
+    ls3: "ምስ ሓድነት ሕክምና ይዛመድ ኣሎ",
+    ls4: "ጸብጻብካ ይዳለይ ኣሎ",
     // Results
-    ai_confidence: "ተስፈሪነት AI",
-    stat_severity: "እቁዕ",
-    stat_confidence: "ፋምዕራም",
-    stat_conditions: "ኛሚሽማዎች ተልከዋል",
-    section_what_is_it: "ዘነህ?",
-    section_symptoms: "\ነብሳት",
-    section_next_steps: "የሚቤ \��ርምጃዎች",
-    section_urgent: "\ኣስቸ \��ሆነ",
-    section_alternatives: "የሌላ ዘዴዎች",
-    emergency_immediate: "F3E5 \��ጣን የሕክምና ክርክሪ",
-    emergency_subtitle: "ጊህ \��ኔታ ፈጣን የሕክምና እርምጃ ሊያስፈልግ ይችላል",
-    btn_view_hospitals: "F4CD ሆስታሎች ንረአሽ",
-    facilities_recommended: "F4CD የተመከሩ ሆስታሎች",
-    facilities_subtitle: "አርስወርሽሽሪ ላይ በመመስረት, እነዚህ ተስርደው አሉ",
-    btn_book: "አኛታሪ ይያዙ",
-    btn_export: "PDF አውጣ",
-    btn_new_scan: "ንባዕና ስካን",
-    result_severity_low: "ቻኖሽት",
-    result_severity_med: "አኛራም",
-    result_severity_high: "ቅረ",
+    ai_confidence: "ቅኑዕነት AI",
+    stat_severity: "ክብደት",
+    stat_confidence: "ቅኑዕነት",
+    stat_conditions: "ዝተረኸቡ ኩነታት",
+    section_what_is_it: "እዚ እንታይ እዩ?",
+    section_symptoms: "ቀንዲ ምልክታት",
+    section_next_steps: "ዝስዕቡ ስጉምትታት",
+    section_urgent: "ናብ ፈጣን እርዳታ ክትከይ ከለኻ",
+    section_alternatives: "ካልእ ክሆኑ ዝኽእሉ ኩነታት",
+    emergency_immediate: "ፈጣን እርዳታ ሕክምና ይምከር",
+    emergency_subtitle: "እዚ ኩነታት ፈጣን ስጉምቲ ሕክምና ከድልዮ ይኽእል እዩ። ኣብ ጎንደር ፈጣን ኣገልግሎት ዘለዎም ሆስፒታላት ኣለዉ።",
+    btn_view_hospitals: "ኣብ ቅርቢ ዝርከቡ ሆስፒታላት ርኣይ",
+    facilities_recommended: "ዝምረጹ ናይ ጥዕና ትካላት",
+    facilities_subtitle: "ብምስታይ ኩነታትካ፡ እዚኣቶም ኣብ ጎንደር ዝርከቡ ትካላት ንኣኻ ዝማሓዩ እዮም።",
+    btn_book: "ቀጠሮ ወስኽ",
+    btn_export: "ከም PDF ኣውጽ",
+    btn_new_scan: "ሓድነት ስካን",
+    result_severity_low: "ክብደት ዝወረደ",
+    result_severity_med: "ክብደት ማእከላይ",
+    result_severity_high: "ክብደት ልዑል",
     // Chat
-    chat_title: "አማሳሽ",
-    chat_subtitle: "AI ",
-    chat_placeholder: "የአ \��ገር ሁሉ...",
-    chat_send: "ላክ",
-    chat_sug_contagious: "አሲ?",
-    chat_sug_causes: "ዘዘነ?",
-    chat_sug_medicine: "ዘመድ?",
-    chat_sug_recovery: "የለአሽ?",
+    chat_title: "ተወሳኺ ሕቶ ሓቲትካ",
+    chat_subtitle: "ናይ AI ሓገዝ ሕክምና",
+    chat_placeholder: "ብዛዕባ እዚ ኩነታት ነገር ኩሉ ሓቲትካ...",
+    chat_send: "ስደድ",
+    chat_sug_contagious: "እዚ ይትሓይሽ ዶ?",
+    chat_sug_causes: "እንታይ ዘስዕብ እዩ?",
+    chat_sug_medicine: "ኣይትከላኸል መድኃኒት እንታይ እዩ?",
+    chat_sug_recovery: "ክሳብ ምፍዳይ ንንውሓት ይወስድ?",
     // History page
-    history_title: "አ \��ካን",
-    history_clear: "አቋ",
-    history_empty: "አር የለም \��መጀመር ስካን ኣል...",
+    history_title: "ታሪኽ ስካን",
+    history_clear: "ኩሉ ኣጥፍኦ",
+    history_empty: "ክሳብ ሕጂ ስካን የለን። ታሪኽ ንምርኣይ ቀዳማይ ስካንካ ወስኽ።",
     // Dashboard
-    dash_title: "ዕቤርዓ \��ና",
-    dash_subtitle: "የሁሉ ስካንዎት ንዑስ ሁኔታዎች",
-    dash_total: "አጠቅላላ ስካን",
-    dash_high: "F534 ከፍተኛ",
-    dash_medium: "F7E1 ከፍተኛ",
-    chart_severity_dist: "እሴሳ \��ለም",
-    chart_scans_over_time: "የተማዛርያ ላይ ምልክት",
-    news_title: "F4F0 \��ሽርስ",
-    btn_refresh: "F504 እንደገና",
-    dash_empty: "አምእላር የለም",
-    loading_health_news: "አምስር የሆነ ነው...",
-    no_health_news: "አምዋ የለም",
+    dash_title: "ዳሽቦርድ ጥዕና",
+    dash_subtitle: "ኣብ ኩሉ ስካንካ ዘለዉ ቅርጺታት",
+    dash_total: "ጠቕላላ ስካን",
+    dash_high: "ክብደት ልዑል",
+    dash_medium: "ክብደት ማእከላይ",
+    chart_severity_dist: "ምድባዊ ክብደት",
+    chart_scans_over_time: "ስካን ብጊዜ (ዝሓለፉ 7 መዓልታት)",
+    news_title: "ዜናታት ጥዕናን መልእኽትን",
+    btn_refresh: "🔄 እንደገና",
+    dash_empty: "ምንም ሓበሬታ ስካን የለን። ዳሽቦርድ ንምምላእ ቀዳማይ ስካንካ ወስኽ።",
+    loading_health_news: "ዜናታት ጥዕና ይጽዓኑ ኣለዉ...",
+    no_health_news: "ኣብዚ እዋን ዝኾነ ዜና ጥዕና የለን።",
     // Facilities
-    facilities_title: "F3E5 \��",
-    facilities_subtitle: "ቶዋ \��",
-    filter_all: "አ",
-    filter_hospital: "F3E5 \��",
-    filter_health_center: "F3E6 \��",
-    filter_clinic: "FA7A \��ሊኒ",
-    filter_pharmacy: "F48A ፋርማሲ",
-    search_placeholder: "አ...",
-    view_list: "F4CB ዝርዝር",
-    find_nearest: "F4CD የቅርብ",
+    facilities_title: "ናይ ጥዕና ትካላት",
+    facilities_subtitle: "ሆስፒታላት፣ ክሊኒካትን ፋርማሲታትን ኣብ ጎንደር፣ ኢትዮጵያ",
+    filter_all: "ኩሉ",
+    filter_hospital: "ሆስፒታላት",
+    filter_health_center: "ጥዕና ማዕከላት",
+    filter_clinic: "ክሊኒካት",
+    filter_pharmacy: "ፋርማሲታት",
+    search_placeholder: "ትካላት ደሊኻ...",
+    view_list: "ኣብ ዝርዝር ርኣይ",
+    find_nearest: "ኣብ ቅርቢ ደሊኻ",
     // Modal
-    modal_book_title: "አርሪ \��ያዙ",
-    modal_book_desc: "የም ሪ...",
-    modal_confirm: "አማዛራ",
+    modal_book_title: "ቀጠሮ ወስኽ",
+    modal_book_desc: "ናይ ምርካብ ቅጺ እዩ። ኣብ ሓቀኛ ስርዓት ቴሌሜዲሲን፡ እዚ ምስ ዘሎ ሓኪም ይራኸብ።",
+    modal_confirm: "ቀጠሮ ኣረጋግጽ",
     // Hospitals modal
-    hospitals_title: "F3E5 \��",
-    hospitals_subtitle: "F534 \��",
-    emergency_call: "አ? 907",
-    emergency_sub: "የ",
+    hospitals_title: "ኣብ ጎንደር ዘለዉ ኣብ ቅርቢ ዝርከቡ ሆስፒታላት",
+    hospitals_subtitle: "ክብደት ልዑል ተረኺቡ። እባኻህ ካብዞም ትካላት ፈጣን እርዳታ ሕክምና ድለይ።",
+    emergency_call: "ፈጣን? 907 (ኣምቡላንስ) ደውሊ",
+    emergency_sub: "ናይ ነጻ ኣገልግሎት ኣምቡላንስ ኣብ ጎንደር ከተማ",
     // News detail
-    btn_close: "አጪ",
-    btn_learn_more: "አር",
-    source: "F4DA \��ንጭ",
+    btn_close: "ዕጾ",
+    btn_learn_more: "ተወሳኺ ኣንብብ",
+    source: "ምንጪ",
     // SOS modal
-    sos_title: "🚨 \��",
-    sos_subtitle: "ቶዋ ሆ�0001",
-    sos_call_ambulance: "📞 አምቡላንስ: 907",
-    sos_call_free: "አ",
-    locate_nearest: "F4CD ለእኔ ቅርብ",
-    sos_locating: "የ",
-    sorted_distance: "አ",
-    sorted_center: "አ",
+    sos_title: "🚨 ፈጣን እርዳታ",
+    sos_subtitle: "ኣብ ጎንደር ዘለዉ ኣብ ቅርቢ ዝርከቡ ሆስፒታላት",
+    sos_call_ambulance: "📞 ኣምቡላንስ ደውሊ: 907",
+    sos_call_free: "ናይ ነጻ ኣደጋ ግዜ ኣገልግሎት · ከተማ ጎንደር",
+    locate_nearest: "ንኣኻ ኣብ ቅርቢ ደሊኻ",
+    sos_locating: "ኩነታትካ ይዳለይ ኣሎ...",
+    sorted_distance: "ካብ ቅርቢኻ ዝተሰርዑ",
+    sorted_center: "ካብ ማዕከል ከተማ ጎንደር ዝተሰርሑ",
     // Chat input placeholder
-    chat_input_placeholder: "አምስ...",
+    chat_input_placeholder: "ብዛዕባ እዚ ኩነታት ነገር ኩሉ ሓቲትካ...",
     // Camera
-    camera_title: "F4F7 ስእሊ",
-    camera_cancel: "አሪ",
+    camera_title: "📷 ስእሊ ወስድ",
+    camera_cancel: "ሰርዝ",
     // Common
-    loading: "አምስር...",
-    error: "ህተም",
-    retry: "አ",
-    logout: "F6AA \��ጣ",
-    save: "አ",
-    cancel: "ጫ",
-    confirmed: "አ",
-    days: "",
-    weeks: "",
-    months: "",
-    years: "",
+    loading: "ይጽዓን ኣሎ...",
+    error: "ጌጋ ተፈጢሩ",
+    retry: "ደጋጊምካ ፈትን",
+    logout: "ውጻእ",
+    save: "ኣቐምጥ",
+    cancel: "ሰርዝ",
+    confirmed: "ተረጋጊጹ",
+    days: "መዓልታት",
+    weeks: "ሰሙናት",
+    months: "ወርታት",
+    years: "ዓመታት",
   }
 };
 
@@ -6470,7 +6657,11 @@ const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
 function setDarkMode(isDark) {
   document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  if (themeToggle) themeToggle.textContent = isDark ? '☀️' : '🌙';
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-pressed', isDark);
+    const themeIcon = themeToggle.querySelector('use');
+    if (themeIcon) themeIcon.setAttribute('href', isDark ? '#icon-sun' : '#icon-moon');
+  }
   localStorage.setItem('mediscan_theme', isDark ? 'dark' : 'light');
 }
 
@@ -6497,6 +6688,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initDemoMode();
   restoreFormState();
   renderHealthNews();
+  handleGoogleLoginRedirect();
 });
 </script>
 
@@ -6539,8 +6731,8 @@ window.addEventListener('DOMContentLoaded', () => {
 /* ── Floating SOS Button ── */
 #sos-fab {
   position: fixed;
-  top: 18px;
-  right: 18px;
+  bottom: 20px;
+  right: 20px;
   z-index: 9999;
   background: linear-gradient(135deg, #c0392b, #e74c3c);
   color: #fff;
@@ -6560,6 +6752,9 @@ window.addEventListener('DOMContentLoaded', () => {
 }
 #sos-fab:hover { transform: translateY(-2px); box-shadow: 0 7px 24px rgba(192,57,43,0.55); }
 #sos-fab:active { transform: scale(0.97); }
+@media (max-width: 480px) {
+  #sos-fab { bottom: 16px; right: 16px; padding: 9px 16px; font-size: 0.82rem; }
+}
 .sos-pulse {
   width: 9px; height: 9px;
   background: #fff;
@@ -6962,65 +7157,8 @@ document.addEventListener('keydown', e => {
    1. HEALTH NEWS — renders directly into
       #health-news-container (already in your HTML)
    ═══════════════════════════════════════════════════ */
-const FIX_NEWS = [
-  { icon:'🦠', tag:'alert',   tagName:'Alert',    date:'May 5, 2026',
-    title:'Malaria Prevention Alert',
-    body:'Increased malaria cases reported in Amhara region. Use mosquito nets and seek early treatment for fever symptoms.' },
-  { icon:'💉', tag:'info',    tagName:'Update',   date:'May 4, 2026',
-    title:'Vaccination Campaign Update',
-    body:'Free vaccination clinics available at Gondar University Hospital for children under 5 years.' },
-  { icon:'🌡️', tag:'warning', tagName:'Advisory', date:'May 3, 2026',
-    title:'Seasonal Flu Advisory',
-    body:'Flu season approaching. Practice good hygiene and consider getting vaccinated if at high risk.' },
-  { icon:'🏥', tag:'info',    tagName:'News',     date:'May 2, 2026',
-    title:'New Health Center Opening in Azezo',
-    body:'A new health center opens in Azezo next week, expanding healthcare access for ~69,000 residents.' },
-];
-
-async function fixRenderNews() {
-  const c = document.getElementById('health-news-container');
-  if (!c) return;
-
-  // Show loading state
-  c.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">Loading health news...</div>';
-
-  try {
-    const response = await fetch('/api/health-news');
-    const data = await response.json();
-
-    if (data.news && data.news.length > 0) {
-      c.innerHTML = data.news.map((n, index) => `
-        <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
-          <div class="news-icon-wrap">${n.icon}</div>
-          <div class="news-content-inner">
-            <div class="news-title-text">${n.title}</div>
-            <div class="news-body-text">${n.body}</div>
-            <div class="news-foot">
-              <span class="news-tag-pill ${n.tag}">${n.tagName}</span>
-              <span class="news-date">${n.date}</span>
-            </div>
-          </div>
-        </div>`).join('');
-    } else {
-      c.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted)">No health news available at this time.</div>';
-    }
-  } catch (error) {
-    console.error('Failed to load health news:', error);
-    // Fallback to static news
-    c.innerHTML = FIX_NEWS.map((n, index) => `
-      <div class="news-item" onclick="showNewsDetail(${index})" style="cursor:pointer;">
-        <div class="news-icon-wrap">${n.icon}</div>
-        <div class="news-content-inner">
-          <div class="news-title-text">${n.title}</div>
-          <div class="news-body-text">${n.body}</div>
-          <div class="news-foot">
-            <span class="news-tag-pill ${n.tag}">${n.tagName}</span>
-            <span class="news-date">${n.date}</span>
-          </div>
-        </div>
-      </div>`).join('');
-  }
-}
+// Removed FIX_NEWS - consolidated to HEALTH_NEWS
+// Removed fixRenderNews - consolidated to renderHealthNews
 
 /* ═══════════════════════════════════════════════════
    2. HOSPITAL MAP — self-contained, no fetch needed,
@@ -7148,7 +7286,7 @@ function fixInitMap() {
 
   // Wait a tick so the container is painted before Leaflet reads dimensions
   setTimeout(() => {
-    if (!window.L) { console.error('Leaflet not loaded'); return; }
+    if (!window.L) { return; }
     fixMap = L.map('fix-map-container').setView([12.6089, 37.4671], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -7220,16 +7358,12 @@ window.onFacilitiesPageShow = function() { fixInitMap(); };
   window.showPage = function(name, btn) {
     if (_orig) _orig(name, btn);
     if (name === 'facilities') fixInitMap();
-    if (name === 'dashboard')  fixRenderNews();
+    // renderHealthNews is called from showDashboard, no need to call here
   };
 })();
 
-// Run news immediately on DOM ready (no tab click needed)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', fixRenderNews);
-} else {
-  fixRenderNews();  // DOM already ready, run now
-}
+// News loads via renderHealthNews when dashboard tab is shown
+// No need for separate DOMContentLoaded call
 
 // Also wire the near-me button properly, independent of the facilities tab
 document.addEventListener('DOMContentLoaded', function() {
@@ -7338,9 +7472,21 @@ function toggleAuthMode(mode) {
     passwordInput.setAttribute('required', '');
     authSwitch.innerHTML = '<span>Already have an account? <a onclick="toggleAuthMode(\'login\')">Login</a></span>';
   }
+}
 
-  hideAuthError();
-  hideAuthSuccess();
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const useEl = btn.querySelector('use');
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (useEl) useEl.setAttribute('href', '#icon-eye-off');
+    btn.setAttribute('aria-label', 'Hide password');
+  } else {
+    input.type = 'password';
+    if (useEl) useEl.setAttribute('href', '#icon-eye');
+    btn.setAttribute('aria-label', 'Show password');
+  }
 }
 
 function showAuthError(message) {
@@ -7391,19 +7537,77 @@ function showVerificationPending(message) {
     modalTitle.textContent = 'Verify Your Email';
   }
 
-  // Add verification pending message
+  // Add verification pending message with resend action
   const successEl = document.getElementById('auth-success');
   if (successEl) {
+    const registeredEmail = (document.getElementById('auth-email')?.value || '').trim();
+    const safeEmail = registeredEmail.replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
     successEl.innerHTML = `
       <div style="text-align: center; padding: 1rem 0;">
         <div style="font-size: 3rem; margin-bottom: 1rem;">&#128231;</div>
         <p style="margin-bottom: 0.5rem;">${message || 'Registration successful. Please check your email.'}</p>
+        ${safeEmail ? `<p style="font-size: 0.95rem; color: var(--text); margin: 0.75rem 0; font-weight: 500;">${safeEmail}</p>` : ''}
         <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem;">
-          We sent a verification link to your email. Click the link to activate your account.
+          We sent a verification link. Click the link in the email to activate your account.
         </p>
+        <div style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+          <button type="button" class="auth-resend-btn" id="auth-resend-btn" style="background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+            Resend verification email
+          </button>
+          <button type="button" class="auth-back-login-btn" id="auth-back-login-btn" style="background: transparent; color: var(--muted); border: none; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.85rem; text-decoration: underline;">
+            Back to login
+          </button>
+        </div>
+        <p id="auth-resend-status" style="font-size: 0.8rem; margin-top: 0.5rem; min-height: 1.2em;"></p>
       </div>
     `;
     successEl.classList.add('show');
+
+    // Wire resend button
+    const resendBtn = document.getElementById('auth-resend-btn');
+    if (resendBtn) {
+      resendBtn.addEventListener('click', async () => {
+        if (!registeredEmail) return;
+        resendBtn.disabled = true;
+        const statusEl = document.getElementById('auth-resend-status');
+        if (statusEl) statusEl.textContent = 'Sending…';
+        try {
+          const res = await fetch('/auth/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: registeredEmail })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            if (statusEl) {
+              statusEl.style.color = 'var(--success, #16a34a)';
+              statusEl.textContent = data.message || 'Verification email sent. Check your inbox.';
+            }
+          } else {
+            if (statusEl) {
+              statusEl.style.color = 'var(--danger, #dc2626)';
+              statusEl.textContent = data.error || 'Failed to resend. Please try again later.';
+            }
+            resendBtn.disabled = false;
+          }
+        } catch (err) {
+          if (statusEl) {
+            statusEl.style.color = 'var(--danger, #dc2626)';
+            statusEl.textContent = 'Cannot reach the server. Check your connection.';
+          }
+          resendBtn.disabled = false;
+        }
+      });
+    }
+
+    // Wire back-to-login button
+    const backBtn = document.getElementById('auth-back-login-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        resetAuthModal();
+        toggleAuthMode('login');
+      });
+    }
   }
 }
 
@@ -7494,7 +7698,7 @@ async function loadProfile() {
     }
     // If 404, that's OK - new user with no profile yet, form stays blank
   } catch (error) {
-    console.error('Load profile error:', error);
+    // Internal error - UI handled
     if (profileLoading) profileLoading.style.display = 'none';
     profileCards.forEach(card => card.style.display = '');
     if (profileSaveBtn) profileSaveBtn.style.display = '';
@@ -7523,6 +7727,10 @@ async function loadReminders() {
     loadingState.style.display = 'none';
     notLoggedIn.style.display = 'block';
     if (h2) h2.textContent = 'Medicine Reminders';
+    // Hide add button when not logged in
+    const addBtn = document.getElementById('add-reminder-btn');
+    if (addBtn && !window.authToken) addBtn.style.display = 'none';
+    else if (addBtn) addBtn.style.display = '';
     return;
   }
 
@@ -7560,7 +7768,7 @@ async function loadReminders() {
       renderReminders(reminders, container);
     }
   } catch (error) {
-    console.error('Load reminders error:', error);
+    // Internal error - user notified
     loadingState.style.display = 'none';
     container.innerHTML = '<div class="appointments-empty"><p>Could not load reminders. Please try again.</p></div>';
     showToast('Failed to load reminders.', 'error');
@@ -7730,7 +7938,7 @@ function openEditReminderModal(id) {
       document.getElementById('reminder-modal').classList.add('open');
     })
     .catch(error => {
-      console.error('Failed to load reminder for edit:', error);
+      // Internal error - user notified
       showToast('Failed to load reminder data.', 'error');
     });
 }
@@ -7772,7 +7980,7 @@ async function confirmDeleteReminder() {
       showToast(error.error || 'Failed to delete reminder.', 'error');
     }
   } catch (error) {
-    console.error('Delete reminder error:', error);
+    // Internal error - user notified
     showToast('Network error. Please try again.', 'error');
   } finally {
     deleteBtn.disabled = false;
@@ -7859,7 +8067,7 @@ document.getElementById('reminder-form').addEventListener('submit', async functi
       showToast(error.error || 'Failed to save reminder.', 'error');
     }
   } catch (error) {
-    console.error('Save reminder error:', error);
+    // Internal error - user notified
     showToast('Network error. Please try again.', 'error');
   } finally {
     submitBtn.disabled = false;
@@ -7909,7 +8117,7 @@ async function saveProfile() {
       showToast(error.error || 'Failed to save profile.', 'error');
     }
   } catch (error) {
-    console.error('Save profile error:', error);
+    // Internal error - user notified
     showToast('Network error. Please try again.', 'error');
   }
 
@@ -7978,7 +8186,7 @@ async function loadAppointments() {
       renderAppointments(appointments, container);
     }
   } catch (error) {
-    console.error('Load appointments error:', error);
+    // Internal error - user notified
     container.innerHTML = '<div class="appointments-empty"><p>Could not load appointments. Please try again.</p></div>';
     showToast('Failed to load appointments.', 'error');
   }
@@ -8098,7 +8306,7 @@ async function cancelAppointment(id) {
       }
     }
   } catch (error) {
-    console.error('Cancel appointment error:', error);
+    // Internal error - user notified
     showToast('Network error. Please try again.', 'error');
     if (cancelBtn) {
       cancelBtn.disabled = false;
@@ -8170,17 +8378,24 @@ async function handleAuthSubmit(event) {
 
     } else {
       // Register mode
-      const response = await fetch('/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      let data;
+      try {
+        const response = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
 
-      const data = await response.json();
+        data = await response.json();
 
-      if (!response.ok) {
-        showAuthError(data.error || 'Registration failed. Please try again.');
+        if (!response.ok) {
+          showAuthError(data.error || 'Registration failed. Please try again.');
+          setAuthLoading(false);
+          return;
+        }
+      } catch (fetchErr) {
         setAuthLoading(false);
+        showAuthError('Cannot reach the server. Please check your connection and try again.');
         return;
       }
 
@@ -8192,43 +8407,16 @@ async function handleAuthSubmit(event) {
         return;
       }
 
-      // Auto-login after registration (only if no verification required)
-      // Note: This may fail if email confirmation is required
-      // In that case, Supabase will return an error on login
-      const loginResponse = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const loginData = await loginResponse.json();
-
-      if (loginResponse.ok && loginData.token) {
-        window.authToken = loginData.token;
-        window.currentUser = { email };
-
-        showAuthSuccess('Account created! Redirecting...');
-
-        // Update UI
-        updateAuthUI();
-        loadProfile(); // Load user profile after registration
-        renderDashboard(); // Update dashboard greeting
-
-        setTimeout(() => {
-          closeAuthModal();
-          showToast('Welcome to MediScan! Your account has been created.', 'success');
-        }, 800);
-      } else {
-        // Registration succeeded but auto-login failed
-        showAuthSuccess('Account created! Please log in with your credentials.');
-        toggleAuthMode('login');
-        document.getElementById('auth-password').value = '';
-        document.getElementById('auth-confirm-password').value = '';
-      }
+      // No auto-login: email verification required before login
+      setAuthLoading(false);
+      showAuthSuccess('Account created! Please check your email to verify, then log in.');
+      toggleAuthMode('login');
+      authForm.querySelector('#auth-email').value = email;
+      authForm.querySelector('#auth-password').value = '';
     }
   } catch (error) {
-    console.error('Auth error:', error);
-    showAuthError('Network error. Please check your connection and try again.');
+    // Last-resort fallback for true fetch failures (network errors, CORS, etc.)
+    showAuthError('Something went wrong. Please try again.');
   }
 
   setAuthLoading(false);
@@ -8238,7 +8426,7 @@ async function handleLogout() {
   try {
     await fetch('/auth/logout', { method: 'POST' });
   } catch (error) {
-    console.error('Logout error:', error);
+    // Internal error - silently ignore logout errors
   }
 
   window.authToken = null;
@@ -8251,6 +8439,65 @@ async function handleLogout() {
   updateAuthUI();
   renderDashboard(); // Update dashboard greeting
   showToast('You have been logged out.', 'info');
+}
+
+// ------------------------------------------------------------------
+// Google OAuth – kicks off the Supabase-hosted Google sign-in flow.
+// Fetches the OAuth URL from the backend, then redirects the browser.
+// The user lands on Google, then comes back to /auth/oauth-callback,
+// which sets the HttpOnly refresh cookie and returns to /?google_login=success.
+// ------------------------------------------------------------------
+async function signInWithGoogle() {
+  const btn = document.getElementById('auth-google-btn');
+  if (btn) btn.disabled = true;
+  hideAuthError();
+  try {
+    const res = await fetch('/auth/google', { credentials: 'same-origin' });
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      showAuthError(data.error || 'Could not start Google sign in.');
+      if (btn) btn.disabled = false;
+      return;
+    }
+    // Same-origin redirect to the callback page; the callback page
+    // then bounces the user through Supabase and Google.
+    window.location.href = data.url;
+  } catch (e) {
+    showAuthError('Cannot reach the server. Please try again.');
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ------------------------------------------------------------------
+// Handle the ?google_login=* query param when the OAuth callback page
+// redirects back to the app. Pulls the token (stashed in sessionStorage
+// by the callback page) and updates the UI.
+// ------------------------------------------------------------------
+async function handleGoogleLoginRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('google_login');
+  if (!status) return;
+
+  // Clean the URL regardless of outcome.
+  const cleanUrl = window.location.pathname + (window.location.hash || '');
+  window.history.replaceState({}, document.title, cleanUrl);
+
+  if (status === 'success') {
+    let token = null;
+    try { token = sessionStorage.getItem('mediscan_google_token'); } catch (e) {}
+    if (token) {
+      window.authToken = token;
+      try { sessionStorage.removeItem('mediscan_google_token'); } catch (e) {}
+    }
+    updateAuthUI();
+    loadProfile();
+    renderDashboard();
+    showToast('Welcome! You are now signed in with Google.', 'success');
+  } else if (status === 'missing_token' || status === 'invalid') {
+    showToast('Google sign in was cancelled.', 'warning');
+  } else if (status === 'error') {
+    showToast('Google sign in failed. Please try again.', 'error');
+  }
 }
 
 function updateAuthUI() {

@@ -386,9 +386,6 @@ class HeatmapState {
   }
 }
 
-// Export for ES modules
-export { HeatmapState };
-
 // Create singleton instance for global access
 if (typeof window !== 'undefined') {
   window.HeatmapState = HeatmapState;

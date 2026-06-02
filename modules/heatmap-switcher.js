@@ -1,18 +1,23 @@
 /**
  * MediScan Heatmap Switcher
- * Orchestrator for 2D SVG body heatmap with musclelibrary model
+ * Orchestrator for the 2D body heatmap with reference images.
  *
  * Features:
- * - Unified API for 2D and muscles modes
+ * - Unified API for 2D and Legacy (demo) modes
  * - Seamless state synchronization between modes
  * - Consistent cleanup and resource management
  *
  * Supported modes:
- * - '2d': SVG-based body heatmap with general body regions (body-heatmap.js)
- * - 'muscles': SVG-based body heatmap with 70+ muscle regions (body-heatmap-muscles.js)
+ * - '2d': Reference-image based body heatmap (demo-body-heatmap-simple.js)
+ * - 'demo': Legacy demo body grid (rendered standalone by the toggle handler)
+ *
+ * Note: the prior 'muscles' mode (body-heatmap-muscles.js) was removed.
+ * Use the 2D toggle for the full reference-image experience.
  */
 
-import { HeatmapState } from './heatmap-state.js';
+// Loaded via global script tag in IIndex.html, so HeatmapState is on window
+// (set by modules/heatmap-state.js, which is loaded before this file).
+// For ES-module callers, the named export below also works.
 
 class HeatmapSwitcher {
   /**
@@ -31,7 +36,7 @@ class HeatmapSwitcher {
 
     this.options = {
       onSelectionChange: options.onSelectionChange || (() => {}),
-      state: options.state || window.mediscanHeatmapState || new HeatmapState(),
+      state: options.state || window.mediscanHeatmapState || new (window.HeatmapState || HeatmapState)(),
       ...options
     };
 
@@ -40,19 +45,23 @@ class HeatmapSwitcher {
 
     // Current implementation instances
     this.heatmap2D = null;
-    this.heatmapMuscles = null;
     this.currentMode = '2d';
 
     // Loading state
     this.isLoading = false;
     this.initPromise = null;
 
+    // Lifecycle
+    this.isDestroyed = false;
+
     // Bind methods
     this.onSelectionChange2D = this.onSelectionChange2D.bind(this);
-    this.onSelectionChangeMuscles = this.onSelectionChangeMuscles.bind(this);
 
-    // Subscribe to state changes
-    this.state.subscribe((newState) => {
+    // Subscribe to state changes. Store the unsubscribe so destroy() can
+    // detach us from the shared HeatmapState — otherwise the callback would
+    // keep firing after the container is nulled (race condition).
+    this.unsubscribeState = this.state.subscribe((newState) => {
+      if (this.isDestroyed) return;
       if (newState.mode !== this.currentMode) {
         this.setMode(newState.mode);
       }
@@ -89,18 +98,19 @@ class HeatmapSwitcher {
   }
 
   /**
-   * Set mode (2D or muscles)
-   * @param {string} mode - '2d' or 'muscles'
+   * Set mode (2D only — the muscles option has been removed)
+   * @param {string} mode - '2d' or 'demo' (demo is rendered standalone by the toggle handler)
    */
   async setMode(mode) {
-    // Validate mode
-    if (!['2d', 'muscles'].includes(mode)) {
+    // Validate mode. 'muscles' is silently coerced to '2d' so any stale
+    // references in localStorage or state can't break the UI.
+    if (!['2d', 'demo'].includes(mode)) {
       console.warn(`HeatmapSwitcher: Invalid mode "${mode}", defaulting to 2D`);
       mode = '2d';
     }
 
-    // Skip if already in this mode
-    if (mode === this.currentMode && this.heatmap2D && this.heatmapMuscles) {
+    // Skip if already in this mode and the 2D instance exists
+    if (mode === this.currentMode && this.heatmap2D) {
       return this;
     }
 
@@ -115,11 +125,7 @@ class HeatmapSwitcher {
       this.container.innerHTML = '';
 
       // Load the requested mode
-      if (mode === 'muscles') {
-        await this.loadMuscles();
-      } else {
-        await this.load2D();
-      }
+      await this.load2D();
 
       this.currentMode = mode;
       this.isLoading = false;
@@ -133,14 +139,17 @@ class HeatmapSwitcher {
   }
 
   /**
-   * Load 2D SVG heatmap
+   * Load 2D heatmap (DemoBodyHeatmap with reference images).
+   * The legacy BodyHeatmap class had 10 generic regions; DemoBodyHeatmap
+   * has 33+ precise regions mapped to male/female front/back PNGs, which
+   * is the working implementation we want as the default.
    */
   async load2D() {
     return new Promise((resolve, reject) => {
       try {
-        // BodyHeatmap is loaded via script tag in IIndex.html
-        if (typeof BodyHeatmap === 'undefined') {
-          reject(new Error('BodyHeatmap class not found. Ensure body-heatmap.js is loaded.'));
+        // DemoBodyHeatmap is loaded via script tag in IIndex.html
+        if (typeof DemoBodyHeatmap === 'undefined') {
+          reject(new Error('DemoBodyHeatmap class not found. Ensure demo-body-heatmap-simple.js is loaded.'));
           return;
         }
 
@@ -149,54 +158,22 @@ class HeatmapSwitcher {
           ? this.state.regions.map(r => ({ ...r }))
           : [];
 
-        this.heatmap2D = new BodyHeatmap(this.containerId, {
+        this.heatmap2D = new DemoBodyHeatmap(this.containerId, {
           onSelectionChange: this.onSelectionChange2D,
           initialSelection
         });
 
-        // Sync gender and view from state
-        if (this.state.gender) {
-          this.heatmap2D.gender = this.state.gender === 'm' ? 'male' : 'female';
+        // DemoBodyHeatmap needs an explicit init() call to render
+        if (typeof this.heatmap2D.init === 'function') {
+          this.heatmap2D.init();
         }
-        if (this.state.view) {
-          this.heatmap2D.currentView = this.state.view === '360' ? 'front' : this.state.view;
-        }
-
-        resolve(this);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  /**
-   * Load muscles heatmap with 70+ anatomical regions
-   */
-  async loadMuscles() {
-    return new Promise((resolve, reject) => {
-      try {
-        // BodyHeatmapMuscles is loaded via script tag in IIndex.html
-        if (typeof BodyHeatmapMuscles === 'undefined') {
-          reject(new Error('BodyHeatmapMuscles class not found. Ensure body-heatmap-muscles.js is loaded.'));
-          return;
-        }
-
-        // Get current state for initialization
-        const initialSelection = this.state.regions.length > 0
-          ? this.state.regions.map(r => ({ ...r }))
-          : [];
-
-        this.heatmapMuscles = new BodyHeatmapMuscles(this.containerId, {
-          onSelectionChange: this.onSelectionChangeMuscles,
-          initialSelection
-        });
 
         // Sync gender and view from state
-        if (this.state.gender) {
-          this.heatmapMuscles.gender = this.state.gender === 'm' ? 'male' : 'female';
+        if (this.state.gender && this.heatmap2D.state) {
+          this.heatmap2D.state.gender = this.state.gender === 'm' ? 'male' : 'female';
         }
-        if (this.state.view) {
-          this.heatmapMuscles.currentView = this.state.view === '360' ? 'front' : this.state.view;
+        if (this.state.view && this.heatmap2D.state) {
+          this.heatmap2D.state.view = this.state.view === '360' ? 'front' : this.state.view;
         }
 
         resolve(this);
@@ -216,24 +193,12 @@ class HeatmapSwitcher {
   }
 
   /**
-   * Handle selection changes from muscles heatmap
-   * @param {Array} data - Selection data array
-   */
-  onSelectionChangeMuscles(data) {
-    this.state.setRegions(data);
-    this.options.onSelectionChange(data, 'muscles');
-  }
-
-  /**
    * Get enhanced format (unified API)
    * @returns {object|null} Enhanced format data
    */
   getEnhancedFormat() {
     if (this.heatmap2D) {
       return this.heatmap2D.getEnhancedFormat();
-    }
-    if (this.heatmapMuscles) {
-      return this.heatmapMuscles.getEnhancedFormat();
     }
     return this.state.getEnhancedFormat();
   }
@@ -243,11 +208,14 @@ class HeatmapSwitcher {
    * @returns {string} Legacy format string
    */
   getLegacyFormat() {
-    if (this.heatmap2D) {
+    if (this.heatmap2D && typeof this.heatmap2D.getLegacyFormat === 'function') {
       return this.heatmap2D.getLegacyFormat();
     }
-    if (this.heatmapMuscles) {
-      return this.heatmapMuscles.getLegacyFormat();
+    if (this.heatmap2D) {
+      const selections = typeof this.heatmap2D.getSelections === 'function'
+        ? this.heatmap2D.getSelections()
+        : [];
+      return selections.map(s => s.name || s.area).filter(Boolean).join(', ');
     }
     return this.state.getLegacyFormat();
   }
@@ -259,11 +227,8 @@ class HeatmapSwitcher {
   setSelections(selections) {
     this.state.setRegions(selections);
 
-    if (this.heatmap2D) {
+    if (this.heatmap2D && typeof this.heatmap2D.setSelections === 'function') {
       this.heatmap2D.setSelections(selections);
-    }
-    if (this.heatmapMuscles) {
-      this.heatmapMuscles.setSelections(selections);
     }
   }
 
@@ -273,17 +238,16 @@ class HeatmapSwitcher {
   clear() {
     this.state.clear();
 
-    if (this.heatmap2D) {
+    if (this.heatmap2D && typeof this.heatmap2D.clear === 'function') {
       this.heatmap2D.clear();
-    }
-    if (this.heatmapMuscles) {
-      this.heatmapMuscles.clear();
+    } else if (this.heatmap2D && typeof this.heatmap2D.setSelections === 'function') {
+      this.heatmap2D.setSelections([]);
     }
   }
 
   /**
    * Get current mode
-   * @returns {string} '2d' | 'muscles'
+   * @returns {string} '2d' | 'demo'
    */
   getMode() {
     return this.currentMode;
@@ -293,10 +257,12 @@ class HeatmapSwitcher {
    * Cleanup and dispose resources
    */
   async cleanup() {
-    // Cleanup 2D instance
+    // DemoBodyHeatmap exposes destroy() (not cleanup). Try both.
     if (this.heatmap2D) {
       try {
-        if (typeof this.heatmap2D.cleanup === 'function') {
+        if (typeof this.heatmap2D.destroy === 'function') {
+          this.heatmap2D.destroy();
+        } else if (typeof this.heatmap2D.cleanup === 'function') {
           this.heatmap2D.cleanup();
         }
       } catch (error) {
@@ -315,18 +281,24 @@ class HeatmapSwitcher {
    * Destroy the switcher and release all resources
    */
   async destroy() {
+    this.isDestroyed = true;
+    if (this.unsubscribeState) {
+      this.unsubscribeState();
+      this.unsubscribeState = null;
+    }
     await this.cleanup();
     this.container = null;
     this.options.onSelectionChange = null;
   }
 }
 
-// Export for ES modules
-export { HeatmapSwitcher };
-
-// Export class for manual initialization in IIndex.html
+// Export for browser global (script tag) and CommonJS
 if (typeof window !== 'undefined') {
   window.HeatmapSwitcher = HeatmapSwitcher;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { HeatmapSwitcher };
 }
 
 // Auto-initialize if data attribute present

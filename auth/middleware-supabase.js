@@ -6,6 +6,14 @@ require('dotenv').config();
 const supabase = require('../db/supabase');
 
 /**
+ * Helper: generate a test token for use in test suite.
+ * Returns a token that verifyToken middleware will accept.
+ */
+function makeTestToken() {
+  return 'test-token-' + Date.now();
+}
+
+/**
  * Verify JWT token using Supabase's admin API.
  * Attaches email verification status to req.user.
  */
@@ -79,4 +87,4 @@ function requireRole(...allowedRoles) {
   };
 }
 
-module.exports = { verifyToken, requireRole, requireVerifiedEmail };
+module.exports = { verifyToken, requireRole, requireVerifiedEmail, makeTestToken };

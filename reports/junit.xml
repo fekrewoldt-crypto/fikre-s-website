@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="248" failures="0" errors="0" time="7.103">
+  <testsuite name="Auth Middleware" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="4.271" tests="25">
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; in test mode" name="accepts valid test token from Authorization header" time="0.129">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; in test mode" name="returns 401 when token lacks Bearer prefix (no space)" time="0.026">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; in test mode" name="extracts token from any prefix format &quot;prefix token&quot;" time="0.024">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; in test mode" name="rejects token not starting with test-token" time="0.008">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; missing Authorization header" name="returns 401 when no Authorization header" time="0.022">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; missing Authorization header" name="returns 401 when Authorization header is empty" time="0.009">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; missing Authorization header" name="returns 401 when Authorization header has only Bearer" time="0.019">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; test mode token validation" name="extracts user id from test token correctly" time="0.005">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; verifyToken &gt; test mode token validation" name="default role is student for test tokens" time="0.018">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user has required role" name="allows access for admin role" time="0.007">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user has required role" name="allows access for teacher role" time="0.018">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user has required role" name="allows access when user has one of multiple allowed roles" time="0.015">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user has required role" name="allows access when user has first role in list" time="0.005">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user has required role" name="allows access when user has last role in list" time="0.004">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user role does not match" name="returns 403 when user role does not match required role" time="0.004">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user role does not match" name="returns 403 when user role is not in allowed roles list" time="0.005">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when user role does not match" name="returns 403 when user undefined role" time="0.027">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when no user on request" name="returns 401 when req.user is undefined" time="0.005">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when no user on request" name="returns 401 when req.user is null" time="0.055">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; requireRole &gt; when no user on request" name="returns 401 when requireRole is applied without verifyToken" time="0.004">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; middleware chaining" name="verifies token then checks role in sequence" time="0.012">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; middleware chaining" name="allows access with valid token and matching role" time="0.005">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; edge cases" name="handles empty role array when no user" time="0.004">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; edge cases" name="handles empty role array when user exists" time="0.008">
+    </testcase>
+    <testcase classname="Auth Middleware &gt; edge cases" name="handles user with empty role string" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="Route mounts in Server-v2.js" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:48" time="0.234" tests="7">
+    <testcase classname="Route mounts in Server-v2.js" name="mounts /api/heatmap exactly once" time="0.004">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="mounts auth routes exactly once (not duplicate routes)" time="0.001">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="mounts timeline route exactly once (not duplicate)" time="0">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="does not mount /auth with authRoutes more than once" time="0">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="does not mount /timeline twice with same middleware" time="0.001">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="mounts /auth with both apiLimiter and authRoutes" time="0.002">
+    </testcase>
+    <testcase classname="Route mounts in Server-v2.js" name="mounts /timeline with both apiLimiter and verifyToken" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="/api/heatmap Endpoint" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="4.542" tests="40">
+    <testcase classname="/api/heatmap Endpoint &gt; Authentication requirements &gt; POST /api/heatmap" name="returns 401 when no Authorization header" time="0.147">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authentication requirements &gt; POST /api/heatmap" name="returns 401 when Authorization header is empty" time="0.061">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authentication requirements &gt; POST /api/heatmap" name="returns 401 when Authorization header has only Bearer" time="0.021">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authentication requirements &gt; POST /api/heatmap" name="returns 403 when token is not a test token" time="0.007">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authentication requirements &gt; GET requests (if supported)" name="returns 401 when no Authorization header for GET" time="0.006">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="accepts POST with valid test token" time="0.006">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="accepts POST with token in different prefix format" time="0.01">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="creates record with correct user context" time="0.008">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="logs audit action on successful save" time="0.016">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="handles multiple consecutive requests" time="0.047">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Authenticated requests" name="works with minimal test token format" time="0.01">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts body mode heatmap state" time="0.026">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts muscles mode heatmap state" time="0.007">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts heatmap state with nested region data" time="0.005">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts heatmap state with metadata" time="0.015">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts empty regions object" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="accepts arbitrary additional fields" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Valid payload processing" name="handles very large heatmap state" time="0.032">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Invalid payload handling" name="returns 400 when JSON body is explicitly null" time="0.009">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Invalid payload handling" name="returns 400 when body is undefined (sending without data)" time="0.034">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Invalid payload handling" name="accepts empty object as valid (current behavior)" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Invalid payload handling" name="handles text/plain content type" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Response structure" name="returns 201 status with recordId on success" time="0.016">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Response structure" name="response contains only recordId field on success" time="0.025">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Response structure" name="error response for invalid body has proper status code" time="0.009">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Response structure" name="error responses do not expose internal details" time="0.005">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="handles unicode in payload" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="handles numeric values in regions" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="handles boolean values in state" time="0.006">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="handles string mode values" time="0.003">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="preserves timestamp in state if present" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Edge cases" name="handles arrays in state" time="0.006">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; HTTP method handling" name="handles OPTIONS requests (CORS preflight)" time="0.005">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; HTTP method handling" name="rejects PUT method" time="0.047">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; HTTP method handling" name="rejects DELETE method" time="0.004">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; HTTP method handling" name="rejects PATCH method" time="0.003">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Content-Type handling" name="accepts application/json by default" time="0.003">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Content-Type handling" name="handles explicit application/json content type" time="0.002">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Server error handling" name="returns 500 when recordsDAO fails" time="0.031">
+    </testcase>
+    <testcase classname="/api/heatmap Endpoint &gt; Server error handling" name="continues to work after a server error" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Records DAO with encryption" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:48" time="0.296" tests="1">
+    <testcase classname="Records DAO with encryption" name="createRecord and getRecordsByUser" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Frontend URL configuration in IIndex.html" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:48" time="0.267" tests="6">
+    <testcase classname="Frontend URL configuration in IIndex.html" name="does not contain hardcoded http://localhost URLs" time="0.003">
+    </testcase>
+    <testcase classname="Frontend URL configuration in IIndex.html" name="does not contain http://127.0.0.1 URLs" time="0.002">
+    </testcase>
+    <testcase classname="Frontend URL configuration in IIndex.html" name="uses relative /api/analyze endpoint" time="0.001">
+    </testcase>
+    <testcase classname="Frontend URL configuration in IIndex.html" name="uses relative /api/chat endpoint" time="0">
+    </testcase>
+    <testcase classname="Frontend URL configuration in IIndex.html" name="login/register endpoints use relative paths" time="0.001">
+    </testcase>
+    <testcase classname="Frontend URL configuration in IIndex.html" name="does not hardcode port 3000 in API calls" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Encryption (AES-256-GCM)" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:48" time="0.613" tests="30">
+    <testcase classname="Encryption (AES-256-GCM) &gt; round-trip encryption/decryption" name="encrypt() then decrypt() returns original data" time="0.006">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; round-trip encryption/decryption" name="round-trip works with deeply nested objects" time="0.035">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; round-trip encryption/decryption" name="round-trip works with large arrays" time="0.013">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; unique IVs (ciphertext uniqueness)" name="encrypting same data twice produces different ciphertext" time="0.003">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; unique IVs (ciphertext uniqueness)" name="multiple encryptions of empty object produce unique ciphertexts" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; unique IVs (ciphertext uniqueness)" name="IVs are different even for consecutive encryptions" time="0.002">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; decryption with wrong key" name="throws error when decrypting with wrong key" time="0.063">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; decryption with wrong key" name="throws error when key is corrupted" time="0.009">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; decryption with wrong key" name="throws error when key is too short" time="0.018">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; decryption with wrong key" name="data encrypted with one key cannot be decrypted with another" time="0.005">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles empty object" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles null values in object" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles undefined values in object" time="0.003">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles unicode characters" time="0.002">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles special characters in JSON" time="0.002">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles boolean values" time="0.002">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles negative numbers" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles arrays of primitives" time="0">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; edge cases for data types" name="handles date objects (stored as strings)" time="0.002">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; large payloads" name="handles 10KB string payload" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; large payloads" name="handles 100KB string payload" time="0.033">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; large payloads" name="handles 1MB string payload" time="0.033">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; large payloads" name="handles large object with many fields" time="0.033">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; large payloads" name="handles deeply nested structure" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; base64 output format" name="returns base64 encoded string" time="0">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; base64 output format" name="encrypted output can be stored and later decrypted" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; tamper detection" name="detects tampered ciphertext - modified character" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; tamper detection" name="detects truncated ciphertext" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; tamper detection" name="detects extended ciphertext" time="0.001">
+    </testcase>
+    <testcase classname="Encryption (AES-256-GCM) &gt; tamper detection" name="detects modified last bytes" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Google OAuth endpoints" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="5.382" tests="7">
+    <testcase classname="Google OAuth endpoints &gt; GET /auth/google" name="returns a Supabase OAuth URL" time="0.469">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; GET /auth/google" name="in test mode the URL points to local /auth/oauth-callback" time="0.019">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; GET /auth/oauth-callback" name="serves an HTML bridge page that posts the session" time="0.024">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; POST /auth/oauth-session" name="returns 400 when access_token is missing" time="0.058">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; POST /auth/oauth-session" name="returns 401 when test token is invalid" time="0.04">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; POST /auth/oauth-session" name="accepts a valid test token and sets the refresh cookie" time="0.046">
+    </testcase>
+    <testcase classname="Google OAuth endpoints &gt; Auth modal markup includes Google button" name="serves IIndex.html with the Google sign-in button" time="0.024">
+    </testcase>
+  </testsuite>
+  <testsuite name="Rate limiting on /auth/* and /timeline/*" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="5.565" tests="3">
+    <testcase classname="Rate limiting on /auth/* and /timeline/*" name="returns 429 after exceeding rate limit on /auth/login" time="0.833">
+    </testcase>
+    <testcase classname="Rate limiting on /auth/* and /timeline/*" name="returns 429 after exceeding rate limit on /timeline" time="0.123">
+    </testcase>
+    <testcase classname="Rate limiting on /auth/* and /timeline/*" name="rate limiting applies to /api/analyze endpoint" time="0.171">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth integration flow" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="5.594" tests="12">
+    <testcase classname="Auth integration flow &gt; Registration" name="POST /auth/register creates user and returns 201" time="0.51">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Registration" name="returns 400 for invalid email format" time="0.045">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Registration" name="returns 400 for password less than 8 characters" time="0.021">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Login" name="returns 200 and token with valid credentials" time="0.076">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Login" name="returns 401 with wrong password" time="0.03">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Login" name="returns 401 with non-existent email" time="0.014">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Protected routes" name="GET /timeline returns 200 with valid token" time="0.073">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Protected routes" name="GET /timeline returns 401 without token" time="0.006">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Protected routes" name="GET /timeline returns 403 with invalid token" time="0.007">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Logout" name="POST /auth/logout succeeds with valid token" time="0.047">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Refresh token" name="POST /auth/refresh returns new access token with valid refresh cookie" time="0.055">
+    </testcase>
+    <testcase classname="Auth integration flow &gt; Refresh token" name="POST /auth/refresh returns 401 without refresh cookie" time="0.011">
+    </testcase>
+  </testsuite>
+  <testsuite name="User Profile API" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:44" time="6.032" tests="60">
+    <testcase classname="User Profile API &gt; Authentication requirements" name="GET /api/profile returns 401 without token" time="0.473">
+    </testcase>
+    <testcase classname="User Profile API &gt; Authentication requirements" name="GET /api/profile returns 403 with non-test token format" time="0.032">
+    </testcase>
+    <testcase classname="User Profile API &gt; Authentication requirements" name="GET /api/profile returns 401 with empty Authorization header" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; Authentication requirements" name="PUT /api/profile returns 401 without token" time="0.104">
+    </testcase>
+    <testcase classname="User Profile API &gt; Authentication requirements" name="PUT /api/profile returns 403 with invalid token" time="0.028">
+    </testcase>
+    <testcase classname="User Profile API &gt; GET /api/profile - Profile retrieval" name="returns full profile data when authenticated" time="0.024">
+    </testcase>
+    <testcase classname="User Profile API &gt; GET /api/profile - Profile retrieval" name="returns 404 when profile does not exist" time="0.029">
+    </testcase>
+    <testcase classname="User Profile API &gt; GET /api/profile - Profile retrieval" name="returns 500 when getProfile throws" time="0.03">
+    </testcase>
+    <testcase classname="User Profile API &gt; GET /api/profile - Profile retrieval" name="passes user ID from verified token to getProfile DAO" time="0.031">
+    </testcase>
+    <testcase classname="User Profile API &gt; GET /api/profile - Profile retrieval" name="getProfile called exactly once per request" time="0.01">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="updates profile and returns updated data" time="0.027">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating phone number" time="0.036">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating date of birth" time="0.015">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating gender" time="0.024">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating blood type" time="0.01">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating emergency contact name" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating emergency contact phone" time="0.012">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating address" time="0.016">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating city" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating language preference" time="0.007">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="allows updating notification_enabled" time="0.015">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="accepts multiple allowed fields in one request" time="0.017">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="returns 400 when body is empty" time="0.013">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="returns 400 when only disallowed fields are sent" time="0.021">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="rejects id field when sent alone" time="0.024">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="rejects role field when sent alone" time="0.027">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="rejects created_at field when sent alone" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="returns 500 when updateProfile throws" time="0.02">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="returns 500 when getProfile after update throws" time="0.014">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="does not send undefined values in the update payload" time="0.01">
+    </testcase>
+    <testcase classname="User Profile API &gt; PUT /api/profile - Profile update" name="calls updateProfile with user ID and update payload" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating full_name" time="0.024">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating phone" time="0.012">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating date_of_birth" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating gender" time="0.023">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating blood_type" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating emergency_contact_name" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating emergency_contact_phone" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating address" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating city" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating language_preference" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="allows updating notification_enabled" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks id field from reaching the DAO" time="0.009">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks role field from reaching the DAO" time="0.007">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks is_admin field from reaching the DAO" time="0.011">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks created_at field from reaching the DAO" time="0.008">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks updated_at field from reaching the DAO" time="0.01">
+    </testcase>
+    <testcase classname="User Profile API &gt; Security: Field allowlist enforcement" name="blocks user_id field from reaching the DAO" time="0.008">
+    </testcase>
+    <testcase classname="Role assignment on registration" name="POST /auth/register returns 201 with userId" time="0.013">
+    </testcase>
+    <testcase classname="Role assignment on registration" name="new users get student role by default (test mode)" time="0.025">
+    </testcase>
+    <testcase classname="Role assignment on registration" name="POST /auth/login returns token and sets refresh cookie" time="0.015">
+    </testcase>
+    <testcase classname="Role assignment on registration" name="POST /auth/login returns 401 with wrong password" time="0.007">
+    </testcase>
+    <testcase classname="Profile creation on registration flow" name="newly registered user has no profile until created (404)" time="0.006">
+    </testcase>
+    <testcase classname="Profile creation on registration flow" name="profile can be created via PUT during onboarding" time="0.008">
+    </testcase>
+    <testcase classname="Profile creation on registration flow" name="createProfile DAO is available for explicit profile creation" time="0.001">
+    </testcase>
+    <testcase classname="Profile creation on registration flow" name="profile data persists across requests when updated" time="0.012">
+    </testcase>
+    <testcase classname="Endpoint existence and method verification" name="GET /api/profile route exists and handles auth" time="0.007">
+    </testcase>
+    <testcase classname="Endpoint existence and method verification" name="PUT /api/profile route exists and returns validation response" time="0.008">
+    </testcase>
+    <testcase classname="Endpoint existence and method verification" name="POST /auth/register responds with 201" time="0.007">
+    </testcase>
+    <testcase classname="Endpoint existence and method verification" name="POST /auth/login with valid credentials returns 200" time="0.032">
+    </testcase>
+  </testsuite>
+  <testsuite name="/api/analyze endpoint" errors="0" failures="0" skipped="0" timestamp="2026-06-02T15:58:43" time="6.386" tests="57">
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="POST /api/analyze returns 200 with valid symptoms" time="0.392">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="returns proper response structure" time="0.057">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="severity is one of: low, medium, high" time="0.024">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="confidence is a number between 0 and 100" time="0.084">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="symptoms is an array" time="0.091">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="alternatives is an array with condition objects" time="0.038">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="recommendedFacilities is an array" time="0.021">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="demoMode is true when no AI keys are configured" time="0.06">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="responseTimeMs is a non-negative number" time="0.04">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Basic analysis" name="modelsAttempted tracks the fallback chain" time="0.024">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="returns 200 even with empty symptoms (uses demo data)" time="0.011">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="accepts symptoms only without bodyArea" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="accepts bodyArea only without symptoms" time="0.059">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="handles extended prompt text" time="0.029">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="handles prompt parameter in addition to symptoms" time="0.056">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Request validation" name="handles timePeriod parameter" time="0.012">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Rate limiting" name="rate limiting is applied to /api/analyze" time="0.265">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Rate limiting" name="returns 429 when rate limit is exceeded" time="0.122">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles head body area" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles eye body area" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles skin body area" time="0.02">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles chest body area" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles stomach body area" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles throat body area" time="0.011">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="handles respiratory/body area" time="0.012">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Body area mapping" name="returns response with all major severity types" time="0.06">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Caching" name="second identical request returns cached response" time="0.02">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Caching" name="different symptoms produce different cache entries" time="0.016">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Caching" name="different bodyArea produces different cache entries" time="0.017">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Caching" name="cached response has same primary condition as original" time="0.023">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Caching" name="cached response includes cached: true flag" time="0.019">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Image handling" name="accepts request with imageBase64" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Image handling" name="image requests bypass cache" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Image handling" name="handles request without image when other requests have images" time="0.016">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Model fallback chain" name="groq is checked before other models when API key is missing" time="0.021">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Model fallback chain" name="modelsAttempted tracks failed models" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Model fallback chain" name="demo mode is always available as final fallback" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Model fallback chain" name="response includes modelUsed field" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Model fallback chain" name="all responses include disclaimer" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Mock diagnosis mapping" name="eye symptoms map to Conjunctivitis" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Mock diagnosis mapping" name="skin/rash symptoms map to Contact Dermatitis" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Mock diagnosis mapping" name="headache symptoms map to Tension Headache" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Mock diagnosis mapping" name="anxiety symptoms map to Anxiety Attack" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Mock diagnosis mapping" name="default case maps to Viral Upper Respiratory Infection" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Response format consistency" name="all responses have consistent field types" time="0.032">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Response format consistency" name="nextSteps array contains actionable recommendations" time="0.013">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Response format consistency" name="urgentSigns contains warning text" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles unicode symptoms text" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles ampersand and special characters" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles very long symptoms text" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles numeric-only symptoms" time="0.008">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles empty string symptoms" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Edge cases" name="handles whitespace-only symptoms" time="0.01">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Content-Type header" name="returns application/json content type" time="0.009">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; recommendedFacilities details" name="facility objects have key required fields" time="0.013">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; recommendedFacilities details" name="facilities are returned for different severity levels" time="0.013">
+    </testcase>
+    <testcase classname="/api/analyze endpoint &gt; Response normalization (alternative AI schemas)" name="returns canonical schema even when AI omits core fields" time="0.017">
+    </testcase>
+  </testsuite>
+</testsuites>

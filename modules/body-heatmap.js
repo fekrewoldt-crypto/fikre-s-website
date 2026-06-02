@@ -1323,6 +1323,11 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = BodyHeatmap;
 }
 
+// Browser global (matches the legacy module pattern)
+if (typeof window !== 'undefined') {
+  window.BodyHeatmap = BodyHeatmap;
+}
+
 // Auto-initialize if data attribute present
 document.addEventListener('DOMContentLoaded', () => {
   const containers = document.querySelectorAll('[data-body-heatmap]');

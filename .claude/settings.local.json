@@ -42,7 +42,12 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git pull *)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "WebFetch(domain:www.khealth.ai)",
+      "WebFetch(domain:www.webmd.com)",
+      "WebFetch(domain:www.babylonhealth.com)",
+      "WebFetch(domain:ada.com)",
+      "WebFetch(domain:en.wikipedia.org)"
     ]
   }
 }

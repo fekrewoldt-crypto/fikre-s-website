@@ -3,6 +3,15 @@ const router = express.Router();
 const { verifyToken } = require('../auth/middleware-supabase');
 const { getReminders, createReminder, updateReminder, deleteReminder } = require('../db/medicine-reminders');
 
+// UUID validation helper
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validateUUID(id) {
+  if (!uuidRegex.test(id)) {
+    return false;
+  }
+  return true;
+}
+
 // GET /api/medicine-reminders
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -16,6 +25,9 @@ router.get('/', verifyToken, async (req, res) => {
 // GET /api/medicine-reminders/:id
 router.get('/:id', verifyToken, async (req, res) => {
   try {
+    if (!validateUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
     const { getReminderById } = require('../db/medicine-reminders');
     const reminder = await getReminderById(req.params.id, req.user.id);
     if (!reminder) return res.status(404).json({ error: 'Reminder not found' });
@@ -43,6 +55,9 @@ router.post('/', verifyToken, async (req, res) => {
 // PUT /api/medicine-reminders/:id
 router.put('/:id', verifyToken, async (req, res) => {
   try {
+    if (!validateUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
     await updateReminder(req.params.id, req.user.id, req.body);
     res.json({ success: true });
   } catch (error) {
@@ -53,6 +68,9 @@ router.put('/:id', verifyToken, async (req, res) => {
 // DELETE /api/medicine-reminders/:id
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
+    if (!validateUUID(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
     await deleteReminder(req.params.id, req.user.id);
     res.json({ success: true });
   } catch (error) {

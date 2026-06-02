@@ -9,7 +9,7 @@ describe('Records DAO with encryption', () => {
   beforeAll(async () => {
     // Use a unique email each time to avoid conflicts
     const email = `recordstest${Date.now()}@mediscan-test.local`;
-    const password = 'password123';
+    const password = 'Test@1234';
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;

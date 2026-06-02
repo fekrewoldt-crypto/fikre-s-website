@@ -1,5 +1,14 @@
 require('dotenv').config();
 
+// Verify NODE_ENV is set appropriately
+const allowedEnv = ['development', 'test', 'production'];
+if (!allowedEnv.includes(process.env.NODE_ENV)) {
+  console.error('CRITICAL: NODE_ENV must be development, test, or production');
+  console.error('Current NODE_ENV:', process.env.NODE_ENV);
+  console.error('Not starting server for safety.');
+  process.exit(1);
+}
+
 const express = require('express');
 // Simple cookie parser middleware (no external dependency)
 const helmet = require('helmet');
@@ -18,6 +27,39 @@ const path = require('path');
 function createApp(options = {}) {
   const app = express();
 
+  // Rate limiters are created fresh per app so tests can override limits per-instance
+  const maxAi = process.env.AI_RATE_LIMIT_MAX
+    ? parseInt(process.env.AI_RATE_LIMIT_MAX)
+    : 5;
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: maxAi,
+    message: 'AI analysis rate limit exceeded. Please wait a moment and try again.'
+  });
+
+  const apiLimiter = rateLimit({
+    windowMs: process.env.RATE_LIMIT_WINDOW
+      ? parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000
+      : 1 * 60 * 1000,
+    max: process.env.RATE_LIMIT_MAX
+      ? parseInt(process.env.RATE_LIMIT_MAX)
+      : 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    // /auth/register has its own registerLimiter with a higher allowance.
+    // Don't count registration traffic against the global apiLimiter
+    // budget, or a fresh user trying to sign up gets blocked by login noise.
+    // Check both relative (req.path) and original (req.originalUrl) paths
+    // since express strips the mount prefix before middlewares see req.path.
+    skip: (req) => {
+      const p = req.path || '';
+      const u = req.originalUrl || '';
+      return p === '/register' || p === '/auth/register' ||
+             u === '/auth/register' || u.startsWith('/auth/register?');
+    },
+    message: 'Too many requests, please try again later.'
+  });
+
 // 1. Body parsing
 app.use(express.json({ limit: '20mb' }));
 // Parse cookies manually
@@ -34,44 +76,86 @@ app.use((req, res, next) => {
 });
 
 // 2. CORS - restricted to allowed origins
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001').split(',').map(o => o.trim());
+// '*' in ALLOWED_ORIGINS allows any origin (use only for trusted demos / previews).
+// Production should set a comma-separated list of exact origins, e.g.
+//   ALLOWED_ORIGINS=https://mediscan.vercel.app,https://mediscan.com
+const ALLOW_ALL_ORIGINS = process.env.ALLOWED_ORIGINS === '*';
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001')
+  .split(',')
+  .map(o => o.trim())
+  .filter(o => o && o !== '*');
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like curl, Postman)
+    // Allow requests with no origin (like curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    // Check allowlist
+    // Explicit wildcard — accept any origin
+    if (ALLOW_ALL_ORIGINS) return callback(null, true);
+    // Exact match against allowlist
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Also allow localhost on any port during development
-    if (origin.includes('localhost')) return callback(null, true);
+    // Localhost on any port in non-production
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost:')) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
 
 // 3. Security headers
-app.use(helmet());
+// NOTE: 'unsafe-inline' required for single-file app with inline styles/scripts + CDN deps
+// This is a deliberate security trade-off for the demo SPA; do NOT add to production apps without
+// compensating controls (nonce-based CSP or build step to extract inline code).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      'default-src': ["'self'"],
+      'script-src':  ["'self'", "'unsafe-inline'", 'cdnjs.cloudflare.com', 'unpkg.com', 'https://cdnjs.cloudflare.com', 'https://unpkg.com'],
+      'script-src-elem':  ["'self'", "'unsafe-inline'", 'cdnjs.cloudflare.com', 'unpkg.com', 'https://cdnjs.cloudflare.com', 'https://unpkg.com'],
+      'script-src-attr':   ["'self'", "'unsafe-inline'"],
+      'style-src':   ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'https://fonts.googleapis.com'],
+      'style-src-elem':    ["'self'", "'unsafe-inline'", 'fonts.googleapis.com', 'https://fonts.googleapis.com', 'unpkg.com'],
+      'font-src':    ["'self'", 'fonts.gstatic.com', 'https://fonts.gstatic.com'],
+      'img-src':     ["'self'", 'data:', 'blob:', 'https:'],
+      'connect-src': ["'self'"],
+      'frame-src':   ["'none'"],
+      'object-src':  ["'none'"],
+      'base-uri':    ["'self'"],
+      'form-action': ["'self'"],
+      'frame-ancestors': ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
-// 4. Global rate limiter for /api/*, /auth/*, and /timeline/*
-const windowMs = process.env.RATE_LIMIT_WINDOW
-  ? parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000
-  : 1 * 60 * 1000;
-const maxRequests = process.env.RATE_LIMIT_MAX
-  ? parseInt(process.env.RATE_LIMIT_MAX)
-  : 20;
+// 5. CSRF protection - check Origin header for state-changing requests
+const csrfProtection = (req, res, next) => {
+  // Skip for safe methods
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
 
-const apiLimiter = rateLimit({
-  windowMs,
-  max: maxRequests,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests, please try again later.'
-});
+  // Skip in test mode
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
 
-app.use('/api', apiLimiter);
-app.use('/auth', apiLimiter);
-app.use('/timeline', apiLimiter);
+  const origin = req.headers.origin;
 
-// 5. Static file serving
+  // Allow requests with no origin (like API clients/curl)
+  if (!origin) {
+    return next();
+  }
+
+  // Check if origin is in allowed list
+  const isAllowed = ALLOW_ALL_ORIGINS || allowedOrigins.includes(origin);
+
+  if (!isAllowed) {
+    console.warn(`CSRF rejection: Origin ${origin} not in allowed list`);
+    return res.status(403).json({ error: 'Forbidden: Invalid origin' });
+  }
+
+  next();
+};
+
+// 6. Static file serving
 const publicDir = path.join(__dirname);
 app.use(express.static(publicDir));
 
@@ -82,11 +166,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// 7. Mount auth routes (single mount, no duplicates)
-app.use('/auth', authRoutes);
+// 7. Mount auth routes with rate limiting and CSRF protection.
+// apiLimiter skips /auth/register; that route has its own registerLimiter.
+app.use('/auth', csrfProtection, apiLimiter, authRoutes);
 
-// 8. Mount timeline routes (requires authentication + verified email)
-app.use('/timeline', verifyToken, requireVerifiedEmail, require('./timeline'));
+// 8. Mount timeline routes with rate limiting and auth
+app.use('/timeline', apiLimiter, verifyToken, requireVerifiedEmail, require('./timeline'));
 
 // 9. Mount heatmap API (requires authentication + verified email)
 app.use('/api/heatmap', verifyToken, requireVerifiedEmail, require('./api/heatmap'));
@@ -105,6 +190,7 @@ app.use('/api/medicine-reminders', verifyToken, requireVerifiedEmail, require('.
 
 // ===== Response cache - keyed by symptom hash, expires after 1 hour =====
 const responseCache = new Map();
+const MAX_CACHE_SIZE = 500;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 function getCacheKey(symptoms, bodyArea) {
@@ -123,6 +209,11 @@ function getCached(key) {
 }
 
 function setCached(key, data) {
+  // Prevent memory exhaustion - evict oldest if at limit
+  if (responseCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = responseCache.keys().next().value;
+    responseCache.delete(firstKey);
+  }
   responseCache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
@@ -336,6 +427,167 @@ function extractJSON(raw) {
   }
 }
 
+// ===== Response Normalizer =====
+// Different AI models return different JSON shapes. The frontend expects a
+// canonical schema. This function maps any reasonable response into it,
+// with safe fallbacks for any missing required fields. If the response is
+// too broken, returns a demo-style diagnosis so the UI never goes blank.
+function normalizeAIResponse(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return getMockDiagnosis('', '');
+  }
+
+  const r = { ...raw };
+  const symptomsArr = Array.isArray(r.symptoms) ? r.symptoms : [];
+  const possibleConditions = Array.isArray(r.possible_conditions) ? r.possible_conditions
+    : Array.isArray(r.possibleCauses) ? r.possibleCauses
+    : Array.isArray(r.conditions) ? r.conditions
+    : Array.isArray(r.differential) ? r.differential
+    : Array.isArray(r.diagnoses) ? r.diagnoses
+    : (typeof r.diagnosis === 'string' ? [r.diagnosis] : [])
+    ;
+  const recommendedActions = Array.isArray(r.recommended_actions) ? r.recommended_actions
+    : Array.isArray(r.recommendedActions) ? r.recommendedActions
+    : Array.isArray(r.actions) ? r.actions
+    : Array.isArray(r.recommendations) ? r.recommendations
+    : [];
+
+  // primaryCondition: prefer canonical, else first possible_condition, else diagnosis, else "Undetermined condition"
+  if (!r.primaryCondition) {
+    if (typeof r.condition === 'string' && r.condition.trim()) {
+      r.primaryCondition = r.condition.trim();
+    } else if (possibleConditions.length > 0) {
+      r.primaryCondition = String(possibleConditions[0]).trim();
+    } else if (symptomsArr.length > 0) {
+      r.primaryCondition = 'Possible ' + String(symptomsArr[0]).trim();
+    } else {
+      r.primaryCondition = 'Undetermined condition';
+    }
+  }
+
+  // confidence: number 55-92
+  let conf = Number(r.confidence);
+  if (!Number.isFinite(conf)) conf = 65;
+  r.confidence = Math.min(92, Math.max(55, Math.round(conf)));
+
+  // severity: low | medium | high
+  const sev = String(r.severity || '').toLowerCase();
+  if (['low', 'medium', 'high'].includes(sev)) {
+    r.severity = sev;
+  } else if (r.urgency) {
+    const u = String(r.urgency).toLowerCase();
+    if (u.includes('high') || u.includes('urgent') || u.includes('severe')) r.severity = 'high';
+    else if (u.includes('moderate') || u.includes('medium')) r.severity = 'medium';
+    else r.severity = 'low';
+  } else {
+    // Infer severity from condition + symptoms when AI didn't supply one.
+    // Default to "low" but escalate to "high" for clearly urgent conditions.
+    const HIGH_SEVERITY_KEYWORDS = [
+      'myocardial infarction', 'heart attack', 'stroke', 'anaphylaxis', 'anaphylactic',
+      'pulmonary embolism', 'sepsis', 'meningitis', ' ectopic ', 'aortic dissection',
+      'subarachnoid hemorrhage', 'intracranial hemorrhage', 'cardiac arrest', 'respiratory failure',
+      'testicular torsion', 'rhabdomyolysis', 'diabetic ketoacidosis', 'status epilepticus'
+    ];
+    const MEDIUM_SEVERITY_KEYWORDS = [
+      'pneumonia', 'bronchitis', 'asthma', 'migraine', 'concussion', 'gastritis', 'ulcer',
+      'appendicitis', 'cellulitis', 'diverticulitis', 'pancreatitis', 'kidney stone',
+      'deep vein thrombosis', 'dvt', 'atrial fibrillation', 'arrhythmia', 'hernia',
+      'fracture', 'sprain', 'burn', 'concussion', 'food poisoning', 'urinary tract infection',
+      'sinus infection', 'sinusitis'
+    ];
+    const pcLower = String(r.primaryCondition || '').toLowerCase();
+    const allText = (pcLower + ' ' + symptomsArr.join(' ').toLowerCase());
+    if (HIGH_SEVERITY_KEYWORDS.some(k => allText.includes(k))) {
+      r.severity = 'high';
+    } else if (MEDIUM_SEVERITY_KEYWORDS.some(k => allText.includes(k))) {
+      r.severity = 'medium';
+    } else {
+      r.severity = 'low';
+    }
+  }
+
+  // subtitle
+  if (!r.subtitle) {
+    r.subtitle = r.severity === 'high' ? 'Requires prompt medical attention' : 'Common presentation';
+  }
+
+  // description
+  if (!r.description || !String(r.description).trim()) {
+    if (r.assessment) {
+      r.description = String(r.assessment).trim();
+    } else if (symptomsArr.length > 0) {
+      r.description = `Based on the symptoms described (${symptomsArr.slice(0, 3).join(', ')}), this presentation is consistent with ${r.primaryCondition}.`;
+    } else {
+      r.description = `This analysis suggests ${r.primaryCondition}. A licensed physician should be consulted for diagnosis and treatment.`;
+    }
+  }
+
+  // symptoms
+  if (!Array.isArray(r.symptoms) || r.symptoms.length === 0) {
+    r.symptoms = [];
+  }
+
+  // nextSteps: prefer canonical, else recommended_actions
+  if (!Array.isArray(r.nextSteps) || r.nextSteps.length === 0) {
+    r.nextSteps = recommendedActions.slice(0, 4);
+    if (r.nextSteps.length === 0) {
+      r.nextSteps = [
+        'Monitor your symptoms and note any changes',
+        'Stay hydrated and get adequate rest',
+        'Consult a licensed physician for proper evaluation',
+        'Seek urgent care if symptoms worsen'
+      ];
+    }
+  }
+
+  // urgentSigns
+  if (!r.urgentSigns || !String(r.urgentSigns).trim()) {
+    r.urgentSigns = r.severity === 'high'
+      ? 'Seek immediate medical care if you experience severe pain, difficulty breathing, confusion, or rapidly worsening symptoms.'
+      : 'Seek emergency care if you develop severe pain, high fever, difficulty breathing, or sudden worsening of symptoms.';
+  }
+
+  // alternatives: prefer canonical, else map possible_conditions[1..]
+  if (!Array.isArray(r.alternatives) || r.alternatives.length === 0) {
+    const altsFromPC = possibleConditions.slice(1).map((name, i) => ({
+      name: String(name).trim(),
+      confidence: Math.max(15, r.confidence - 20 - i * 10)
+    }));
+    r.alternatives = altsFromPC.slice(0, 3);
+    if (r.alternatives.length === 0) {
+      r.alternatives = [
+        { name: 'Other common condition', confidence: 35 },
+        { name: 'Less likely alternative', confidence: 18 },
+        { name: 'Rare presentation', confidence: 8 }
+      ];
+    }
+  } else {
+    // ensure each alternative has name + confidence
+    r.alternatives = r.alternatives.map((a, i) => {
+      if (typeof a === 'string') {
+        return { name: a, confidence: Math.max(10, r.confidence - 15 - i * 10) };
+      }
+      return {
+        name: a.name || `Alternative ${i + 1}`,
+        confidence: Math.min(95, Math.max(10, Number(a.confidence) || Math.max(10, r.confidence - 15 - i * 10)))
+      };
+    });
+  }
+
+  // disclaimer
+  if (!r.disclaimer || !String(r.disclaimer).trim()) {
+    r.disclaimer = 'This AI analysis is for educational purposes only and does not constitute medical advice. Please consult a licensed physician.';
+  }
+
+  // Strip alternative-schema noise fields so the response shape is clean
+  const noiseKeys = ['possible_conditions', 'possibleCauses', 'differential', 'conditions', 'diagnoses',
+                     'recommended_actions', 'recommendedActions', 'actions', 'recommendations',
+                     'condition', 'assessment', 'urgency', 'diagnosis'];
+  for (const k of noiseKeys) delete r[k];
+
+  return r;
+}
+
 // ===== Ollama (Secondary - Local, Free) =====
 async function analyzeWithOllama(prompt) {
   if (!ollamaAvailable) throw new Error('Ollama not available');
@@ -420,10 +672,10 @@ async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
     model: 'gemini-2.0-flash',
     generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
     safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
     ]
   });
 
@@ -433,7 +685,7 @@ async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
   try {
     const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
     const responseText = result.response.text();
-    console.log('Gemini Response preview:', responseText.slice(0, 100));
+    console.log('Gemini Response:', { length: responseText.length, model: 'gemini-2.0-flash' });
     return extractJSON(responseText);
   } catch (error) {
     console.error('Gemini Error Details:', {
@@ -489,7 +741,7 @@ async function analyzeWithGroq(prompt) {
     });
 
     const responseText = response.choices[0].message.content;
-    console.log('Groq Response preview:', responseText.slice(0, 100));
+    console.log('Groq Response:', { length: responseText.length, model: 'llama-3.3-70b' });
     return extractJSON(responseText);
   } catch (error) {
     console.error('Groq Error Details:', {
@@ -521,7 +773,7 @@ async function analyzeWithNvidia(prompt) {
     });
 
     const responseText = response.choices[0].message.content;
-    console.log('NVIDIA Response preview:', responseText.slice(0, 100));
+    console.log('NVIDIA Response:', { length: responseText.length, model: 'nvidia' });
     return extractJSON(responseText);
   } catch (error) {
     console.error('NVIDIA Error Details:', {
@@ -575,11 +827,98 @@ function recommendFacilities(severity, condition) {
   }));
 }
 
+// ===== Translation helper (MyMemory Translation API) =====
+// The AI model always responds in English (where it is strongest and most
+// consistent). For non-English UI languages we run the response values
+// through MyMemory so the result card renders in the user's locale.
+// MyMemory's anonymous tier: 5,000 words/day per source IP, no key required.
+// Quality varies (it uses multiple backends) but is solid for short medical
+// strings. Falls back to untranslated English if the call fails or the daily
+// quota is exhausted, so the demo never breaks because of translation issues.
+
+const LOCALE_TO_MYMEMORY = { en: 'en', am: 'am', om: 'om', ti: 'ti' };
+
+async function translateText(text, targetLang) {
+  if (!text || !targetLang || targetLang === 'en') return text;
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${encodeURIComponent(targetLang)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error('MyMemory API error:', response.status);
+      return text;
+    }
+    const data = await response.json();
+    const status = data?.responseStatus;
+    const translated = data?.responseData?.translatedText;
+    if (status === 200 && translated) {
+      return translated;
+    }
+    // 403/429 mean daily quota hit or rate limited — log once, return original
+    if (status === 403 || status === 429) {
+      console.warn(`MyMemory quota/rate limit hit (status ${status}) — returning untranslated text`);
+    } else if (status >= 400) {
+      console.error(`MyMemory translation error (status ${status}):`, data?.responseDetails || '');
+    }
+    return text;
+  } catch (err) {
+    console.error('MyMemory fetch failed:', err.message);
+    return text;
+  }
+}
+
+async function translateResult(result, lang) {
+  if (!lang || lang === 'en') return result;
+
+  const target = LOCALE_TO_MYMEMORY[lang] || lang;
+  try {
+    const translated = { ...result };
+    if (result.primaryCondition) translated.primaryCondition = await translateText(result.primaryCondition, target);
+    if (result.subtitle)         translated.subtitle         = await translateText(result.subtitle, target);
+    if (result.description)      translated.description      = await translateText(result.description, target);
+    if (result.urgentSigns)      translated.urgentSigns      = await translateText(result.urgentSigns, target);
+    if (result.disclaimer)       translated.disclaimer       = await translateText(result.disclaimer, target);
+    if (Array.isArray(result.symptoms)) {
+      translated.symptoms = await Promise.all(result.symptoms.map(s => translateText(s, target)));
+    }
+    if (Array.isArray(result.nextSteps)) {
+      translated.nextSteps = await Promise.all(result.nextSteps.map(s => translateText(s, target)));
+    }
+    if (Array.isArray(result.alternatives)) {
+      translated.alternatives = await Promise.all(result.alternatives.map(async (alt) => ({
+        ...alt,
+        name: await translateText(alt.name, target)
+      })));
+    }
+    translated.translatedTo = lang; // marker for the frontend
+    return translated;
+  } catch (err) {
+    console.error('translateResult failed, returning original:', err.message);
+    return result;
+  }
+}
+
 // ===== API ENDPOINTS =====
 
 // POST /api/analyze
-app.post('/api/analyze', async (req, res) => {
-  let { prompt, imageBase64, imageMimeType, symptoms, bodyArea } = req.body;
+app.post('/api/analyze', aiLimiter, async (req, res) => {
+  let { prompt, imageBase64, imageMimeType, symptoms, bodyArea, lang } = req.body;
+
+  // Input validation
+  if (prompt && prompt.length > 5000) {
+    return res.status(400).json({ error: 'Prompt too long (max 5000 characters)' });
+  }
+  if (symptoms && symptoms.length > 2000) {
+    return res.status(400).json({ error: 'Symptoms description too long (max 2000 characters)' });
+  }
+  if (bodyArea && typeof bodyArea === 'string' && bodyArea.length > 1000) {
+    return res.status(400).json({ error: 'Body area data too long' });
+  }
+  if (imageMimeType && !['image/jpeg', 'image/png', 'image/webp'].includes(imageMimeType)) {
+    return res.status(400).json({ error: 'Unsupported image type' });
+  }
+  if (imageBase64 && imageBase64.length > 5 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Image too large (max 5MB)' });
+  }
 
   // Check cache first (skip for images)
   if (!imageBase64 && symptoms) {
@@ -587,12 +926,34 @@ app.post('/api/analyze', async (req, res) => {
     const cached = getCached(cacheKey);
     if (cached) {
       console.log('Cache hit for:', symptoms.slice(0, 30) + '...');
-      return res.json({ ...cached, cached: true });
+      const normalizedCached = normalizeAIResponse({ ...cached, cached: true });
+      const translatedCached = await translateResult(normalizedCached, lang);
+      return res.json(translatedCached);
     }
   }
 
   const usedModels = [];
   let lastError = null;
+
+  // Test mode shortcut: skip real AI calls, return fast mock so the
+  // rate-limit test doesn't burn quota waiting for 11 sequential calls.
+  if (process.env.NODE_ENV === 'test') {
+    const result = getMockDiagnosis(symptoms, bodyArea);
+    const recommendedFacilities = recommendFacilities(result.severity, result.primaryCondition);
+    const response = normalizeAIResponse({
+      ...result,
+      modelUsed: 'demo',
+      modelsAttempted: usedModels,
+      responseTimeMs: 0,
+      demoMode: true,
+      recommendedFacilities
+    });
+    if (!imageBase64 && symptoms) {
+      setCached(getCacheKey(symptoms, bodyArea), response);
+    }
+    const translated = await translateResult(response, lang);
+    return res.json(translated);
+  }
 
   // Image-only preprocessing using NVIDIA vision
   let imageDescription = '';
@@ -601,7 +962,7 @@ app.post('/api/analyze', async (req, res) => {
       const visionRes = await analyzeWithNvidiaVision(prompt, imageBase64);
       imageDescription = visionRes.description || '';
       usedModels.push({ model: 'nvidia_vision', result: visionRes, error: null });
-      console.log('NVIDIA vision description obtained (' + imageDescription.slice(0, 50) + '...)');
+      console.log('NVIDIA vision description obtained (length: ' + imageDescription.length + ')');
     } catch (e) {
       console.error('NVIDIA vision failed:', e.message);
       usedModels.push({ model: 'nvidia_vision', error: e.message });
@@ -672,20 +1033,21 @@ app.post('/api/analyze', async (req, res) => {
 
       const recommendedFacilities = recommendFacilities(result.severity, result.primaryCondition);
 
-      const response = {
+      const response = normalizeAIResponse({
         ...result,
         modelUsed: modelName,
         modelsAttempted: usedModels,
         responseTimeMs: duration,
         demoMode: modelName === 'demo',
         recommendedFacilities: recommendedFacilities
-      };
+      });
 
       if (!imageBase64 && symptoms) {
         setCached(getCacheKey(symptoms, bodyArea), response);
       }
 
-      return res.json(response);
+      const translated = await translateResult(response, lang);
+      return res.json(translated);
 
     } catch (error) {
       console.error(modelName + ' failed:', error.message);
@@ -702,7 +1064,7 @@ app.post('/api/analyze', async (req, res) => {
   console.log('All AI models failed, using demo mode as final fallback');
   const demoResult = getMockDiagnosis(symptoms, bodyArea);
   const recommendedFacilities = recommendFacilities(demoResult.severity, demoResult.primaryCondition);
-  res.json({
+  const fallbackResponse = normalizeAIResponse({
     ...demoResult,
     modelUsed: 'demo',
     modelsAttempted: usedModels,
@@ -711,6 +1073,8 @@ app.post('/api/analyze', async (req, res) => {
     fallbackReason: 'All AI models unavailable, using demo data',
     recommendedFacilities: recommendedFacilities
   });
+  const translatedFallback = await translateResult(fallbackResponse, lang);
+  res.json(translatedFallback);
 });
 
 // POST /api/chat
@@ -722,7 +1086,7 @@ const demoReplies = [
   "While this is usually manageable at home, do not hesitate to consult a healthcare provider if you are concerned."
 ];
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', aiLimiter, verifyToken, requireVerifiedEmail, async (req, res) => {
   const { prompt } = req.body;
 
   if (process.env.GEMINI_API_KEY && isModelAvailable('gemini')) {
@@ -1049,9 +1413,12 @@ app.get('/', (req, res) => {
     console.log('API Keys configured:');
     console.log('  Gemini:', process.env.GEMINI_API_KEY ? 'yes' : 'no');
     console.log('  Groq:', process.env.GROQ_API_KEY ? 'yes' : 'no');
-    console.log('  NVIDIA:', process.env.NVIDIA_API_KEY ? 'yes' : 'no');
+    console.log('  NVIDIA text:', process.env.NVIDIA_API_KEY ? 'yes' : 'no');
+    console.log('  NVIDIA vision (images):', process.env.VISION_API_KEY ? 'yes' : 'no');
     console.log('');
-    console.log('Rate limits: ' + maxRequests + ' requests per ' + (windowMs / 1000 / 60) + ' minute(s). Resets at:', new Date(rateLimits.resetTime).toLocaleString());
+    const rateWindow = process.env.RATE_LIMIT_WINDOW ? parseInt(process.env.RATE_LIMIT_WINDOW) : 1;
+    const rateMax = process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX) : 20;
+    console.log('Rate limits: ' + rateMax + ' requests per ' + rateWindow + ' minute(s)');
     });
   }
 

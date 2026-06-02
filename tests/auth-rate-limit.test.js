@@ -34,7 +34,7 @@ describe('Rate limiting on /auth/* and /timeline/*', () => {
     // Register a test user first
     await request(app)
       .post('/auth/register')
-      .send({ email, password: 'password123' });
+      .send({ email, password: 'Test@1234' });
 
     // Hit the rate limit
     for (let i = 0; i < maxRequests; i++) {

@@ -88,6 +88,11 @@ GEMINI_API_KEY=           # primary AI (gemini-2.0-flash)
 GROQ_API_KEY=             # secondary (llama-3.3-70b-versatile)
 NVIDIA_API_KEY=           # vision model + text
 
+# Translation (MyMemory — automatic, no key required)
+# Translates AI result content into am/om/ti based on the user's language.
+# Free tier: 5,000 words/day per source IP, no key needed. Anonymous.
+# If quota is hit, results fall back to English silently.
+
 # Rate limiting
 RATE_LIMIT_WINDOW=1       # minutes
 RATE_LIMIT_MAX=20         # requests per window

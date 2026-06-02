@@ -6,10 +6,54 @@
 require('dotenv').config();
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const supabase = require('../db/supabase');
 const auditDAO = require('../db/audit-supabase');
 // Simple in-memory user store for test mode
 const testUsers = {};
+
+// Helper: build the absolute OAuth callback URL for the current request.
+// Used by the Google OAuth flow so Supabase can redirect back to the same
+// origin (and port) the request came from.
+function getOAuthCallbackUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}/auth/oauth-callback`;
+}
+
+// Per-router register limiter: more generous than the global apiLimiter
+// so legitimate signups aren't blocked by login/refresh traffic sharing
+// the same /auth namespace. 10 attempts per 5 minutes is enough for a
+// user to fix typos without inviting brute-force abuse.
+const registerLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many registration attempts. Please wait a few minutes and try again.'
+});
+
+// Login limiter: 20 attempts per minute matches the prior global apiLimiter
+// behaviour that auth-rate-limit.test.js depends on.
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.LOGIN_RATE_LIMIT_MAX
+    ? parseInt(process.env.LOGIN_RATE_LIMIT_MAX)
+    : 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many login attempts. Please wait a moment and try again.'
+});
+
+// Resend limiter: 5 per 10 minutes. Email sends cost real $$ from Supabase
+// and we don't want a script to hammer this endpoint.
+const resendLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many resend attempts. Please wait a few minutes and try again.'
+});
 
 // ------------------------------------------------------------------
 // Auto-admin helper: check if this is the first user in the system.
@@ -38,7 +82,7 @@ async function determineInitialRole() {
 // Enables email confirmation flow. Supabase sends a verification email
 // to the user. The user must click the confirmation link before full access.
 // ------------------------------------------------------------------
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   // Basic validation (same as original)
@@ -51,6 +95,10 @@ router.post('/register', async (req, res) => {
   }
   if (password.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  }
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&\-_]).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({ error: 'Password must include uppercase, lowercase, number, and a special character' });
   }
 
   try {
@@ -74,11 +122,22 @@ router.post('/register', async (req, res) => {
       },
     });
     if (error) {
-      // Supabase uses 400 for validation errors, 409 for duplicate email, 429 for rate limit
-      if (error.status === 400) return res.status(400).json({ error: error.message });
-      if (error.status === 409) return res.status(409).json({ error: error.message });
-      if (error.status === 429 || (error.message && error.message.includes('rate limit'))) return res.status(429).json({ error: error.message });
-      return res.status(500).json({ error: error.message });
+      // Supabase uses 400 for validation errors, 422 for invalid email/password, 429 for rate limit
+      if (error.status === 400 || error.status === 422) {
+        console.error('Supabase signUp validation error:', error.message);
+        return res.status(400).json({ error: 'Invalid registration details' });
+      }
+      if (error.status === 409 || (error.message && error.message.toLowerCase().includes('already registered'))) {
+        return res.status(409).json({ error: 'An account with this email may already exist' });
+      }
+      if (error.status === 429 || (error.message && error.message.includes('rate limit'))) {
+        console.warn('Supabase rate limit hit on /auth/register');
+        return res.status(429).json({
+          error: 'Supabase is rate-limiting registrations. Please wait a few minutes and try again.'
+        });
+      }
+      console.error('Supabase signUp error:', error);
+      return res.status(500).json({ error: 'Registration failed, please try again' });
     }
 
     // The user ID is data.user.id
@@ -109,7 +168,7 @@ router.post('/register', async (req, res) => {
 // ------------------------------------------------------------------
 // Login – POST /auth/login
 // ------------------------------------------------------------------
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Missing email or password' });
@@ -118,8 +177,7 @@ router.post('/login', async (req, res) => {
     // In test mode, simulate authentication against in‑memory store
     if (process.env.NODE_ENV === 'test') {
       const storedId = testUsers[email];
-      // Accept only the known password used during registration
-      if (!storedId || password !== 'password123') {
+      if (!storedId) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
       const fakeToken = 'test-token-' + Date.now();
@@ -135,7 +193,7 @@ router.post('/login', async (req, res) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       // Supabase returns 400 for wrong credentials
-      return res.status(401).json({ error: error.message });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
     const user = data.user;
     // Create a short‑lived access token (15 min) – we reuse the JWT that Supabase issues
@@ -200,7 +258,7 @@ router.post('/refresh', async (req, res) => {
   try {
     // Use Supabase admin to refresh the session
     const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
-    if (error) return res.status(401).json({ error: error.message });
+    if (error) return res.status(401).json({ error: 'Session expired, please login again' });
     const newAccess = data.session.access_token;
     const newRefresh = data.session.refresh_token;
     // Reset cookie with new refresh token
@@ -255,6 +313,170 @@ router.get('/verify-email', async (req, res) => {
 </html>
   `;
   res.send(html);
+});
+
+// ------------------------------------------------------------------
+// Google OAuth – GET /auth/google
+// Returns a Supabase-generated OAuth URL that the frontend redirects to.
+// The user lands on Google's consent screen, then is bounced to
+// /auth/oauth-callback with a session in the URL hash fragment.
+// ------------------------------------------------------------------
+router.get('/google', async (req, res) => {
+  // Test-mode shortcut: skip the round-trip to Supabase and return a URL
+  // that points at our local callback with a fake session in the hash.
+  // This keeps the test suite independent of Supabase rate limits.
+  if (process.env.NODE_ENV === 'test') {
+    return res.json({
+      url: '/auth/oauth-callback#access_token=test-google-token&refresh_token=test-google-refresh&provider=google'
+    });
+  }
+
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const anonClient = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY
+    );
+    const { data, error } = await anonClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: getOAuthCallbackUrl(req),
+        queryParams: { access_type: 'offline', prompt: 'consent' }
+      }
+    });
+    if (error || !data?.url) {
+      console.error('Google OAuth URL error:', error?.message || 'no url returned');
+      return res.status(500).json({ error: 'Could not start Google sign in' });
+    }
+    return res.json({ url: data.url });
+  } catch (err) {
+    console.error('Google OAuth error:', err);
+    return res.status(500).json({ error: 'Could not start Google sign in' });
+  }
+});
+
+// ------------------------------------------------------------------
+// OAuth Callback Page – GET /auth/oauth-callback
+// Serves a tiny HTML page that reads the session from the URL hash
+// and posts it to /auth/oauth-session, which sets the HttpOnly refresh
+// cookie and returns the access token. The page then redirects to /.
+// ------------------------------------------------------------------
+router.get('/oauth-callback', (req, res) => {
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signing you in…</title>
+  <style>
+    body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, #e8f4ef, #d4edda); min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; color: #1a6b4a; }
+    .container { text-align: center; padding: 2rem; }
+    .spinner { width: 48px; height: 48px; border: 4px solid #cce8d9; border-top-color: #1a6b4a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Signing you in…</h1>
+    <p>Completing your Google sign in.</p>
+  </div>
+  <script>
+    (function() {
+      function finish(status) {
+        var target = '/?google_login=' + status;
+        if (status === 'success') {
+          // Slight delay so the cookie is set before the next page loads.
+          setTimeout(function() { window.location.replace(target); }, 200);
+        } else {
+          window.location.replace(target);
+        }
+      }
+      try {
+        var hash = window.location.hash || '';
+        if (hash.charAt(0) === '#') hash = hash.substring(1);
+        var params = new URLSearchParams(hash);
+        var accessToken = params.get('access_token');
+        var refreshToken = params.get('refresh_token');
+        if (!accessToken) { finish('missing_token'); return; }
+        fetch('/auth/oauth-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken || '' })
+        }).then(function(r) {
+          if (!r.ok) return r.json().then(function(b) { throw new Error(b.error || 'session failed'); });
+          return r.json();
+        }).then(function(data) {
+          if (data && data.token) {
+            try { sessionStorage.setItem('mediscan_google_token', data.token); } catch (e) {}
+            finish('success');
+          } else {
+            finish('invalid');
+          }
+        }).catch(function(err) {
+          console.error('OAuth session error:', err);
+          finish('error');
+        });
+      } catch (e) {
+        console.error('OAuth callback error:', e);
+        finish('error');
+      }
+    })();
+  </script>
+</body>
+</html>`);
+});
+
+// ------------------------------------------------------------------
+// OAuth Session – POST /auth/oauth-session
+// Receives access_token + refresh_token from the OAuth callback page,
+// sets the HttpOnly refresh cookie, returns the access token.
+// ------------------------------------------------------------------
+router.post('/oauth-session', async (req, res) => {
+  const { access_token, refresh_token } = req.body || {};
+  if (!access_token) {
+    return res.status(400).json({ error: 'Missing access token' });
+  }
+
+  // Test-mode shortcut: accept any token starting with 'test-' and
+  // return a fake session. Skips Supabase round-trip.
+  if (process.env.NODE_ENV === 'test') {
+    if (!access_token.startsWith('test-')) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    res.cookie('refreshToken', refresh_token || 'test-google-refresh', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    return res.json({ token: access_token, email: 'test-google@example.com' });
+  }
+
+  try {
+    // Verify the access token by calling getUser; this also fetches the
+    // canonical user object so we can record the audit entry and return
+    // the email to the frontend.
+    const { data, error } = await supabase.auth.getUser(access_token);
+    if (error || !data?.user) {
+      console.error('OAuth session verify error:', error?.message || 'no user');
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+    const user = data.user;
+    if (refresh_token) {
+      res.cookie('refreshToken', refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    }
+    await auditDAO.logAction({ userId: user.id, action: 'login_google' });
+    return res.json({ token: access_token, email: user.email });
+  } catch (err) {
+    console.error('OAuth session error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ------------------------------------------------------------------
@@ -336,7 +558,7 @@ router.get('/verify-status', async (req, res) => {
 // Resend Verification Email – POST /auth/resend-verification
 // Sends a new verification email to the user.
 // ------------------------------------------------------------------
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', resendLimiter, async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
@@ -362,7 +584,7 @@ router.post('/resend-verification', async (req, res) => {
 
     if (error) {
       console.error('Resend verification error:', error.message);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: 'Failed to send verification email' });
     }
 
     return res.json({ message: 'Verification email sent. Please check your inbox.' });

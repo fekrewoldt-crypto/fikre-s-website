@@ -32,66 +32,94 @@ describe('Route mounts in Server-v2.js', () => {
   });
 
   it('mounts auth routes exactly once (not duplicate routes)', () => {
-    // /auth has 2 app.use calls: 1 for rate limiter, 1 for auth routes.
-    // The key check: authRoutes is imported and mounted.
+    // Check that auth routes are imported and mounted with rate limiting
     const authRoutesImport = serverContent.includes("require('./auth/supabase-auth')") ||
                              serverContent.includes("require('./auth')");
-    // Check that auth routes are mounted (not commented out)
-    const hasAuthMount = /app\.use\s*\(\s*['"]\/auth['"]\s*,\s*authRoutes/.test(serverContent);
+    // /auth is mounted with apiLimiter, authRoutes (three args) — check that it's mounted via the
+    // comma-separated pattern, not a comment
+    const hasAuthMount = /app\.use\s*\(\s*['"]\/auth['"]\s*,\s*[/A-Za-z_$]/.test(serverContent);
     expect(authRoutesImport).toBe(true);
     expect(hasAuthMount).toBe(true);
   });
 
   it('mounts timeline route exactly once (not duplicate)', () => {
-    // /timeline has 2 app.use calls: 1 for rate limiter, 1 for timeline route with verifyToken.
-    // Check timeline is protected by verifyToken
-    const hasTimelineMount = /app\.use\s*\(\s*['"]\/timeline['"]\s*,\s*verifyToken/.test(serverContent);
+    // /timeline has apiLimiter, verifyToken + route (three args)
+    const hasTimelineMount = /app\.use\s*\(\s*['"]\/timeline['"]\s*,\s*[/A-Za-z_$]/.test(serverContent);
     expect(hasTimelineMount).toBe(true);
   });
 
   it('does not mount /auth with authRoutes more than once', () => {
-    const matches = serverContent.match(/app\.use\s*\(\s*['"]\/auth['"]\s*,\s*authRoutes/g) || [];
+    // Count fully-qualified mount with authRoutes (the third arg in the middleware chain)
+    const matches = serverContent.match(/app\.use\s*\(\s*['"]\/auth['"]\s*/g) || [];
     expect(matches.length).toBe(1);
   });
 
   it('does not mount /timeline twice with same middleware', () => {
-    const matches = serverContent.match(/app\.use\s*\(\s*['"]\/timeline['"]\s*,\s*verifyToken/g) || [];
+    // Count mounts for /timeline
+    const matches = serverContent.match(/app\.use\s*\(\s*['"]\/timeline['"]\s*/g) || [];
     expect(matches.length).toBe(1);
   });
 
   it('mounts /auth with both apiLimiter and authRoutes', () => {
     // Verify /auth gets rate limiting before auth routes
-    const lines = serverContent.split('\n');
-    let authLimiterIndex = -1;
-    let authRoutesIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (/app\.use\s*\(\s*['"]\/auth['"]\s*,\s*apiLimiter/.test(lines[i])) {
-        authLimiterIndex = i;
-      }
-      if (/app\.use\s*\(\s*['"]\/auth['"]\s*,\s*authRoutes/.test(lines[i])) {
-        authRoutesIndex = i;
+    // The mount line is: app.use('/auth', apiLimiter, authRoutes)
+    const allLines = serverContent.split('\n');
+    let authLineIndex = -1;
+    let authHasApiLimiter = false;
+    let authHasAuthRoutes = false;
+
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i].trim();
+      if (line.includes(`app.use('/auth'`) || line.includes('app.use("/auth"')) {
+        authLineIndex = i;
+        // Check the mount line for apiLimiter and authRoutes in the middleware chain
+        const rest = allLines[i];
+        authHasApiLimiter = rest.includes('apiLimiter');
+        authHasAuthRoutes = rest.includes('authRoutes');
+        break;
       }
     }
-    expect(authLimiterIndex).toBeGreaterThan(-1);
-    expect(authRoutesIndex).toBeGreaterThan(-1);
-    expect(authLimiterIndex).toBeLessThan(authRoutesIndex);
+
+    expect(authLineIndex).toBeGreaterThan(-1);
+    expect(authHasApiLimiter).toBe(true);
+    expect(authHasAuthRoutes).toBe(true);
+    // apiLimiter appears before authRoutes in the same line (middleware chain)
+    const authLine = allLines[authLineIndex];
+    const limiterPos = authLine.indexOf('apiLimiter');
+    const routesPos = authLine.indexOf('authRoutes');
+    expect(limiterPos).toBeGreaterThan(-1);
+    expect(routesPos).toBeGreaterThan(-1);
+    expect(limiterPos).toBeLessThan(routesPos);
   });
 
   it('mounts /timeline with both apiLimiter and verifyToken', () => {
     // Verify /timeline gets rate limiting before verifyToken + timeline
-    const lines = serverContent.split('\n');
-    let timelineLimiterIndex = -1;
-    let timelineRoutesIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (/app\.use\s*\(\s*['"]\/timeline['"]\s*,\s*apiLimiter/.test(lines[i])) {
-        timelineLimiterIndex = i;
-      }
-      if (/app\.use\s*\(\s*['"]\/timeline['"]\s*,\s*verifyToken/.test(lines[i])) {
-        timelineRoutesIndex = i;
+    // The mount line is: app.use('/timeline', apiLimiter, verifyToken, ...)
+    const allLines = serverContent.split('\n');
+    let timelineLineIndex = -1;
+    let timelineHasApiLimiter = false;
+    let timelineHasVerifyToken = false;
+
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i].trim();
+      if (line.includes(`app.use('/timeline'`) || line.includes('app.use("/timeline"')) {
+        timelineLineIndex = i;
+        const rest = allLines[i];
+        timelineHasApiLimiter = rest.includes('apiLimiter');
+        timelineHasVerifyToken = rest.includes('verifyToken');
+        break;
       }
     }
-    expect(timelineLimiterIndex).toBeGreaterThan(-1);
-    expect(timelineRoutesIndex).toBeGreaterThan(-1);
-    expect(timelineLimiterIndex).toBeLessThan(timelineRoutesIndex);
+
+    expect(timelineLineIndex).toBeGreaterThan(-1);
+    expect(timelineHasApiLimiter).toBe(true);
+    expect(timelineHasVerifyToken).toBe(true);
+    // apiLimiter appears before verifyToken in the same line (middleware chain)
+    const timelineLine = allLines[timelineLineIndex];
+    const limiterPos = timelineLine.indexOf('apiLimiter');
+    const verifyPos = timelineLine.indexOf('verifyToken');
+    expect(limiterPos).toBeGreaterThan(-1);
+    expect(verifyPos).toBeGreaterThan(-1);
+    expect(limiterPos).toBeLessThan(verifyPos);
   });
 });

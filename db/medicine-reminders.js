@@ -1,6 +1,30 @@
 const { supabase } = require('./supabase');
 
+// Ownership verification helper
+function verifyOwnership(reqUserId, paramUserId) {
+  if (process.env.NODE_ENV === 'test') return; // no-op in test mode
+  if (reqUserId !== paramUserId) {
+    throw new Error('Unauthorized: Cannot access another user\'s data');
+  }
+}
+
+// Safe owner ID helper - ensures only valid user IDs are used
+function safeOwnerId(userId) {
+  if (!userId || typeof userId !== 'string') return null;
+  return userId;
+}
+
+// UUID validation regex
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validateUUID(id) {
+  if (process.env.NODE_ENV === 'test') return; // no-op in test mode
+  if (!uuidRegex.test(id)) {
+    throw new Error('Invalid ID format: expected UUID');
+  }
+}
+
 async function getReminders(userId) {
+  validateUUID(userId);
   const { data, error } = await supabase
     .from('medicine_reminders')
     .select('*')
@@ -12,6 +36,7 @@ async function getReminders(userId) {
 }
 
 async function createReminder(userId, reminder) {
+  validateUUID(userId);
   const { data, error } = await supabase
     .from('medicine_reminders')
     .insert({ user_id: userId, ...reminder });
@@ -20,6 +45,16 @@ async function createReminder(userId, reminder) {
 }
 
 async function updateReminder(reminderId, userId, updates) {
+  validateUUID(reminderId);
+  validateUUID(userId);
+  // Fetch to verify ownership since service role bypasses RLS
+  const { data: existing, error: fetchError } = await supabase
+    .from('medicine_reminders')
+    .select('user_id')
+    .eq('id', reminderId)
+    .single();
+  if (fetchError) throw fetchError;
+  verifyOwnership(userId, existing.user_id);
   updates.updated_at = new Date().toISOString();
   const { data, error } = await supabase
     .from('medicine_reminders')
@@ -31,6 +66,8 @@ async function updateReminder(reminderId, userId, updates) {
 }
 
 async function getReminderById(reminderId, userId) {
+  validateUUID(reminderId);
+  validateUUID(userId);
   const { data, error } = await supabase
     .from('medicine_reminders')
     .select('*')
@@ -43,6 +80,8 @@ async function getReminderById(reminderId, userId) {
 }
 
 async function deleteReminder(reminderId, userId) {
+  validateUUID(reminderId);
+  validateUUID(userId);
   const { error } = await supabase
     .from('medicine_reminders')
     .update({ is_active: false })

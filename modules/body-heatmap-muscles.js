@@ -737,8 +737,15 @@ class BodyHeatmapMuscles {
   }
 }
 
-// Export for ES modules
-export { BodyHeatmapMuscles };
+// Browser global (matches the legacy module pattern)
+if (typeof window !== 'undefined') {
+  window.BodyHeatmapMuscles = BodyHeatmapMuscles;
+}
+
+// CommonJS export for Node/test compatibility
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { BodyHeatmapMuscles };
+}
 
 // Auto-initialize if data attribute present
 if (typeof document !== 'undefined') {
