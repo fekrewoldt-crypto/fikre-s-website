@@ -2,7 +2,20 @@
   "builds": [
     {
       "src": "Server-v2.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "male-front.png",
+          "male-back.png",
+          "female-front.png",
+          "female-back.png",
+          "reference-male.png",
+          "hospital-map.css",
+          "hospital-map.js",
+          "modules/**",
+          "locales/**"
+        ]
+      }
     }
   ],
   "routes": [
