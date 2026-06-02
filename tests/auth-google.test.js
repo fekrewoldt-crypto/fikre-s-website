@@ -32,6 +32,64 @@ describe('Google OAuth endpoints', () => {
     });
   });
 
+  describe('getOAuthCallbackUrl helper', () => {
+    const { _getOAuthCallbackUrl: getUrl } = require('../auth/supabase-auth');
+
+    afterEach(() => {
+      delete process.env.APP_BASE_URL;
+    });
+
+    it('uses x-forwarded-host when present (Vercel case)', () => {
+      const req = {
+        protocol: 'http',
+        headers: {
+          'x-forwarded-proto': 'https',
+          'x-forwarded-host': 'fikre-s-website.vercel.app',
+          'host': 'localhost:3000'
+        }
+      };
+      expect(getUrl(req)).toBe('https://fikre-s-website.vercel.app/auth/oauth-callback');
+    });
+
+    it('falls back to req.headers.host when x-forwarded-host is missing', () => {
+      const req = {
+        protocol: 'http',
+        headers: { 'host': 'localhost:3000' }
+      };
+      expect(getUrl(req)).toBe('http://localhost:3000/auth/oauth-callback');
+    });
+
+    it('APP_BASE_URL wins over proxy headers (lets ops pin a public URL)', () => {
+      process.env.APP_BASE_URL = 'https://fikre-s-website.vercel.app';
+      const req = {
+        protocol: 'http',
+        headers: {
+          'x-forwarded-proto': 'http',
+          'x-forwarded-host': 'internal-router.local',
+          'host': 'internal-router.local:8080'
+        }
+      };
+      expect(getUrl(req)).toBe('https://fikre-s-website.vercel.app/auth/oauth-callback');
+    });
+
+    it('handles a comma-separated list in x-forwarded-proto (takes first value)', () => {
+      const req = {
+        protocol: 'http',
+        headers: {
+          'x-forwarded-proto': 'https,http',
+          'x-forwarded-host': 'fikre-s-website.vercel.app',
+          'host': 'localhost:3000'
+        }
+      };
+      expect(getUrl(req)).toBe('https://fikre-s-website.vercel.app/auth/oauth-callback');
+    });
+
+    it('falls through to http when no protocol hint is present', () => {
+      const req = { protocol: undefined, headers: { host: 'example.com' } };
+      expect(getUrl(req)).toBe('http://example.com/auth/oauth-callback');
+    });
+  });
+
   describe('GET /auth/oauth-callback', () => {
     it('serves an HTML bridge page that posts the session', async () => {
       const res = await request(app).get('/auth/oauth-callback');

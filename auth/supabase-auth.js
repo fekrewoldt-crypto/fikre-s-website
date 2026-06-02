@@ -15,9 +15,24 @@ const testUsers = {};
 // Helper: build the absolute OAuth callback URL for the current request.
 // Used by the Google OAuth flow so Supabase can redirect back to the same
 // origin (and port) the request came from.
+//
+// The order of preference is:
+//   1. APP_BASE_URL env var, if set — lets ops pin a specific public URL
+//      regardless of proxy headers. Useful when x-forwarded-host is being
+//      stripped (e.g. some Cloudflare setups) or when the request is
+//      reaching the function from a path that mangles the Host header.
+//   2. x-forwarded-proto + x-forwarded-host (Vercel / most reverse proxies
+//      set both).
+//   3. req.protocol + req.headers.host (last resort).
 function getOAuthCallbackUrl(req) {
-  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  if (process.env.APP_BASE_URL) {
+    try {
+      const base = new URL(process.env.APP_BASE_URL);
+      return `${base.protocol}//${base.host}/auth/oauth-callback`;
+    } catch (_) { /* fall through to header-based detection */ }
+  }
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  const host = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   return `${proto}://${host}/auth/oauth-callback`;
 }
 
@@ -340,6 +355,15 @@ router.get('/google', async (req, res) => {
     });
   }
 
+  // Log the resolved callback URL so a misconfigured Supabase allowlist
+  // (Site URL pointing at localhost, missing redirect URL) is visible in
+  // Vercel logs. Most "OAuth lands on localhost" complaints trace to
+  // Supabase's URL Configuration, not to this code.
+  const callbackUrl = getOAuthCallbackUrl(req);
+  if (process.env.NODE_ENV !== 'production' || process.env.LOG_OAUTH === '1') {
+    console.log('[oauth/google] callback URL →', callbackUrl);
+  }
+
   try {
     const { createClient } = require('@supabase/supabase-js');
     const anonClient = createClient(
@@ -349,7 +373,7 @@ router.get('/google', async (req, res) => {
     const { data, error } = await anonClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: getOAuthCallbackUrl(req),
+        redirectTo: callbackUrl,
         queryParams: { access_type: 'offline', prompt: 'consent' }
       }
     });
@@ -649,3 +673,6 @@ router.post('/forgot-password', forgotLimiter, async (req, res) => {
 });
 
 module.exports = router;
+// Internal helpers exported only for unit tests; the router is what
+// production code consumes.
+module.exports._getOAuthCallbackUrl = getOAuthCallbackUrl;
