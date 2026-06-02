@@ -4,160 +4,197 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**MediScan** — AI-powered medical diagnostic assistant. Won 1st place in Gondar city-wide secondary school software competition (May 2026). Clinical-grade personal health record system targeting students in Gondar, Ethiopia.
+**MediScan** — AI-powered medical diagnostic assistant. Won 1st place in Gondar city-wide secondary school software competition (May 2026). Clinical-grade personal health record system targeting students in Gondar, Ethiopia. Deployed at https://fikre-s-website.vercel.app/.
 
 ## Commands
 
 ```bash
 npm install              # install dependencies
 npm start                # run server on http://localhost:3000
-npm run dev              # same as start
-npm test                 # run Jest test suite
-npm test -- tests/auth-integration.test.js  # run specific test file
-npm run vercel-build     # no-op for Vercel deployment
+npm run dev              # alias for start
+npm test                 # run all Jest tests (12 suites, 284 tests)
+npm test -- tests/auth-integration.test.js  # single test file
+npm test -- -t "413"     # single test by name pattern
+npm run vercel-build     # no-op for Vercel deploy
 ```
+
+To run the server with a port other than 3000: `PORT=3001 npm start`. To run a fresh `node Server-v2.js` test session with dummy env vars, see the test-mode setup in `tests/setup.js` — it sets `NODE_ENV=test` which bypasses Supabase and the startup env-var check.
 
 ## Architecture
 
 ```
-Browser → Express (Server-v2.js) → Multi-model AI fallback chain
-                      ↓
-              Supabase (PostgreSQL + RLS)
-              ├── auth.users   — managed by Supabase Auth
-              ├── records      — AES-256-GCM encrypted health data
-              └── audit        — auth action logs
+Browser (IIndex.html, ~9200 lines of inline CSS+JS)
+  ↓
+Vercel edge (CDN) → Express function (Server-v2.js, ~1584 lines)
+  ↓
+Multi-model AI fallback chain: Groq → NVIDIA → Gemini → Ollama → demo mode
+  ↓
+Supabase (PostgreSQL + Auth + RLS)
+  ├── auth.users   — managed by Supabase Auth
+  ├── records      — AES-256-GCM encrypted health data
+  ├── profiles, appointments, medicine_reminders, doctors
+  └── audit        — auth action logs
 ```
 
 ### Backend (Express)
 
-- **Server-v2.js** (969 lines) — entry point. Middleware order: `json → cors → helmet → rate-limit → static → logging → routes`.
-- **/auth/** — Supabase Auth routes (`/register`, `/login`, `/logout`, `/refresh`). Delegates to `supabase.auth.signUp()` / `signInWithPassword()`. First user gets `admin` role via user metadata.
-- **/db/** — DAOs use `db/supabase.js` singleton (Supabase client with service-role key). Records use AES-256-GCM encryption before storage.
-- **Supabase Auth** — JWT verification via `supabase.auth.getUser(token)` (not jsonwebtoken). Roles stored in `user_metadata.role`.
-- **Row Level Security (RLS)** — `records` and `audit` tables have RLS policies isolating users to their own data.
-- **/timeline** — protected route, requires valid JWT. Reads/writes records via `recordsDAO.getRecordsByUser()` (async).
-- **/api/analyze** — primary AI endpoint. Falls back through: Groq → NVIDIA → Gemini → Ollama → demo mode (in order of `MODEL_PRIORITY`). Caches responses for 1 hour by symptom hash.
-- **/api/heatmap** — protected endpoint for heatmap state sync, requires JWT.
+`Server-v2.js` is the only entry point. Exports `createApp()` for tests. Vercel bundle includes root files explicitly listed in `vercel.json` `includeFiles` — anything not listed there 404s in production (see Vercel serverless gotchas below).
 
-### Frontend (Vanilla JS + Glassmorphism)
-
-- **IIndex.html** — main app (capital I is intentional, do not rename). Contains inline CSS, JS, and SVG body heatmap. Loaded from root `/`.
-- **API URLs** — use relative paths (`/api/analyze`, `/auth/login`). Hardcoded `localhost:3000` references have been removed.
-- **/modules/** — ES6 class modules: `heatmap-switcher.js` (orchestrator), `heatmap-state.js` (localStorage persistence), `body-heatmap.js` (~10 regions), `body-heatmap-muscles.js` (~70 regions), `nvidiaVisionClient.js`.
-- **prototype-*.html** — standalone UI experiments. Stable changes go in IIndex.html.
-- **timeline.js** — timeline visualization page.
-
-### Auth Flow (Supabase)
-
-1. `POST /auth/register` → `supabase.auth.signUp({ email, password, options: { data: { role } } })` — first user gets `admin` role
-2. `POST /auth/login` → `supabase.auth.signInWithPassword({ email, password })` → returns `{ token: accessToken }` + sets HttpOnly refresh cookie
-3. All frontend API calls attach `Authorization: Bearer <token>` header
-4. `POST /auth/refresh` → `supabase.auth.refreshSession({ refresh_token })` → returns new access token
-
-JWT is verified server-side via `supabase.auth.getUser(token)` in `auth/middleware-supabase.js`
-
-### Server Middleware Order (critical)
-
+**Middleware order** (declared as a numbered comment sequence in `Server-v2.js`):
 ```
-1. express.json({ limit: '20mb' })
-2. cors()
-3. helmet()
-4. rateLimit (applies to /api/*, /auth/*, /timeline/*)
-5. express.static (serves all HTML/JS/CSS from root)
-6. request logging
-7. app.use('/auth', authRoutes)
-8. app.use('/timeline', verifyToken, require('./timeline'))
-9. app.use('/api/heatmap', verifyToken, require('./api/heatmap'))
+1. express.json({ limit: '4mb' })
+2. entity.too.large handler → 413 JSON
+3. inline cookie parser (populates req.cookies from the Cookie header)
+4. CORS (allowlist from ALLOWED_ORIGINS)
+5. helmet
+6. CSRF protection (defined here, applied only on the /auth mount)
+7. path-traversal rejection (.. and \0 in decoded path)
+8. express.static(publicDir, { dotfiles: 'deny', index: false, maxAge: '5m' })
+9. STATIC_CONTENT_TYPES / STATIC_ASSET_WHITELIST route handlers
+   (explicit routes for /modules/:file, /locales/:file, and a regex for
+   root-level PNG / CSS / JS assets)
+10. request logging (NODE_ENV !== 'production')
+11. /auth, /timeline, /api/* mounts
 ```
 
-Route mounts are checked: `/auth` (1x), `/timeline` (1x), `/api/heatmap` (1x). Route-mounts.test.js enforces this.
+`tests/route-mounts.test.js` enforces that route mounts are non-duplicate and that `/auth` has `apiLimiter` before `authRoutes`. It does NOT lock the overall middleware order — keep that in sync by hand if you reorder.
 
-## Environmental Variables
+**Routes (each is its own router file):**
+- `auth/supabase-auth.js` — `/register`, `/login`, `/logout`, `/refresh`, `/forgot-password`, `/resend-verification`, `/verify-email`, `/verify-status`, `/google`, `/oauth-callback`, `/oauth-session`, `/callback` (legacy PKCE redirect)
+- `timeline.js` (root) — protected, JWT-required
+- `api/heatmap.js`, `api/profile.js`, `api/appointments.js`, `api/doctors.js`, `api/medicine-reminders.js` — each protected with `verifyToken` + `requireVerifiedEmail`
+- `db/` — Supabase DAOs: `records-supabase.js` (AES-256-GCM encrypted), `audit-supabase.js`, `profiles.js`, `appointments.js`, `medicine-reminders.js`, `news.js`. `db/supabase.js` is the service-role client singleton. `db/migrations/` holds the SQL schema history; `db/migrations.sql.bak` is a one-off backup.
+
+**Other API endpoints (defined inline in `Server-v2.js`):**
+- `POST /api/analyze` — `aiLimiter` only (no JWT). Primary AI diagnostic endpoint.
+- `POST /api/chat` — `aiLimiter` + `verifyToken` + `requireVerifiedEmail`. Authenticated follow-up chat.
+- `GET /api/health-news` — public, no auth.
+- `GET /api/health` — public liveness probe.
+- `GET /api/status` — public service status.
+- `GET /` — serves `IIndex.html` (the SPA).
+
+**AI fallback** (`/api/analyze`): tries models in `MODEL_PRIORITY` order. If a model fails 3 times in a row it falls through to the next. Cached by symptom-hash for 1 hour (`responseCache` Map). `extractJSON()` parses AI responses and tolerates schema drift between providers; `normalizeAIResponse()` ensures the client always gets the same shape.
+
+**Supabase Auth flow** (managed via `@supabase/supabase-js`):
+1. `POST /auth/register` → `supabase.auth.signUp()` with `data: { role }` in user metadata. First user gets `admin` role.
+2. `POST /auth/login` → `supabase.auth.signInWithPassword()` → returns `{ token: accessToken }` + sets HttpOnly refresh cookie.
+3. Frontend stores `authToken` in JS memory only (never localStorage). All API calls use `Authorization: Bearer <token>`.
+4. `POST /auth/refresh` → `supabase.auth.refreshSession({ refresh_token })` → new access token.
+5. Google OAuth via `POST /auth/google` → returns Supabase OAuth URL → user bounces through Google → lands on `/auth/oauth-callback` (HTML bridge page) → POSTs session to `/auth/oauth-session` → redirected to `/?google_login=success`.
+
+JWT verified server-side via `supabase.auth.getUser(token)` in `auth/middleware-supabase.js`.
+
+### Frontend (Vanilla JS + Glassmorphism, no build step)
+
+- **IIndex.html** — single-file app. Capital I is intentional, do not rename. Inline CSS (tokens, glassmorphism, premium motion/color vars) and inline JS (~176 KB across 4 script blocks). References modules via `<script src="modules/…">`. Loaded from root `/`.
+- **API URLs** — always relative (`/api/analyze`, `/auth/login`). No `localhost:3000` references.
+- **modules/** — vanilla ES6 class modules loaded as scripts (no bundler):
+  - `heatmap-switcher.js` — orchestrator
+  - `heatmap-state.js` — localStorage persistence
+  - `body-heatmap.js` — ~10 standard regions
+  - `body-heatmap-muscles.js` — ~70 muscle regions
+  - `demo-body-heatmap-simple.js` — fallback UI
+  - `nvidiaVisionClient.js` — vision API client
+  - `translations.js` — i18n strings
+- **prototype-*.html** — standalone UI experiments. Stable features get folded into `IIndex.html`.
+- **timeline.js** — timeline visualization page (served at `/timeline.js`).
+- **hospital-map.js / hospital-map.css** — Leaflet-based facility map.
+- **hospitals-gondar.json** — static facility data.
+- **locales/am.json** — Amharic overrides for MyMemory-translated content.
+
+### Key patterns
+
+- **TDD**: `tests/` is the source of truth for behaviour. New features ship RED → GREEN → refactor. Per-file `*.test.js` next to feature folders.
+- **Supabase DAOs are async**: all DAO functions return Promises. Route handlers must `await`.
+- **HeatmapSwitcher**: initialize with `await heatmap.init()`, get data with `heatmap.getEnhancedFormat()`.
+- **Test-mode shortcuts**: `NODE_ENV=test` makes auth routes bypass Supabase (return mock users), DAO calls become no-ops, the timeline endpoint skips DB, and the auth middleware accepts any `test-token-*`. Lets the suite run in ~7s without external rate limits.
+- **Factory app for testing**: `Server-v2.js` exports `createApp()` so each test file gets a fresh Express app with its own rate-limiter instance. No shared state between suites.
+- **Inline cookie parser** (no `cookie-parser` dep): populates `req.cookies` from `Cookie` header.
+
+## Vercel serverless gotchas
+
+These are real bugs that only show up on the deployed URL, not under `node Server-v2.js` locally. They cost hours in 2026-06.
+
+**1. Static files 404 unless explicitly bundled.** Vercel's `@vercel/node` doesn't include the project root in the function bundle. So `express.static(publicDir)` sees an empty directory. The fix:
+- `vercel.json` → `builds[0].config.includeFiles` lists every PNG/CSS/JS that needs to ship.
+- A `STATIC_ASSET_WHITELIST` in `Server-v2.js` plus explicit `/modules/:file`, `/locales/:file`, and root-asset routes serve them.
+- Path-traversal middleware (`..` and `\0` rejection) sits in front; `dotfiles: 'deny'` keeps `.env` from leaking.
+- **Any new PNG/JS/CSS asset at the project root must be added to BOTH `STATIC_ASSET_WHITELIST` (Server-v2.js) AND `includeFiles` (vercel.json).** Tests in `tests/static-files.test.js` enforce the whitelist side.
+
+**2. Request bodies > ~4.5 MB are rejected at the edge with plain-text 413.** Vercel returns `FUNCTION_PAYLOAD_TOO_LARGE`. The frontend's `JSON.parse` fails and the raw text surfaces as "Analysis failed: Request Entity Too Large…" — looks like "Internal server error" to a user. Three layers of defence:
+- Client: `compressImageToLimit()` in `IIndex.html` progressively shrinks JPEG to under 1.5 MB base64 before upload. Both `capturePhoto()` and `processFile()` use it.
+- Server: `express.json({ limit: '4mb' })` matches Vercel's edge cap so local and prod behave the same. A custom `entity.too.large` handler returns clean JSON `{"error":"Image is too large…"}`.
+- Frontend pre-flight: if `body.length > 4_000_000` before fetch, throw a friendly error. Plus detection of 413 / `FUNCTION_PAYLOAD_TOO_LARGE` in the response path.
+
+**3. Supabase URL Configuration is the OAuth localhost trap.** If the user lands on `http://localhost:3000` after Google sign-in, the Supabase dashboard's `Site URL` and `Redirect URLs` allowlist are the cause — not our code. The fix is in the Supabase dashboard (Authentication → URL Configuration), not in this repo. The dynamic `redirectTo` we pass via `getOAuthCallbackUrl()` is correct on Vercel because `x-forwarded-host` is set; it gets silently dropped if Supabase's allowlist doesn't include it.
+
+## Environment variables
 
 ```
 # Supabase (required)
-SUPABASE_URL=             # Project URL (e.g., https://xxxx.supabase.co)
-SUPABASE_SERVICE_KEY=     # Service-role key (server-side only)
+SUPABASE_URL=                  # e.g., https://iaylskrenjvcxjdywscv.supabase.co
+SUPABASE_SERVICE_KEY=          # service-role key (server-side only)
 
-# Keep existing:
-JWT_SECRET=               # for Supabase Auth (must match project JWT secret)
-DATA_ENC_KEY=             # 64 hex chars (32 bytes) for AES-256-GCM record encryption
+# Encryption
+DATA_ENC_KEY=                  # 64 hex chars (32 bytes) for AES-256-GCM record encryption
 
-# AI Models (at least one needed)
-GEMINI_API_KEY=           # primary AI (gemini-2.0-flash)
-GROQ_API_KEY=             # secondary (llama-3.3-70b-versatile)
-NVIDIA_API_KEY=           # vision model + text
+# AI models (at least one needed)
+GEMINI_API_KEY=                # primary (gemini-2.0-flash)
+GROQ_API_KEY=                  # secondary (llama-3.3-70b-versatile)
+NVIDIA_API_KEY=                # text + vision
+VISION_API_KEY=                # alt NVIDIA vision key (optional)
 
 # Translation (MyMemory — automatic, no key required)
 # Translates AI result content into am/om/ti based on the user's language.
 # Free tier: 5,000 words/day per source IP, no key needed. Anonymous.
-# If quota is hit, results fall back to English silently.
 
 # Rate limiting
-RATE_LIMIT_WINDOW=1       # minutes
-RATE_LIMIT_MAX=20         # requests per window
+RATE_LIMIT_WINDOW=1            # minutes
+RATE_LIMIT_MAX=20              # requests per window per IP
+LOGIN_RATE_LIMIT_MAX=20        # /auth/login specific
+AI_RATE_LIMIT_MAX=5            # /api/analyze specific
+
+# CORS (comma-separated origins, or * for any)
+ALLOWED_ORIGINS=https://fikre-s-website.vercel.app,http://localhost:3000
+
+# OAuth (optional escape hatch)
+APP_BASE_URL=                  # if set, getOAuthCallbackUrl() pins to this instead of x-forwarded-host
+LOG_OAUTH=1                    # log resolved OAuth callback URL (visible in Vercel logs)
 
 # Server
 PORT=3000
-NODE_ENV=production       # enables secure cookies
+NODE_ENV=production            # enables secure cookies, disables request logging
 ```
 
 ## Compliance
 
-The system handles PHI (Personal Health Information). Current design requirements:
+PHI (Personal Health Information) target is Ethiopian Data Protection Proclamation No. 132/2020:
 - Health records encrypted at rest (AES-256-GCM, application layer)
-- JWT access token stored in memory only (never localStorage)
+- JWT access token stored in JS memory only (never localStorage)
 - Refresh token in HttpOnly, Secure, sameSite=lax cookie
-- All auth actions logged to audit table
+- All auth actions logged to `audit` table
 - RLS policies enforce user isolation at the database level
-- Compliance target: Ethiopian Data Protection Proclamation No. 132/2020
 
-## Key Patterns
+## Testing
 
-- **TDD**: Tests live in `/tests/`. Start each feature with RED failing tests, then GREEN minimal implementation, then refactor.
-- **Supabase DAOs are async**: All DAO functions return Promises. Express route handlers must be `async` and `await` DAO calls.
-- **HeatmapSwitcher**: Initialize with `await heatmap.init()`, get data with `heatmap.getEnhancedFormat()`.
-- **AI fallback**: If Groq fails with 429, it exhausts the Groq quota and retry-waits. On 3 consecutive failures, falls back to next model. If all fail, returns demo mock data.
-- **Prototype first**: All UI experiments go in `prototype-*.html`. Production changes go in IIndex.html.
-- **Factory app for testing**: `Server-v2.js` exports a `createApp()` factory so each test file gets a fresh Express app with its own rate‑limiter instance, preventing state leakage between test suites.
-- **Test‑mode shortcuts**: When `process.env.NODE_ENV === 'test'`, auth routes bypass Supabase (return mock user IDs/tokens), the audit DAO becomes a no‑op, the records DAO returns an empty array, and the timeline endpoint skips DB calls. The middleware accepts any token that starts with `test-token`. This makes the test suite fast and independent of external rate limits.
-- **Manual cookie parser**: To avoid external dependency, `Server-v2.js` includes an inline cookie‑parser middleware that populates `req.cookies` from the `Cookie` header.
+12 Jest suites, 284 tests, ~7s run time:
+- `auth-integration.test.js`, `auth-middleware.test.js`, `auth-rate-limit.test.js`, `auth-google.test.js` — full auth flow incl. Google OAuth
+- `api-analyze.test.js` — analyze endpoint + 413 body cap
+- `api-heatmap.test.js`, `encryption.test.js`, `records.test.js`, `users.test.js` — data layer
+- `route-mounts.test.js` — enforces that route mounts are non-duplicate and that `/auth` has `apiLimiter` before `authRoutes`
+- `frontend-urls.test.js` — no `localhost:3000` references in IIndex.html
+- `static-files.test.js` — whitelist + path-traversal protection
 
-## Known Issues
+Each test file uses `createApp()` to get a fresh app with isolated rate-limiter state. `tests/setup.js` sets the test env vars and exports AES constants.
 
-- `heatmap-state.js` `saveToStorage()` is fire‑and‑forget — needs to await server acknowledgment before resolving
-- `npm install` on this project has been problematic due to `better-sqlite3` native module issues (now removed); if you see rebuild errors, try `rm -rf node_modules package-lock.json && npm install`
+## File map (do not rename)
 
-## Deprecated / Removed
+- `IIndex.html` — capital I is intentional (legacy filename); do not rename.
+- `Server-v2.js` — current Express server. `Server.js` and `Server-free.js` are legacy, do not use.
+- `modules/vista3d-client.js` — DELETED (was legacy 3D heatmap GPU client).
+- `db/index.js`, `db/records.js`, `db/audit.js`, `db/users.js` — DELETED (SQLite era, replaced by Supabase DAOs).
+- `data/` — DELETED (SQLite files).
 
-## Recent Advances
-- **Backend Migration Complete**: Successfully migrated from SQLite to Supabase (PostgreSQL + Auth + RLS) with AES-256-GCM encryption for health records at the application layer.
-- **Test Suite Success**: All test suites now pass (6/6, 30/30 tests) after implementing:
-  - Factory pattern in Server-v2.js (`createApp()`) to isolate rate limiter state per test.
-  - Test‑mode shortcuts in auth routes to bypass Supabase rate limits and external calls.
-  - Modified auth middleware to accept test tokens (`test-token-*`).
-  - Conditional DAO calls based on `NODE_ENV` to prevent DB operations in test environment.
-  - Manual cookie‑parser middleware to eliminate external dependency.
-  - UI enhancements: added Login/Register button in `IIndex.html` for quick auth testing.
-- **Specific Fixes Resolved**:
-  - EADDRINUSE errors by guarding `app.listen` with `process.env.NODE_ENV !== 'test'`.
-  - Supabase registration 500 errors via explicit 429 handling and test email domains.
-  - Auth test 401/403 errors by updating `verifyToken` for test mode.
-  - Logout test failure by correcting response message to `{ message: 'logout' }`.
-  - Missing cookie‑parser issue with inline middleware implementation.
-  - Timeline/audit DAO call failures in test mode via no‑op implementations.
-- **Architecture Improvements**:
-  - Maintained Supabase Auth flow with HttpOnly refresh tokens.
-  - Preserved AES-256-GCM encryption for health records.
-  - Implemented Row Level Security for user data isolation.
-  - Kept API contract identical for frontend compatibility.
-  - Added environmental‑based conditional logic for test/execution modes.
+## Known issues
 
-The system now provides a clinical‑grade personal health record system with persistent cloud storage, ready for deployment while maintaining compliance with Ethiopian Data Protection Proclamation No. 132/2020. All original functionality remains intact with improved scalability and reliability.
-
-- `db/index.js`, `db/records.js`, `db/audit.js`, `db/users.js` — SQLite DAOs, removed
-- `data/` directory — SQLite database files, removed
-- `better-sqlite3` — SQLite driver, removed from package.json
-- `Server.js`, `Server-free.js` — legacy, do not use
-- `.archive/` — old 3D heatmap files
-- `modules/vista3d-client.js` — remote GPU client (legacy)
+None currently blocking. The two Vercel-only bugs (static 404s and analyze 413) and the Supabase OAuth localhost trap are all documented above and have tests guarding against regression.
