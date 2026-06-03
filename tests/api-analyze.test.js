@@ -333,6 +333,29 @@ describe('/api/analyze endpoint', () => {
       expect(res.body.error).toMatch(/too large/i);
       expect(res.body.error).toMatch(/image|photo|smaller/i);
     });
+
+    it('returns 413 when JSON-serialized body exceeds 3.9MB (Vercel edge safety net)', async () => {
+      // Heatmap data + symptoms can push total body past 4MB even without
+      // a large image. The server catches this BEFORE Vercel does, so the
+      // user sees a clean JSON error instead of "Internal server error".
+      // 70 regions × ~300 chars each ≈ 21 KB of heatmap alone; pad to
+      // push the JSON-serialized body well past 3.9MB without tripping
+      // the symptoms 2 KB cap.
+      const bodyHeatmapData = {
+        regions: Array.from({ length: 70 }, (_, i) => ({
+          area: 'r' + i,
+          name: 'Region ' + i + ' ' + 'X'.repeat(60_000),
+          intensity: 5
+        }))
+      };
+      const res = await analyzeRequest({
+        symptoms: 'rash',
+        bodyHeatmapData,
+        bodyRegions: bodyHeatmapData.regions
+      });
+      expect(res.status).toBe(413);
+      expect(res.body.error).toMatch(/too large/i);
+    });
   });
 
   describe('Model fallback chain', () => {

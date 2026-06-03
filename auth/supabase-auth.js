@@ -404,19 +404,45 @@ router.get('/oauth-callback', (req, res) => {
   <title>Signing you in…</title>
   <style>
     body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, #e8f4ef, #d4edda); min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; color: #1a6b4a; }
-    .container { text-align: center; padding: 2rem; }
+    .container { text-align: center; padding: 2rem; max-width: 480px; }
     .spinner { width: 48px; height: 48px; border: 4px solid #cce8d9; border-top-color: #1a6b4a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .error { display: none; background: #fff; border: 1px solid #f4c7c3; border-radius: 12px; padding: 1rem; margin-top: 1.5rem; color: #b3261e; text-align: left; }
+    .error h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+    .error p { margin: 0 0 0.75rem; font-size: 0.9rem; line-height: 1.4; }
+    .error button { background: #1a6b4a; color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .error button:hover { background: #145239; }
+    .error .detail { font-family: monospace; font-size: 0.8rem; color: #6b2a26; background: #fdecea; border-radius: 6px; padding: 6px 8px; margin-top: 0.5rem; word-break: break-all; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="spinner"></div>
-    <h1>Signing you in…</h1>
-    <p>Completing your Google sign in.</p>
+    <div id="spinner-wrap">
+      <div class="spinner"></div>
+      <h1>Signing you in…</h1>
+      <p>Completing your Google sign in.</p>
+    </div>
+    <div id="error-wrap" class="error">
+      <h2 id="error-title">Sign in could not finish</h2>
+      <p id="error-message">Something went wrong while talking to the server.</p>
+      <div id="error-detail" class="detail" style="display:none;"></div>
+      <button onclick="window.location.replace('/?google_login=error')">Back to MediScan</button>
+    </div>
   </div>
   <script>
     (function() {
+      function showError(title, message, detail) {
+        var sp = document.getElementById('spinner-wrap');
+        var er = document.getElementById('error-wrap');
+        if (sp) sp.style.display = 'none';
+        if (er) er.style.display = 'block';
+        var t = document.getElementById('error-title');
+        var m = document.getElementById('error-message');
+        var d = document.getElementById('error-detail');
+        if (t) t.textContent = title || 'Sign in could not finish';
+        if (m) m.textContent = message || 'Something went wrong while talking to the server.';
+        if (d && detail) { d.style.display = 'block'; d.textContent = detail; }
+      }
       function finish(status) {
         var target = '/?google_login=' + status;
         if (status === 'success') {
@@ -432,28 +458,52 @@ router.get('/oauth-callback', (req, res) => {
         var params = new URLSearchParams(hash);
         var accessToken = params.get('access_token');
         var refreshToken = params.get('refresh_token');
-        if (!accessToken) { finish('missing_token'); return; }
-        fetch('/auth/oauth-session', {
+        if (!accessToken) {
+          showError(
+            'No sign-in token received',
+            'Google sign in did not return an access token. The Supabase redirect URL allowlist may be missing this site, or the request was cancelled.',
+            'Hash was empty. Supabase usually appends #access_token=... after a successful Google sign in.'
+          );
+          return;
+        }
+        // 10s timeout: Vercel serverless functions can hang past the user
+        // patience window if Supabase verify is slow. Aborting lets us
+        // show a clear error instead of a frozen spinner.
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var timeoutId = controller ? setTimeout(function() { controller.abort(); }, 10000) : null;
+
+        var fetchOpts = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken || '' })
-        }).then(function(r) {
-          if (!r.ok) return r.json().then(function(b) { throw new Error(b.error || 'session failed'); });
+        };
+        if (controller) fetchOpts.signal = controller.signal;
+
+        fetch('/auth/oauth-session', fetchOpts).then(function(r) {
+          if (timeoutId) clearTimeout(timeoutId);
+          if (!r.ok) return r.json().then(function(b) { throw new Error(b.error || ('HTTP ' + r.status)); }).catch(function(e) { throw e; });
           return r.json();
         }).then(function(data) {
           if (data && data.token) {
             try { sessionStorage.setItem('mediscan_google_token', data.token); } catch (e) {}
             finish('success');
           } else {
+            showError('Server returned no token', 'The MediScan server response was missing a token. Please try again.');
             finish('invalid');
           }
         }).catch(function(err) {
+          if (timeoutId) clearTimeout(timeoutId);
           console.error('OAuth session error:', err);
+          var msg = (err && err.name === 'AbortError')
+            ? 'The MediScan server took longer than 10 seconds to respond. This is usually transient — please try again.'
+            : (err && err.message) ? err.message : 'Unknown error';
+          showError('Could not complete sign in', msg, err && err.stack ? err.stack.split('\\n').slice(0,3).join(' | ') : null);
           finish('error');
         });
       } catch (e) {
         console.error('OAuth callback error:', e);
+        showError('Unexpected error', e && e.message ? e.message : 'Unknown error', e && e.stack ? e.stack : null);
         finish('error');
       }
     })();

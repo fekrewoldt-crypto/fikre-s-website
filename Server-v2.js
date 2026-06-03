@@ -1031,6 +1031,15 @@ async function translateResult(result, lang) {
 app.post('/api/analyze', aiLimiter, async (req, res) => {
   let { prompt, imageBase64, imageMimeType, symptoms, bodyArea, lang } = req.body;
 
+  // Total request body cap. Vercel rejects at the edge with plain-text
+  // 413 FUNCTION_PAYLOAD_TOO_LARGE — but by then the user sees an
+  // unfriendly "Internal server error". Catching the same limit here
+  // gives a clean JSON error and matches the client's 4_000_000 preflight.
+  const totalBody = (req.body && JSON.stringify(req.body).length) || 0;
+  if (totalBody > 3_900_000) {
+    return res.status(413).json({ error: 'Request is too large. Please remove the image or use a smaller photo.' });
+  }
+
   // Input validation
   if (prompt && prompt.length > 5000) {
     return res.status(400).json({ error: 'Prompt too long (max 5000 characters)' });

@@ -98,6 +98,18 @@ describe('Google OAuth endpoints', () => {
       expect(res.text).toContain('/auth/oauth-session');
       expect(res.text).toContain('access_token');
     });
+
+    it('bridge page shows a visible error UI if access_token is missing', async () => {
+      // The bridge reads #hash on load. If the hash is empty, the user
+      // shouldn't be left staring at a frozen spinner — they should see
+      // a "no token received" message and a back button. This guards
+      // against the "Signing in..." hang reported in 2026-06.
+      const res = await request(app).get('/auth/oauth-callback');
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('id="error-wrap"');
+      expect(res.text).toContain('AbortController');
+      expect(res.text).toContain('Back to MediScan');
+    });
   });
 
   describe('POST /auth/oauth-session', () => {

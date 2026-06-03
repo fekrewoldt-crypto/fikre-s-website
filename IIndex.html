@@ -1656,6 +1656,19 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
     font-size: 0.9rem;
   }
 
+  /* Language dropdown: the parent .nav-right has overflow-x:auto on
+     small phones, which clips any absolutely-positioned descendant
+     (the dropdown). Break out by switching to position:fixed and
+     pinning to the top-right under the nav. The lang-selector button
+     itself is in the scroll viewport — users will still tap the button
+     fine, and the dropdown appears as an overlay. */
+  .lang-dropdown {
+    position: fixed;
+    top: 64px;
+    right: 8px;
+    left: auto;
+  }
+
   /* Form Elements */
   textarea {
     font-size: 0.9rem;
@@ -4573,19 +4586,21 @@ let altsChart = null, sevChart = null, timeChart = null;
 // runtime rejects request bodies above ~4.5 MB with 413 FUNCTION_PAYLOAD_TOO_LARGE
 // — and a 3-4 MB base64 image plus the prompt + heatmap payload trips that limit
 // for real phone photos. We compress to fit comfortably under that ceiling.
-const MAX_IMAGE_BASE64_BYTES = 1_500_000; // 1.5 MB base64 ~= 1.1 MB binary
+const MAX_IMAGE_BASE64_BYTES = 1_100_000; // 1.1 MB base64 ~= 825 KB binary
 
 // Progressively downscale + re-encode an HTMLImageElement (or canvas) until the
 // resulting base64 JPEG fits under MAX_IMAGE_BASE64_BYTES. Returns the base64
 // data URL on success or null if the source can't be encoded.
-async function compressImageToLimit(source, startMaxDim = 1200, startQuality = 0.85) {
+async function compressImageToLimit(source, startMaxDim = 1024, startQuality = 0.8) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   let dim = startMaxDim;
   let quality = startQuality;
-  // Three passes: shrink dim and quality if the result is still too big.
-  for (let pass = 0; pass < 3; pass++) {
+  // Five passes instead of three — phone photos (3-4 MP) at 1024px / 0.8
+  // quality still produce ~1.4 MB base64. Each pass shrinks the long edge
+  // by 25% and the quality by 0.1, so we drop to 320px / 0.4 if needed.
+  for (let pass = 0; pass < 5; pass++) {
     let { width, height } = source;
     if (width > dim || height > dim) {
       if (width > height) { height = Math.round(height * dim / width); width = dim; }
@@ -4600,8 +4615,8 @@ async function compressImageToLimit(source, startMaxDim = 1200, startQuality = 0
     const base64 = dataUrl.split(',')[1] || '';
     if (base64.length * 0.75 <= MAX_IMAGE_BASE64_BYTES) return dataUrl;
     // Tighten for next pass
-    dim = Math.max(320, Math.round(dim * 0.75));
-    quality = Math.max(0.4, quality - 0.15);
+    dim = Math.max(280, Math.round(dim * 0.75));
+    quality = Math.max(0.35, quality - 0.1);
   }
   // Last attempt at the tightest settings
   let { width, height } = source;
@@ -5155,19 +5170,23 @@ function wireHeatmapModeToggle() {
 
       try {
         if (mode === 'demo') {
-          // Demo (Legacy) mode: destroy any current switcher, render the
-          // legacy demo heatmap into the (now empty) container.
+          // Legacy mode: hide the 2D image-based heatmap, show the 10-button
+          // text grid. The grid was always the legacy UI — labelled "demo" in
+          // data-mode to match the original DemoBodyHeatmap intent, but
+          // shipping the text grid is what users actually want here.
           if (window.mediscanBodyHeatmap && typeof window.mediscanBodyHeatmap.destroy === 'function') {
             await window.mediscanBodyHeatmap.destroy();
+            window.mediscanBodyHeatmap = null;
           }
-          if (typeof DemoBodyHeatmap !== 'undefined') {
-            window.mediscanBodyHeatmap = new DemoBodyHeatmap('body-heatmap-container', {
-              initialSelection: bodySelections || []
-            });
-          }
+          container.style.display = 'none';
+          const legacyGrid = document.getElementById('legacy-body-grid');
+          if (legacyGrid) legacyGrid.style.display = 'grid';
         } else {
           // 2d or muscles: need a HeatmapSwitcher. If the current instance
           // is a DemoBodyHeatmap (no setMode), recreate the switcher.
+          const legacyGrid = document.getElementById('legacy-body-grid');
+          if (legacyGrid) legacyGrid.style.display = 'none';
+          container.style.display = '';
           if (!window.mediscanBodyHeatmap || typeof window.mediscanBodyHeatmap.setMode !== 'function') {
             if (window.mediscanBodyHeatmap && typeof window.mediscanBodyHeatmap.destroy === 'function') {
               await window.mediscanBodyHeatmap.destroy();
@@ -5207,6 +5226,17 @@ document.querySelectorAll('.dur-btn').forEach(b => b.addEventListener('click', (
   document.querySelectorAll('.dur-btn').forEach(x => x.classList.remove('selected'));
   b.classList.add('selected');
   selectedDuration = b.dataset.val;
+  saveFormState();
+}));
+
+// Legacy body area buttons (10-button text grid). Same selection shape
+// as the heatmap so analyze() and the server prompt work unchanged:
+// selectedBody = the raw string (e.g. "chest / lungs").
+document.querySelectorAll('#legacy-body-grid .body-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#legacy-body-grid .body-btn').forEach(x => x.classList.remove('selected'));
+  b.classList.add('selected');
+  selectedBody = b.dataset.val;
+  bodySelections = [];
   saveFormState();
 }));
 
