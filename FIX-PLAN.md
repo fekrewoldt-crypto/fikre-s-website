@@ -8,16 +8,19 @@
 
 | # | Fix | Status | Date |
 |---|-----|--------|------|
-| 1 | /api/analyze auth (unblock frontend) | DONE | 2026-06-02 |
-| 2 | Registration backend (rate limit + Supabase errors) | DONE | 2026-06-02 |
-| 3 | 2D heatmap restoration (remove muscles, default DemoBodyHeatmap) | DONE | 2026-06-02 |
-| 4 | Amharic translations cleanup (Khmer, backslashes, English fallbacks) | DONE | 2026-06-02 |
-| 5 | Tigrinya translations cleanup | DONE | 2026-06-02 |
-| 6 | Email verification UI (resend, email display, back-to-login) | DONE | 2026-06-02 |
-| 7 | en/om/ti translation audit (read-only) | DONE | 2026-06-02 |
-| 8 | Update this FIX-PLAN.md | DONE | 2026-06-02 |
-| 9 | om/ti: add nav_appointments, nav_profile, nav_reminders | DONE | 2026-06-02 |
-| 10 | Google OAuth (research done, requires user GCP setup) | DEFERRED | — |
+| 11 | /api/analyze auth (unblock frontend) | DONE | 2026-06-02 |
+| 12 | Registration backend (rate limit + Supabase errors) | DONE | 2026-06-02 |
+| 13 | 2D heatmap restoration (remove muscles, default DemoBodyHeatmap) | DONE | 2026-06-02 |
+| 14 | Amharic translations cleanup (Khmer, backslashes, English fallbacks) | DONE | 2026-06-02 |
+| 15 | Tigrinya translations cleanup | DONE | 2026-06-02 |
+| 16 | Email verification UI (resend, email display, back-to-login) | DONE | 2026-06-02 |
+| 17 | en/om/ti translation audit (read-only) | DONE | 2026-06-02 |
+| 18 | Update this FIX-PLAN.md | DONE | 2026-06-02 |
+| 19 | om/ti: add nav_appointments, nav_profile, nav_reminders | DONE | 2026-06-02 |
+| 20 | Google OAuth (research done, requires user GCP setup) | DEFERRED | — |
+| **#11** | **OAuth: store email + set window.currentUser** | **DONE** | **2026-06-04** |
+| **#12** | **OAuth: isolate auditDAO.try/catch** | **DONE** | **2026-06-04** |
+| **#13** | **Full test suite** | **DONE** | **2026-06-04** |
 
 See "Session 2026-06-02 Notes" at the bottom of this file for full diffs and rationale.
 
@@ -755,3 +758,225 @@ Note: the FIX-PLAN count of "106 keys" was based on an earlier snapshot. The cur
 5. Add the Google callback handler on the backend.
 
 Deferred because steps 1-3 require user action in external consoles. No code work is blocked on this.
+
+---
+
+## STATUS: Session 2026-06-04 (Fixes #11-12 — Google OAuth Crashes After Success)
+
+### Investigation Summary (4 parallel agents ran)
+
+**Root cause is a two-part bug:**
+
+**BUG 1 — `window.currentUser` never set after OAuth success** (CRITICAL)
+- After Google OAuth succeeds, user lands on `/?google_login=success`
+- `handleGoogleLoginRedirect()` in `IIndex.html:9100-9115` sets `window.authToken` from sessionStorage
+- But `window.currentUser` is **never set** — it stays `null`
+- `updateAuthUI()` at line 9136 requires `if (window.authToken && window.currentUser)` — BOTH must be true
+- Since `currentUser` is null, the logged-in UI branch never runs. User sees the success toast but the UI never shows them logged in.
+- Email/password login has the correct line at `IIndex.html:8976`: `window.currentUser = { email }`
+- The OAuth callback page receives `{ token, email }` from the server at `auth/supabase-auth.js:558` but only stores `token` in sessionStorage at line 489. The email is discarded.
+
+**BUG 2 — auditDAO.logAction() can throw 500 at the finish line** (HIGH)
+- Location: `auth/supabase-auth.js:557` inside `POST /auth/oauth-session`
+- If the `audit` table doesn't exist, has RLS issues, or if `validateUUID(user.id)` fails → throws → catch block returns 500
+- The OAuth callback page's `.catch()` handler catches this and redirects to `/?google_login=error`
+- This means a valid Google sign-in can fail at the very last step due to a non-critical audit table issue
+
+---
+
+## Fix #11: Store Google email alongside token, set window.currentUser on OAuth success
+
+### Approach
+
+The callback page already receives `{ token, email }` from `POST /auth/oauth-session`. We need to:
+
+1. **`auth/supabase-auth.js` (callback page JS, line ~489)**: Store both token AND email in sessionStorage before calling `finish('success')`
+2. **`IIndex.html` (`handleGoogleLoginRedirect()`, line ~9100-9107)**: Read both token and email from sessionStorage, set `window.currentUser = { email }`
+
+### Changes
+
+**File: `auth/supabase-auth.js` — OAuth callback page inner HTML at ~line 488-490**
+
+Current:
+```javascript
+if (data && data.token) {
+  try { sessionStorage.setItem('mediscan_google_token', data.token); } catch (e) {}
+  finish('success');
+```
+
+Fixed:
+```javascript
+if (data && data.token) {
+  try {
+    sessionStorage.setItem('mediscan_google_token', data.token);
+    if (data.email) sessionStorage.setItem('mediscan_google_email', data.email);
+  } catch (e) {}
+  finish('success');
+```
+
+**File: `IIndex.html` — `handleGoogleLoginRedirect()` at ~line 9100-9107**
+
+Current:
+```javascript
+if (status === 'success') {
+  let token = null;
+  try { token = sessionStorage.getItem('mediscan_google_token'); } catch (e) {}
+  if (token) {
+    window.authToken = token;
+    try { sessionStorage.removeItem('mediscan_google_token'); } catch (e) {}
+  }
+  updateAuthUI();
+  loadProfile();
+  renderDashboard();
+  showToast('Welcome! You are now signed in with Google.', 'success');
+}
+```
+
+Fixed:
+```javascript
+if (status === 'success') {
+  let token = null, email = null;
+  try { token = sessionStorage.getItem('mediscan_google_token'); } catch (e) {}
+  try { email = sessionStorage.getItem('mediscan_google_email'); } catch (e) {}
+  if (token) {
+    window.authToken = token;
+    if (email) window.currentUser = { email: email };
+    try {
+      sessionStorage.removeItem('mediscan_google_token');
+      sessionStorage.removeItem('mediscan_google_email');
+    } catch (e) {}
+  }
+  updateAuthUI();
+  loadProfile();
+  renderDashboard();
+  showToast('Welcome! You are now signed in with Google.', 'success');
+}
+```
+
+### Skills to load
+- `auth-implementation-patterns` — for OAuth flow context
+- `frontend-developer` — for IIndex.html inline JS editing
+- `testing-patterns` — for writing a verification test
+
+---
+
+## Fix #12: Wrap auditDAO.logAction() in try/catch
+
+Location: `auth/supabase-auth.js` line 557 inside `POST /auth/oauth-session`
+
+Current:
+```javascript
+try {
+  const { data, error } = await supabase.auth.getUser(access_token);
+  if (error || !data?.user) { ... }
+  const user = data.user;
+  res.cookie('refreshToken', refresh_token, { ... });
+  await auditDAO.logAction({ userId: user.id, action: 'login_google' });  // ← CAN THROW
+  return res.json({ token: access_token, email: user.email });
+} catch (err) {
+  console.error('OAuth session error:', err);
+  return res.status(500).json({ error: 'Internal server error' });
+}
+```
+
+Fixed — isolate the audit call:
+```javascript
+try {
+  const { data, error } = await supabase.auth.getUser(access_token);
+  if (error || !data?.user) { ... }
+  const user = data.user;
+  res.cookie('refreshToken', refresh_token, { ... });
+} catch (err) {
+  console.error('OAuth session error:', err);
+  return res.status(500).json({ error: 'Internal server error' });
+}
+
+// Run audit logging separately — failures here must NOT break auth
+try {
+  await auditDAO.logAction({ userId: user.id, action: 'login_google' });
+} catch (auditErr) {
+  // Log but do not block — audit is non-critical for auth flow
+  console.error('Audit log failed (non-fatal):', auditErr.message);
+}
+return res.json({ token: access_token, email: user.email });
+```
+
+**Note:** Split the try/catch — the outer `try/catch` handles only the critical auth steps (token verification, cookie-setting). The audit call gets its own try/catch so it cannot block the response.
+
+### Skills to load
+- `auth-implementation-patterns` — for the correct handling of non-critical side-effects in auth flows
+
+---
+
+## Fix #13: Run full test suite as smoke test
+
+After Fix #11 and Fix #12 are implemented, run:
+
+```bash
+npm test
+```
+
+Expected: 284/284 tests pass, including `auth-google.test.js` (13 tests).
+
+### Skills to load
+- `test-automator` — for proper test execution and interpretation
+- `error-debugging-error-analysis` — to diagnose any test failures
+
+---
+
+## Fix #0: Baseline test run
+
+**Status:** DONE (implied by all prior fixes passing).
+
+---
+
+## Task Dispatch Order
+
+| Order | Task | Skills to Load | Agent Type |
+|-------|------|---------------|------------|
+| 1 | Baseline test run | `test-automator` | foreground |
+| 2 | Fix #11 (email sessionStorage + currentUser) | `auth-implementation-patterns`, `frontend-developer` | foreground |
+| 3 | Fix #12 (auditDAO try/catch) | `auth-implementation-patterns` | foreground |
+| 4 | Test suite + integration | `test-automator`, `error-debugging-error-analysis` | foreground |
+| 5 | User handles: APP_BASE_URL + audit table in Supabase | — | manual |
+
+---
+
+## Summary Table
+
+| Fix # | File | Lines | What | Skills | Risk |
+|-------|------|-------|------|--------|------|
+| #11 | `auth/supabase-auth.js` (callback page JS) | ~488-491 | Store `email` in sessionStorage alongside `token` | `auth-implementation-patterns`, `frontend-developer` | LOW |
+| #11 | `IIndex.html` | ~9100-9110 | Read email from sessionStorage, set `window.currentUser = { email }` | `auth-implementation-patterns`, `frontend-developer` | LOW |
+| #12 | `auth/supabase-auth.js` | ~540-562 | Split try/catch; isolate auditDAO.logAction() from auth response | `auth-implementation-patterns` | LOW |
+| #13 | — | — | Run `npm test` — all 284 tests must pass | `test-automator`, `error-debugging-error-analysis` | N/A |
+
+---
+
+## Non-Code Fixes (User Action Required)
+
+These cannot be automated and must be done by the user:
+
+1. **Set `APP_BASE_URL` in Vercel env vars:**
+   ```
+   APP_BASE_URL=https://fikre-s-website.vercel.app
+   ```
+
+2. **Verify Supabase dashboard URL Configuration:**
+   - Site URL: `https://fikre-s-website.vercel.app`
+   - Redirect URLs must include: `https://fikre-s-website.vercel.app/auth/oauth-callback`
+
+3. **Verify `audit` table exists in Supabase:**
+   Run this in Supabase SQL editor if the table doesn't exist:
+   ```sql
+   CREATE TABLE IF NOT EXISTS audit (
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     user_id UUID NOT NULL,
+     action TEXT NOT NULL,
+     record_id UUID,
+     timestamp TIMESTAMPTZ DEFAULT NOW()
+   );
+   ALTER TABLE audit ENABLE ROW LEVEL SECURITY;
+   CREATE POLICY "audit_insert" ON audit FOR INSERT WITH CHECK (true);
+   CREATE POLICY "audit_select" ON audit FOR SELECT USING (true);
+   ```

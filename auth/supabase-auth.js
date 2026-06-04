@@ -487,6 +487,7 @@ router.get('/oauth-callback', (req, res) => {
         }).then(function(data) {
           if (data && data.token) {
             try { sessionStorage.setItem('mediscan_google_token', data.token); } catch (e) {}
+            if (data.email) try { sessionStorage.setItem('mediscan_google_email', data.email); } catch (e) {}
             finish('success');
           } else {
             showError('Server returned no token', 'The MediScan server response was missing a token. Please try again.');
@@ -554,12 +555,19 @@ router.post('/oauth-session', async (req, res) => {
         sameSite: 'lax',
       });
     }
-    await auditDAO.logAction({ userId: user.id, action: 'login_google' });
-    return res.json({ token: access_token, email: user.email });
   } catch (err) {
     console.error('OAuth session error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+
+  // Run audit logging separately — failures here must NOT block the auth response
+  try {
+    await auditDAO.logAction({ userId: user.id, action: 'login_google' });
+  } catch (auditErr) {
+    // Log but do not block — audit is non-critical for auth flow
+    console.error('Audit log failed (non-fatal):', auditErr.message);
+  }
+  return res.json({ token: access_token, email: user.email });
 });
 
 // ------------------------------------------------------------------

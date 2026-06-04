@@ -9098,11 +9098,16 @@ async function handleGoogleLoginRedirect() {
   window.history.replaceState({}, document.title, cleanUrl);
 
   if (status === 'success') {
-    let token = null;
+    let token = null, email = null;
     try { token = sessionStorage.getItem('mediscan_google_token'); } catch (e) {}
+    try { email = sessionStorage.getItem('mediscan_google_email'); } catch (e) {}
     if (token) {
       window.authToken = token;
-      try { sessionStorage.removeItem('mediscan_google_token'); } catch (e) {}
+      if (email) window.currentUser = { email: email };
+      try {
+        sessionStorage.removeItem('mediscan_google_token');
+        sessionStorage.removeItem('mediscan_google_email');
+      } catch (e) {}
     }
     updateAuthUI();
     loadProfile();
