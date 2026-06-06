@@ -504,13 +504,22 @@ router.get('/oauth-callback', (req, res) => {
           console.error('OAuth session error:', err);
           var msg = (err && err.name === 'AbortError')
             ? 'The MediScan server took longer than 10 seconds to respond. This is usually transient — please try again.'
-            : (err && err.message) ? err.message : 'Unknown error';
-          showError('Could not complete sign in', msg, err && err.stack ? err.stack.split('\\n').slice(0,3).join(' | ') : null);
+            : (err && err.message) ? String(err.message) : 'Unknown error';
+          var stackPreview = null;
+          if (err && err.stack) {
+            try { stackPreview = String(err.stack).split('\n').slice(0, 3).join(' | '); } catch (e) {}
+          }
+          showError('Could not complete sign in', msg, stackPreview);
           finish('error');
         });
       } catch (e) {
         console.error('OAuth callback error:', e);
-        showError('Unexpected error', e && e.message ? e.message : 'Unknown error', e && e.stack ? e.stack : null);
+        var errMsg = (e && e.message) ? String(e.message) : 'Unknown error';
+        var errStack = null;
+        if (e && e.stack) {
+          try { errStack = String(e.stack).split('\n').slice(0, 3).join(' | '); } catch (ex) {}
+        }
+        showError('Unexpected error', errMsg, errStack);
         finish('error');
       }
     })();
