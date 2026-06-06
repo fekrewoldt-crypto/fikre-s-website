@@ -2,7 +2,10 @@
 <html lang="en"><!-- /auth/login /auth/register -->
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MediScan — AI Health Identification</title>
 <meta name="description" content="MediScan is an AI-powered medical diagnostic assistant — describe symptoms, upload photos, get instant health insights.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2062,6 +2065,17 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
   * {
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+  }
+
+  /* Ensure touch targets are at least 44x44px for mobile accessibility */
+  .body-btn, .dur-btn, .nav-tab, .chat-sug {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Disable zoom on double-tap for inputs */
+  input, textarea, select {
+    touch-action: manipulation;
   }
 
   /* Improve touch target sizes */
@@ -5025,12 +5039,21 @@ document.getElementById('remove-img').addEventListener('click', () => { imageBas
 
 // ── SELECTORS ──
 // Legacy body buttons (for backward compatibility)
-document.querySelectorAll('.body-btn').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.body-btn').forEach(x => x.classList.remove('selected'));
-  b.classList.add('selected');
-  selectedBody = b.dataset.val;
-  saveFormState();
-}));
+// Using both touchstart and click for responsive mobile + desktop
+document.querySelectorAll('.body-btn').forEach(b => {
+  const handler = () => {
+    document.querySelectorAll('.body-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    selectedBody = b.dataset.val;
+    saveFormState();
+  };
+  b.addEventListener('click', handler);
+  // Touchstart with preventDefault disabled avoids 300ms delay on mobile
+  b.addEventListener('touchstart', function(e) {
+    // Don't prevent default - let the click fire normally
+    // This handler just ensures the button responds on first tap
+  }, { passive: true });
+});
 
 // Initialize body heatmap on page load - using HeatmapSwitcher (orchestrates 2D / Muscles / Demo)
 async function initBodyHeatmap() {
@@ -5221,13 +5244,19 @@ function wireHeatmapModeToggle() {
   });
 }
 
-// Duration buttons
-document.querySelectorAll('.dur-btn').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.dur-btn').forEach(x => x.classList.remove('selected'));
-  b.classList.add('selected');
-  selectedDuration = b.dataset.val;
-  saveFormState();
-}));
+// Duration buttons - touch-friendly for mobile
+document.querySelectorAll('.dur-btn').forEach(b => {
+  const handler = () => {
+    document.querySelectorAll('.dur-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    selectedDuration = b.dataset.val;
+    saveFormState();
+  };
+  b.addEventListener('click', handler);
+  b.addEventListener('touchstart', function(e) {
+    // Passive listener for faster mobile response
+  }, { passive: true });
+});
 
 // Legacy body area buttons (10-button text grid). Same selection shape
 // as the heatmap so analyze() and the server prompt work unchanged:
