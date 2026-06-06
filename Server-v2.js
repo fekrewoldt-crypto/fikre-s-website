@@ -552,7 +552,8 @@ function normalizeAIResponse(raw) {
   }
 
   const r = { ...raw };
-  const symptomsArr = Array.isArray(r.symptoms) ? r.symptoms : [];
+  // symptoms: handle both string arrays and object arrays (e.g. {name, severity})
+  const symptomsArr = Array.isArray(r.symptoms) ? r.symptoms.map(s => typeof s === 'string' ? s : (s.name || s.symptom || String(s))) : [];
   const possibleConditions = Array.isArray(r.possible_conditions) ? r.possible_conditions
     : Array.isArray(r.possibleCauses) ? r.possibleCauses
     : Array.isArray(r.conditions) ? r.conditions
@@ -571,9 +572,11 @@ function normalizeAIResponse(raw) {
     if (typeof r.condition === 'string' && r.condition.trim()) {
       r.primaryCondition = r.condition.trim();
     } else if (possibleConditions.length > 0) {
-      r.primaryCondition = String(possibleConditions[0]).trim();
+      const first = possibleConditions[0];
+      r.primaryCondition = (typeof first === 'string' ? first : (first.name || first.condition || String(first))).trim();
     } else if (symptomsArr.length > 0) {
-      r.primaryCondition = 'Possible ' + String(symptomsArr[0]).trim();
+      const firstSymptom = symptomsArr[0];
+      r.primaryCondition = 'Possible ' + (typeof firstSymptom === 'string' ? firstSymptom : String(firstSymptom)).trim();
     } else {
       r.primaryCondition = 'Undetermined condition';
     }
@@ -643,7 +646,7 @@ function normalizeAIResponse(raw) {
 
   // nextSteps: prefer canonical, else recommended_actions
   if (!Array.isArray(r.nextSteps) || r.nextSteps.length === 0) {
-    r.nextSteps = recommendedActions.slice(0, 4);
+    r.nextSteps = recommendedActions.slice(0, 4).map(step => typeof step === 'string' ? step : String(step));
     if (r.nextSteps.length === 0) {
       r.nextSteps = [
         'Monitor your symptoms and note any changes',
@@ -652,6 +655,15 @@ function normalizeAIResponse(raw) {
         'Seek urgent care if symptoms worsen'
       ];
     }
+  } else {
+    r.nextSteps = r.nextSteps.map(step => {
+      if (typeof step === 'string') return step;
+      if (typeof step === 'object' && step !== null) {
+        // Try common property names for step text
+        return step.text || step.description || step.step || step.action || step.recommendation || step.title || step.name || step.advice || JSON.stringify(step).slice(0, 100);
+      }
+      return String(step);
+    });
   }
 
   // urgentSigns
@@ -663,10 +675,13 @@ function normalizeAIResponse(raw) {
 
   // alternatives: prefer canonical, else map possible_conditions[1..]
   if (!Array.isArray(r.alternatives) || r.alternatives.length === 0) {
-    const altsFromPC = possibleConditions.slice(1).map((name, i) => ({
-      name: String(name).trim(),
-      confidence: Math.max(15, r.confidence - 20 - i * 10)
-    }));
+    const altsFromPC = possibleConditions.slice(1).map((name, i) => {
+      const condName = typeof name === 'string' ? name : (name.name || name.condition || String(name));
+      return {
+        name: condName.trim(),
+        confidence: Math.max(15, r.confidence - 20 - i * 10)
+      };
+    });
     r.alternatives = altsFromPC.slice(0, 3);
     if (r.alternatives.length === 0) {
       r.alternatives = [
@@ -681,8 +696,9 @@ function normalizeAIResponse(raw) {
       if (typeof a === 'string') {
         return { name: a, confidence: Math.max(10, r.confidence - 15 - i * 10) };
       }
+      const condName = typeof a.name === 'string' ? a.name : (a.name?.name || a.condition || String(a.name || `Alternative ${i + 1}`));
       return {
-        name: a.name || `Alternative ${i + 1}`,
+        name: condName.trim(),
         confidence: Math.min(95, Math.max(10, Number(a.confidence) || Math.max(10, r.confidence - 15 - i * 10)))
       };
     });
@@ -1108,8 +1124,11 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
     }
   }
 
-  // Build aggregated prompt
-  let aggregatedPrompt = prompt;
+  // Build aggregated prompt - handle case where prompt is undefined but symptoms provided
+  let aggregatedPrompt = prompt || '';
+  if (symptoms && !aggregatedPrompt.includes('Patient description')) {
+    aggregatedPrompt += (aggregatedPrompt ? '\n' : '') + 'Patient description: "' + symptoms + '"';
+  }
   if (imageDescription) {
     aggregatedPrompt += '\n\nImage description: ' + imageDescription;
   }
@@ -1118,6 +1137,11 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   }
   if (req.body.timePeriod) {
     aggregatedPrompt += '\nTime period: ' + req.body.timePeriod;
+  }
+
+  // Ensure prompt has minimum content for AI models
+  if (!aggregatedPrompt.trim() && symptoms) {
+    aggregatedPrompt = 'Analyze these symptoms: ' + symptoms;
   }
 
   prompt = aggregatedPrompt;
