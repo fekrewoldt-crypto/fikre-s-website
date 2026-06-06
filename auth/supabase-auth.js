@@ -400,7 +400,7 @@ router.get('/oauth-callback', (req, res) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>Signing you in…</title>
   <style>
     body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, #e8f4ef, #d4edda); min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; color: #1a6b4a; }
@@ -482,7 +482,13 @@ router.get('/oauth-callback', (req, res) => {
 
         fetch('/auth/oauth-session', fetchOpts).then(function(r) {
           if (timeoutId) clearTimeout(timeoutId);
-          if (!r.ok) return r.json().then(function(b) { throw new Error(b.error || ('HTTP ' + r.status)); }).catch(function(e) { throw e; });
+          if (!r.ok) {
+            return r.text().then(function(text) {
+              var errData;
+              try { errData = JSON.parse(text); } catch (e) { errData = { error: text || ('HTTP ' + r.status) }; }
+              throw new Error(errData.error || ('HTTP ' + r.status));
+            });
+          }
           return r.json();
         }).then(function(data) {
           if (data && data.token) {
