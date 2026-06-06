@@ -19,7 +19,6 @@ const authRoutes = require('./auth/supabase-auth');
 const recordsDAO = require('./db/records-supabase');
 const auditDAO = require('./db/audit-supabase');
 const newsDAO = require('./db/news');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { OpenAI } = require('openai');
 const fs = require('fs');
 const path = require('path');
@@ -356,7 +355,6 @@ async function checkOllama() {
 checkOllama();
 
 // ===== AI Client Initialization =====
-const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const groq = process.env.GROQ_API_KEY ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' }) : null;
 const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({ apiKey: process.env.NVIDIA_API_KEY, baseURL: 'https://integrate.api.nvidia.com/v1' }) : null;
@@ -364,10 +362,9 @@ const nvidia = process.env.NVIDIA_API_KEY ? new OpenAI({ apiKey: process.env.NVI
 const { analyzeWithNvidiaVision } = require('./modules/nvidiaVisionClient.js');
 
 // ===== Model Configuration =====
-const MODEL_PRIORITY = ['groq', 'nvidia', 'gemini', 'ollama', 'demo'];
+const MODEL_PRIORITY = ['groq', 'nvidia', 'ollama', 'demo'];
 
 const MODEL_CAPABILITIES = {
-  gemini: { supportsImages: true },
   nvidia: { supportsImages: false },
   groq: { supportsImages: false },
   ollama: { supportsImages: false },
@@ -375,7 +372,6 @@ const MODEL_CAPABILITIES = {
 };
 
 const DAILY_LIMITS = {
-  gemini: 1500,
   nvidia: 10000,
   groq: 14400,
   demo: Infinity
@@ -383,7 +379,6 @@ const DAILY_LIMITS = {
 
 let rateLimits = {
   resetTime: getNextMidnight(),
-  gemini: 0,
   nvidia: 0,
   groq: 0,
   demo: 0
@@ -397,7 +392,7 @@ function getNextMidnight() {
 
 function loadRateLimits() {
   if (Date.now() > rateLimits.resetTime) {
-    rateLimits = { resetTime: getNextMidnight(), gemini: 0, groq: 0, demo: 0 };
+    rateLimits = { resetTime: getNextMidnight(), groq: 0, nvidia: 0, demo: 0 };
   }
   return rateLimits;
 }
@@ -409,7 +404,7 @@ function saveRateLimits(limits) {
 function isModelAvailable(model) {
   if (model === 'ollama') return ollamaAvailable;
   if (Date.now() > rateLimits.resetTime) {
-    rateLimits = { resetTime: getNextMidnight(), gemini: 0, groq: 0, demo: 0 };
+    rateLimits = { resetTime: getNextMidnight(), groq: 0, nvidia: 0, demo: 0 };
   }
   return rateLimits[model] < DAILY_LIMITS[model] || DAILY_LIMITS[model] === Infinity;
 }
@@ -791,48 +786,6 @@ async function chatWithOllama(prompt) {
   return data.response.trim();
 }
 
-// ===== Gemini (Primary) =====
-async function analyzeWithGemini(prompt, imageBase64, imageMimeType) {
-  if (!genAI) throw new Error('Gemini not configured');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Gemini Request:', {
-      model: 'gemini-2.0-flash',
-      hasImage: !!imageBase64,
-      promptLength: prompt?.length
-    });
-  }
-
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
-    ]
-  });
-
-  const parts = [{ text: prompt }];
-  if (imageBase64) parts.push({ inlineData: { mimeType: imageMimeType || 'image/jpeg', data: imageBase64 } });
-
-  try {
-    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
-    const responseText = result.response.text();
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Gemini Response:', { length: responseText.length, model: 'gemini-2.0-flash' });
-    }
-    return extractJSON(responseText);
-  } catch (error) {
-    console.error('Gemini Error Details:', {
-      message: error.message,
-      status: error.status,
-      details: error.cause
-    });
-    throw error;
-  }
-}
-
 // ===== OpenAI (Tertiary) =====
 async function analyzeWithOpenAI(prompt, imageBase64, imageMimeType) {
   if (!openai) throw new Error('OpenAI not configured');
@@ -1170,11 +1123,6 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
       const startTime = Date.now();
 
       switch (modelName) {
-        case 'gemini':
-          if (!process.env.GEMINI_API_KEY) continue;
-          result = await analyzeWithGemini(prompt, imageBase64, imageMimeType);
-          incrementModel('gemini');
-          break;
         case 'nvidia':
           if (!process.env.NVIDIA_API_KEY) continue;
           result = await analyzeWithNvidia(prompt);
@@ -1268,19 +1216,7 @@ app.post('/api/chat', aiLimiter, verifyToken, requireVerifiedEmail, async (req, 
   let reply = null;
   let modelUsed = null;
 
-  if (process.env.GEMINI_API_KEY && isModelAvailable('gemini')) {
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { temperature: 0.7, maxOutputTokens: 512 } });
-      const result = await model.generateContent(prompt);
-      incrementModel('gemini');
-      reply = result.response.text().trim();
-      modelUsed = 'gemini';
-    } catch (error) {
-      console.log('Gemini chat failed:', error.message);
-      if (error.message && (error.message.includes('429') || error.message.includes('quota'))) exhaustModel('gemini');
-    }
-  }
-
+  // Groq is now the primary model for chat (Gemini removed)
   if (reply === null && process.env.GROQ_API_KEY && isModelAvailable('groq')) {
     try {
       const response = await groq.chat.completions.create({
@@ -1438,16 +1374,6 @@ Return ONLY valid JSON in this exact format:
       }
     }
 
-    if ((!news || news.length === 0) && genAI && isModelAvailable('gemini')) {
-      try {
-        const geminiNews = await analyzeWithGemini(newsPrompt);
-        news = Array.isArray(geminiNews) ? geminiNews : [geminiNews];
-        incrementModel('gemini');
-      } catch (e) {
-        console.log('Gemini news generation failed:', e.message);
-      }
-    }
-
     if (!news || news.length === 0) {
       news = [
         {
@@ -1492,7 +1418,6 @@ Return ONLY valid JSON in this exact format:
 
     const dbSource = nvidia && isModelAvailable('nvidia') ? 'nvidia'
       : groq && isModelAvailable('groq') ? 'groq'
-      : genAI && isModelAvailable('gemini') ? 'gemini'
       : 'static';
     res.json({ news, cached: false, source: dbSource });
   } catch (error) {
@@ -1515,25 +1440,18 @@ app.get('/api/health', (req, res) => {
 app.get('/api/status', (req, res) => {
   res.json({
     models: {
-      gemini: {
-        available: isModelAvailable('gemini'),
-        usedToday: rateLimits.gemini,
-        dailyLimit: DAILY_LIMITS.gemini,
-        hasKey: !!process.env.GEMINI_API_KEY,
-        supportsImages: true
+      groq: {
+        available: isModelAvailable('groq'),
+        usedToday: rateLimits.groq,
+        dailyLimit: DAILY_LIMITS.groq,
+        hasKey: !!process.env.GROQ_API_KEY,
+        supportsImages: false
       },
       nvidia: {
         available: isModelAvailable('nvidia'),
         usedToday: rateLimits.nvidia,
         dailyLimit: DAILY_LIMITS.nvidia,
         hasKey: !!process.env.NVIDIA_API_KEY,
-        supportsImages: false
-      },
-      groq: {
-        available: isModelAvailable('groq'),
-        usedToday: rateLimits.groq,
-        dailyLimit: DAILY_LIMITS.groq,
-        hasKey: !!process.env.GROQ_API_KEY,
         supportsImages: false
       },
       ollama: {
@@ -1545,7 +1463,7 @@ app.get('/api/status', (req, res) => {
       }
     },
     rateLimitResetsAt: new Date(rateLimits.resetTime).toISOString(),
-    demoMode: !process.env.GEMINI_API_KEY && !ollamaAvailable && !process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY
+    demoMode: !ollamaAvailable && !process.env.GROQ_API_KEY && !process.env.NVIDIA_API_KEY
   });
 });
 
@@ -1599,7 +1517,6 @@ app.get('/', (req, res) => {
     console.log('📊 Model priority:', MODEL_PRIORITY.join(' → '));
     console.log('');
     console.log('API Keys configured:');
-    console.log('  Gemini:', process.env.GEMINI_API_KEY ? 'yes' : 'no');
     console.log('  Groq:', process.env.GROQ_API_KEY ? 'yes' : 'no');
     console.log('  NVIDIA text:', process.env.NVIDIA_API_KEY ? 'yes' : 'no');
     console.log('  NVIDIA vision (images):', process.env.VISION_API_KEY ? 'yes' : 'no');
