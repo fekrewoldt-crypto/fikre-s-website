@@ -3725,7 +3725,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       <button class="auth-tab active" id="tab-login" onclick="toggleAuthMode('login')">Login</button>
       <button class="auth-tab" id="tab-register" onclick="toggleAuthMode('register')">Register</button>
     </div>
-    <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+    <form id="auth-form" onsubmit="handleAuthSubmit(event)" novalidate>
       <div class="auth-form-group">
         <label class="auth-form-label" for="auth-email">Email</label>
         <input type="email" id="auth-email" class="auth-form-input" placeholder="you@example.com" required autocomplete="email">
@@ -4204,7 +4204,7 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
       Keep track of your medications and never miss a dose.
     </p>
 
-    <form id="reminder-form">
+    <form id="reminder-form" novalidate>
       <input type="hidden" id="reminder-id" value="">
 
       <div class="form-group">
