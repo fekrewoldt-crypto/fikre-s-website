@@ -304,9 +304,19 @@ const responseCache = new Map();
 const MAX_CACHE_SIZE = 500;
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-function getCacheKey(symptoms, bodyArea) {
+function getCacheKey(symptoms, bodyArea, lang, bodyRegions) {
   const crypto = require('crypto');
-  return crypto.createHash('md5').update(`${symptoms}:${bodyArea}`).digest('hex');
+  // bodyRegions is part of the key because the heatmap path often leaves bodyArea
+  // empty, so without it two users with identical symptom text but different
+  // clicked regions would share a cached diagnosis (privacy leak). Name is
+  // omitted to stay stable across i18n.
+  const regionKey = (Array.isArray(bodyRegions) ? bodyRegions : [])
+    .filter(r => r && typeof r === 'object')
+    .map(r => ({ area: r.area, intensity: r.intensity }))
+    .sort((a, b) => String(a.area || '').localeCompare(String(b.area || '')))
+    .map(r => JSON.stringify(r))
+    .join('|');
+  return crypto.createHash('md5').update(`${symptoms}:${bodyArea}:${lang || 'en'}:${regionKey}`).digest('hex');
 }
 
 function getCached(key) {
@@ -512,28 +522,62 @@ function getMockDiagnosis(symptoms, bodyArea) {
 
 function extractJSON(raw) {
   raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1) {
-    console.error('No JSON found in response:', raw.slice(0, 200));
-    throw new Error('No JSON found in AI response');
-  }
-  raw = raw.slice(start, end + 1);
   try {
     return JSON.parse(raw);
-  } catch (e) {
-    const fixed = raw
+  } catch (_) { /* fall through to balanced-brace walk */ }
+
+  // A naive raw.indexOf('{')..raw.lastIndexOf('}') slice concatenates prose
+  // braces (e.g. "see {below} for details: {<real json>}") into the parsed
+  // string. Walk the source counting braces while respecting string literals
+  // and return the first balanced object that parses as valid JSON.
+  const candidates = findBalancedObjects(raw);
+  const tryParse = (s) => {
+    try { return [JSON.parse(s), null]; } catch (e) { /* try repair */ }
+    const fixed = s
       .replace(/,\s*([}\]])/g, '$1')
       .replace(/[\x00-\x1F\x7F]/g, ' ')
       .replace(/'/g, '"');
-    try {
-      return JSON.parse(fixed);
-    } catch {
-      console.error('JSON parse failed:', e.message);
-      console.error('Raw response:', raw.slice(0, 500));
-      throw new Error('AI returned malformed JSON. Please try again.');
+    try { return [JSON.parse(fixed), null]; } catch (e) { return [null, e]; }
+  };
+  for (const c of candidates) {
+    const [obj] = tryParse(c);
+    if (obj) return obj;
+  }
+
+  if (candidates.length === 0) {
+    console.error('No JSON found in response:', raw.slice(0, 200));
+    throw new Error('No JSON found in AI response');
+  }
+  console.error('JSON parse failed for all candidates');
+  console.error('Raw response:', raw.slice(0, 500));
+  throw new Error('AI returned malformed JSON. Please try again.');
+}
+
+function findBalancedObjects(s) {
+  const out = [];
+  let depth = 0;
+  let start = -1;
+  let inStr = false;
+  let escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) {
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === '"') { inStr = false; }
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) { out.push(s.slice(start, i + 1)); start = -1; }
+      if (depth < 0) { depth = 0; start = -1; }
     }
   }
+  return out;
 }
 
 // ===== Response Normalizer =====
@@ -545,6 +589,22 @@ function normalizeAIResponse(raw) {
   if (!raw || typeof raw !== 'object') {
     return getMockDiagnosis('', '');
   }
+
+  // Coerce a field that may arrive as a plain string, an object like
+  // {level/value/severity: "high"}, an array (take first), or null/undefined.
+  // Returning a string lets the existing toLowerCase/allow-list check work
+  // instead of stringifying an object to "[object object]" and silently
+  // falling through to the keyword-inference branch (which defaults to low).
+  const coerceScalar = (v) => {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    if (Array.isArray(v)) return v.length ? coerceScalar(v[0]) : '';
+    if (typeof v === 'object') {
+      const cand = v.level || v.value || v.severity || v.label || v.name;
+      return typeof cand === 'string' ? cand : '';
+    }
+    return String(v);
+  };
 
   const r = { ...raw };
   // symptoms: handle both string arrays and object arrays (e.g. {name, severity})
@@ -583,11 +643,11 @@ function normalizeAIResponse(raw) {
   r.confidence = Math.min(92, Math.max(55, Math.round(conf)));
 
   // severity: low | medium | high
-  const sev = String(r.severity || '').toLowerCase();
+  const sev = coerceScalar(r.severity).toLowerCase();
   if (['low', 'medium', 'high'].includes(sev)) {
     r.severity = sev;
-  } else if (r.urgency) {
-    const u = String(r.urgency).toLowerCase();
+  } else if (r.urgency != null && coerceScalar(r.urgency)) {
+    const u = coerceScalar(r.urgency).toLowerCase();
     if (u.includes('high') || u.includes('urgent') || u.includes('severe')) r.severity = 'high';
     else if (u.includes('moderate') || u.includes('medium')) r.severity = 'medium';
     else r.severity = 'low';
@@ -811,6 +871,8 @@ async function analyzeWithOpenAI(prompt, imageBase64, imageMimeType) {
 }
 
 // ===== Groq (Secondary) =====
+const AI_PROVIDER_TIMEOUT_MS = 4000;
+
 async function analyzeWithGroq(prompt) {
   if (!groq) throw new Error('Groq not configured');
   if (process.env.NODE_ENV !== 'production') {
@@ -820,6 +882,8 @@ async function analyzeWithGroq(prompt) {
     });
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_PROVIDER_TIMEOUT_MS);
   try {
     const response = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -829,7 +893,7 @@ async function analyzeWithGroq(prompt) {
         { role: 'system', content: 'You are a medical AI assistant. Respond ONLY with valid JSON. No markdown formatting, no backticks, no explanations.' },
         { role: 'user', content: prompt }
       ]
-    });
+    }, { signal: controller.signal });
 
     const responseText = response.choices[0].message.content;
     if (process.env.NODE_ENV !== 'production') {
@@ -837,12 +901,18 @@ async function analyzeWithGroq(prompt) {
     }
     return extractJSON(responseText);
   } catch (error) {
+    if (controller.signal.aborted) {
+      console.error('Groq timeout ' + AI_PROVIDER_TIMEOUT_MS + 'ms');
+      throw new Error('Groq timeout after ' + AI_PROVIDER_TIMEOUT_MS + 'ms');
+    }
     console.error('Groq Error Details:', {
       message: error.message,
       status: error.status,
       details: error.cause
     });
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -856,6 +926,8 @@ async function analyzeWithNvidia(prompt) {
     });
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_PROVIDER_TIMEOUT_MS);
   try {
     const response = await nvidia.chat.completions.create({
       model: 'openai/gpt-oss-120b',
@@ -865,7 +937,7 @@ async function analyzeWithNvidia(prompt) {
         { role: 'system', content: 'You are a medical AI assistant. Respond ONLY with valid JSON. No markdown formatting, no backticks, no explanations.' },
         { role: 'user', content: prompt }
       ]
-    });
+    }, { signal: controller.signal });
 
     const responseText = response.choices[0].message.content;
     if (process.env.NODE_ENV !== 'production') {
@@ -873,12 +945,18 @@ async function analyzeWithNvidia(prompt) {
     }
     return extractJSON(responseText);
   } catch (error) {
+    if (controller.signal.aborted) {
+      console.error('NVIDIA timeout ' + AI_PROVIDER_TIMEOUT_MS + 'ms');
+      throw new Error('NVIDIA timeout after ' + AI_PROVIDER_TIMEOUT_MS + 'ms');
+    }
     console.error('NVIDIA Error Details:', {
       message: error.message,
       status: error.status,
       details: error.cause
     });
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -998,7 +1076,7 @@ async function translateResult(result, lang) {
 
 // POST /api/analyze
 app.post('/api/analyze', aiLimiter, async (req, res) => {
-  let { prompt, imageBase64, imageMimeType, symptoms, bodyArea, lang } = req.body;
+  let { prompt, imageBase64, imageMimeType, symptoms, bodyArea, bodyHeatmapData, bodyRegions, lang } = req.body;
 
   // Total request body cap. Vercel rejects at the edge with plain-text
   // 413 FUNCTION_PAYLOAD_TOO_LARGE — but by then the user sees an
@@ -1028,7 +1106,7 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
 
   // Check cache first (skip for images)
   if (!imageBase64 && symptoms) {
-    const cacheKey = getCacheKey(symptoms, bodyArea);
+    const cacheKey = getCacheKey(symptoms, bodyArea, lang, bodyRegions);
     const cached = getCached(cacheKey);
     if (cached) {
       if (process.env.NODE_ENV !== 'production') {
@@ -1057,7 +1135,7 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
       recommendedFacilities
     });
     if (!imageBase64 && symptoms) {
-      setCached(getCacheKey(symptoms, bodyArea), response);
+      setCached(getCacheKey(symptoms, bodyArea, lang, bodyRegions), response);
     }
     const translated = await translateResult(response, lang);
     return res.json(translated);
@@ -1078,7 +1156,11 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   }
 
   // Build aggregated prompt - handle case where prompt is undefined but symptoms provided
-  let aggregatedPrompt = prompt || '';
+  // Strip any system-role / instruction prefix the frontend may have prepended so the
+  // server's own system prompt is the authoritative one and there is no double-wrap.
+  let rawPrompt = prompt || '';
+  rawPrompt = rawPrompt.replace(/^You are\s+[^.\n]+[.\n]*/i, '').replace(/^Medical AI[^\n]*\n*/i, '').replace(/^I\'m an AI[^\n]*\n*/i, '').trim();
+  let aggregatedPrompt = rawPrompt;
   if (symptoms && !aggregatedPrompt.includes('Patient description')) {
     aggregatedPrompt += (aggregatedPrompt ? '\n' : '') + 'Patient description: "' + symptoms + '"';
   }
@@ -1091,6 +1173,12 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   if (req.body.timePeriod) {
     aggregatedPrompt += '\nTime period: ' + req.body.timePeriod;
   }
+  if (bodyHeatmapData && typeof bodyHeatmapData === 'object') {
+    aggregatedPrompt += '\nHeatmap data: ' + JSON.stringify(bodyHeatmapData);
+  }
+  if (bodyRegions && Array.isArray(bodyRegions) && bodyRegions.length > 0) {
+    aggregatedPrompt += '\nClicked body regions: ' + bodyRegions.join(', ');
+  }
 
   // Ensure prompt has minimum content for AI models
   if (!aggregatedPrompt.trim() && symptoms) {
@@ -1098,7 +1186,8 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   }
 
   prompt = aggregatedPrompt;
-  imageBase64 = null;
+  // Do NOT nullify imageBase64. The image description is embedded above, but we
+  // keep the raw data so image-capable models can also call their vision endpoints.
 
   // Text-only / symptom path
   for (const modelName of MODEL_PRIORITY) {
@@ -1161,8 +1250,10 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
         recommendedFacilities: recommendedFacilities
       });
 
-      if (!imageBase64 && symptoms) {
-        setCached(getCacheKey(symptoms, bodyArea), response);
+      // Skip caching demo fallbacks so a brief AI outage doesn't poison the
+      // cache with mock data for the next hour.
+      if (!imageBase64 && symptoms && !response.demoMode) {
+        setCached(getCacheKey(symptoms, bodyArea, lang, bodyRegions), response);
       }
 
       const translated = await translateResult(response, lang);
@@ -1527,9 +1618,23 @@ app.get('/', (req, res) => {
     });
   }
 
+  // Global error handler catches unhandled promise rejections and returns
+  // clean JSON instead of raw stack traces or unhelpful 500s.
+  app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    const message = process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
+      : err.message;
+    res.status(err.status || 500).json({ error: message });
+  });
+
+  app.__normalizeAIResponse = normalizeAIResponse;
+  app.__extractJSON = extractJSON;
   return app;
 }
 
 const app = createApp();
 module.exports = app;
 module.exports.createApp = createApp;
+module.exports.normalizeAIResponse = app.__normalizeAIResponse;
+module.exports.extractJSON = app.__extractJSON;

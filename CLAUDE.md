@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm install              # install dependencies
 npm start                # run server on http://localhost:3000
 npm run dev              # alias for start
-npm test                 # run all Jest tests (12 suites, 284 tests)
+npm test                 # run all Jest tests (13 suites, 291 tests)
 npm test -- tests/auth-integration.test.js  # single test file
 npm test -- -t "413"     # single test by name pattern
 npm run vercel-build     # no-op for Vercel deploy
@@ -27,7 +27,7 @@ Browser (IIndex.html, ~9200 lines of inline CSS+JS)
   ↓
 Vercel edge (CDN) → Express function (Server-v2.js, ~1584 lines)
   ↓
-Multi-model AI fallback chain: Groq → NVIDIA → Gemini → Ollama → demo mode
+Multi-model AI fallback chain: Groq → NVIDIA → Ollama → demo mode
   ↓
 Supabase (PostgreSQL + Auth + RLS)
   ├── auth.users   — managed by Supabase Auth
@@ -63,7 +63,7 @@ Supabase (PostgreSQL + Auth + RLS)
 - `auth/supabase-auth.js` — `/register`, `/login`, `/logout`, `/refresh`, `/forgot-password`, `/resend-verification`, `/verify-email`, `/verify-status`, `/google`, `/oauth-callback`, `/oauth-session`, `/callback` (legacy PKCE redirect)
 - `timeline.js` (root) — protected, JWT-required
 - `api/heatmap.js`, `api/profile.js`, `api/appointments.js`, `api/doctors.js`, `api/medicine-reminders.js` — each protected with `verifyToken` + `requireVerifiedEmail`
-- `db/` — Supabase DAOs: `records-supabase.js` (AES-256-GCM encrypted), `audit-supabase.js`, `profiles.js`, `appointments.js`, `medicine-reminders.js`, `news.js`. `db/supabase.js` is the service-role client singleton. `db/migrations/` holds the SQL schema history; `db/migrations.sql.bak` is a one-off backup.
+- `db/` — Supabase DAOs: `records-supabase.js` (AES-256-GCM encrypted), `audit-supabase.js`, `profiles.js`, `appointments.js`, `medicine-reminders.js`, `news.js`. `db/supabase.js` is the service-role client singleton. `db/migrations/` holds the SQL schema history.
 
 **Other API endpoints (defined inline in `Server-v2.js`):**
 - `POST /api/analyze` — `aiLimiter` only (no JWT). Primary AI diagnostic endpoint.
@@ -76,13 +76,13 @@ Supabase (PostgreSQL + Auth + RLS)
 **AI fallback** (`/api/analyze`): tries models in `MODEL_PRIORITY` order. If a model fails 3 times in a row it falls through to the next. Cached by symptom-hash for 1 hour (`responseCache` Map). `extractJSON()` parses AI responses and tolerates schema drift between providers; `normalizeAIResponse()` ensures the client always gets the same shape.
 
 **Supabase Auth flow** (managed via `@supabase/supabase-js`):
-1. `POST /auth/register` → `supabase.auth.signUp()` with `data: { role }` in user metadata. First user gets `admin` role.
+1. `POST /auth/register` → `supabase.auth.signUp()`. Role is stored server-side in `user_profiles` table (not in `user_metadata` to prevent privilege escalation). First user gets `admin` role.
 2. `POST /auth/login` → `supabase.auth.signInWithPassword()` → returns `{ token: accessToken }` + sets HttpOnly refresh cookie.
 3. Frontend stores `authToken` in JS memory only (never localStorage). All API calls use `Authorization: Bearer <token>`.
 4. `POST /auth/refresh` → `supabase.auth.refreshSession({ refresh_token })` → new access token.
 5. Google OAuth via `POST /auth/google` → returns Supabase OAuth URL → user bounces through Google → lands on `/auth/oauth-callback` (HTML bridge page) → POSTs session to `/auth/oauth-session` → redirected to `/?google_login=success`.
 
-JWT verified server-side via `supabase.auth.getUser(token)` in `auth/middleware-supabase.js`.
+JWT verified server-side via `supabase.auth.getUser(token)` in `auth/middleware-supabase.js`. Role is read from `user_profiles` table (not `user_metadata`) to prevent escalation via `auth.updateUser()`.
 
 ### Frontend (Vanilla JS + Glassmorphism, no build step)
 
@@ -134,13 +134,14 @@ These are real bugs that only show up on the deployed URL, not under `node Serve
 # Supabase (required)
 SUPABASE_URL=                  # e.g., https://iaylskrenjvcxjdywscv.supabase.co
 SUPABASE_SERVICE_KEY=          # service-role key (server-side only)
+SUPABASE_ANON_KEY=             # REQUIRED for Google OAuth (signInWithOAuth). The service key is NOT accepted. Without this, /auth/google returns 500 (code=MISSING_SUPABASE_ANON_KEY).
 
 # Encryption
 DATA_ENC_KEY=                  # 64 hex chars (32 bytes) for AES-256-GCM record encryption
 
 # AI models (at least one needed)
-GEMINI_API_KEY=                # primary (gemini-2.0-flash)
-GROQ_API_KEY=                  # secondary (llama-3.3-70b-versatile)
+# Model priority: Groq (primary) → NVIDIA (text + vision) → Ollama (local) → Demo (fallback)
+GROQ_API_KEY=                  # primary (llama-3.3-70b-versatile)
 NVIDIA_API_KEY=                # text + vision
 VISION_API_KEY=                # alt NVIDIA vision key (optional)
 
@@ -177,13 +178,14 @@ PHI (Personal Health Information) target is Ethiopian Data Protection Proclamati
 
 ## Testing
 
-12 Jest suites, 284 tests, ~7s run time:
+13 Jest suites, 291 tests, ~5s run time:
 - `auth-integration.test.js`, `auth-middleware.test.js`, `auth-rate-limit.test.js`, `auth-google.test.js` — full auth flow incl. Google OAuth
 - `api-analyze.test.js` — analyze endpoint + 413 body cap
 - `api-heatmap.test.js`, `encryption.test.js`, `records.test.js`, `users.test.js` — data layer
 - `route-mounts.test.js` — enforces that route mounts are non-duplicate and that `/auth` has `apiLimiter` before `authRoutes`
 - `frontend-urls.test.js` — no `localhost:3000` references in IIndex.html
 - `static-files.test.js` — whitelist + path-traversal protection
+- `frontend-mobile-fixes.test.js` — mobile responsiveness
 
 Each test file uses `createApp()` to get a fresh app with isolated rate-limiter state. `tests/setup.js` sets the test env vars and exports AES constants.
 
@@ -195,6 +197,19 @@ Each test file uses `createApp()` to get a fresh app with isolated rate-limiter 
 - `db/index.js`, `db/records.js`, `db/audit.js`, `db/users.js` — DELETED (SQLite era, replaced by Supabase DAOs).
 - `data/` — DELETED (SQLite files).
 
-## Known issues
+## Security fixes (2026-06-07)
 
-None currently blocking. The two Vercel-only bugs (static 404s and analyze 413) and the Supabase OAuth localhost trap are all documented above and have tests guarding against regression.
+**P0 fixes applied:**
+1. Added `timeline.js` to `vercel.json` `includeFiles` — was 404ing in production
+2. Added `verifyToken` to `/api/appointments/doctors` — was unauthenticated
+3. Added global error handler in `Server-v2.js` — unhandled errors now return clean JSON
+4. Role moved from `user_metadata` (client-writable) to `user_profiles` table (server-controlled)
+   - Run `db/migrations/003_user_profiles_role.sql` in Supabase SQL Editor to migrate existing users
+5. `.env.example` updated — Gemini removed from model priority (Groq → NVIDIA → Ollama → demo)
+
+**The role migration fix:**
+Prior to 2026-06-07, role was stored in `user.user_metadata.role`, which a malicious user could change via `supabase.auth.updateUser()` to escalate to admin. The fix:
+- New `user_profiles` table with `role` column
+- Trigger `prevent_role_update()` blocks authenticated users from updating their own role
+- `auth/middleware-supabase.js` reads role from `user_profiles` via service client
+- `auth/supabase-auth.js` creates `user_profiles` row at registration with server-controlled role

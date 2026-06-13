@@ -126,7 +126,9 @@ router.post('/register', registerLimiter, async (req, res) => {
   }
 
   try {
-    // Determine role: first user gets admin, others get student
+    // Determine role: first user gets admin, others get student.
+    // Role is stored server-side in user_profiles (not in user_metadata) to prevent
+    // privilege escalation via client-side updateUser().
     const role = await determineInitialRole();
 
     // In test mode, bypass Supabase to avoid rate limits
@@ -141,7 +143,8 @@ router.post('/register', registerLimiter, async (req, res) => {
       email,
       password,
       options: {
-        data: { role }, // store role in user_metadata
+        // Role is NOT stored in user_metadata — it is set below in user_profiles.
+        // Storing role in user_metadata would allow updateUser() to escalate to admin.
         emailConfirm: true, // require email verification
       },
     });
@@ -167,6 +170,23 @@ router.post('/register', registerLimiter, async (req, res) => {
     // The user ID is data.user.id
     const userId = data.user.id;
     const userEmail = data.user.email;
+
+    // Create user_profiles row with server-controlled role.
+    // This uses the service-role Supabase client so it bypasses RLS.
+    // The backpopulate migration handles existing users created before this change.
+    try {
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({ id: userId, role: role, email: userEmail });
+      if (profileError && profileError.code !== '23505') {
+        // 23505 = unique constraint violation (row exists, probably from backpopulate)
+        // Other errors are logged but don't block registration
+        console.warn('Could not create user_profiles row:', profileError.message);
+      }
+    } catch (err) {
+      // Non-fatal: the user is registered, the profile row may be backfilled later
+      console.warn('user_profiles insert failed (non-fatal):', err.message);
+    }
 
     // Check if email confirmation is required
     // If data.session is null, user needs to confirm email
@@ -216,8 +236,21 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Supabase returns 400 for wrong credentials
-      return res.status(401).json({ error: 'Invalid email or password' });
+      // Branch on Supabase error.message so unverified-email users get a clear
+      // signal (403 + EMAIL_NOT_VERIFIED) and stop chasing the password reset path.
+      // Code matches auth/middleware-supabase.js so the frontend can share one handler.
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('not confirmed')) {
+        return res.status(403).json({
+          error: 'Please verify your email before signing in.',
+          code: 'EMAIL_NOT_VERIFIED'
+        });
+      }
+      if (msg.includes('invalid login credentials')) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+      console.error('Login Supabase error:', error);
+      return res.status(500).json({ error: 'Sign-in is temporarily unavailable. Please try again in a moment.' });
     }
     const user = data.user;
     // Create a short‑lived access token (15 min) – we reuse the JWT that Supabase issues
@@ -364,11 +397,23 @@ router.get('/google', async (req, res) => {
     console.log('[oauth/google] callback URL →', callbackUrl);
   }
 
+  // SUPABASE_ANON_KEY is required for client-side OAuth. The service-role
+  // key is rejected by Supabase for signInWithOAuth, so falling back to it
+  // silently produced a 500 in production. Fail fast with a clear log line
+  // so the missing env var is obvious in Vercel logs.
+  if (!process.env.SUPABASE_ANON_KEY) {
+    console.error('[oauth/google] MISSING_SUPABASE_ANON_KEY: set SUPABASE_ANON_KEY in the deployment environment. The service-role key cannot be used for signInWithOAuth.');
+    return res.status(500).json({
+      error: 'Sign-in is temporarily unavailable. Please use email/password.',
+      code: 'MISSING_SUPABASE_ANON_KEY'
+    });
+  }
+
   try {
     const { createClient } = require('@supabase/supabase-js');
     const anonClient = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY
+      process.env.SUPABASE_ANON_KEY
     );
     const { data, error } = await anonClient.auth.signInWithOAuth({
       provider: 'google',
@@ -553,6 +598,8 @@ router.post('/oauth-session', async (req, res) => {
     return res.json({ token: access_token, email: 'test-google@example.com' });
   }
 
+  // Declare user outside try so it's accessible after
+  let user;
   try {
     // Verify the access token by calling getUser; this also fetches the
     // canonical user object so we can record the audit entry and return
@@ -562,7 +609,7 @@ router.post('/oauth-session', async (req, res) => {
       console.error('OAuth session verify error:', error?.message || 'no user');
       return res.status(401).json({ error: 'Invalid or expired session' });
     }
-    const user = data.user;
+    user = data.user;
     if (refresh_token) {
       res.cookie('refreshToken', refresh_token, {
         httpOnly: true,
@@ -582,6 +629,21 @@ router.post('/oauth-session', async (req, res) => {
     // Log but do not block — audit is non-critical for auth flow
     console.error('Audit log failed (non-fatal):', auditErr.message);
   }
+
+  // Create user_profiles row for OAuth users (not created at registration like email/password users)
+  try {
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({ id: user.id, role: 'student', email: user.email });
+    if (profileError && profileError.code !== '23505') {
+      // 23505 = unique constraint violation (row already exists — e.g., manual backfill)
+      console.warn('Could not create user_profiles row for OAuth user:', profileError.message);
+    }
+  } catch (err) {
+    // Non-fatal: the user is authenticated, profile may be backfilled later
+    console.warn('user_profiles insert failed for OAuth user (non-fatal):', err.message);
+  }
+
   return res.json({ token: access_token, email: user.email });
 });
 

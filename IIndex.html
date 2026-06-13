@@ -4439,6 +4439,17 @@ const CHAT_URL   = '/api/chat';
 // Demo Mode State
 let demoMode = false;
 
+// In-flight guards: prevent double-tap on Analyze / Chat Send from firing
+// duplicate requests (and wasting AI quota). Cleared in a finally block.
+let analyzeInFlight = false;
+let chatInFlight = false;
+
+// /api/status response cache. The status probe used to run before every
+// analyze, adding 3-5s on Vercel cold starts. Cache it for 60s instead.
+let apiStatusCache = null;
+let apiStatusCacheAt = 0;
+const API_STATUS_TTL_MS = 60000;
+
 // Demo Mode Cases - Ethiopian health context
 const DEMO_CASES = {
   malaria: {
@@ -4754,53 +4765,23 @@ async function loadHospitalData() {
 
 // Fallback hospital data if JSON load fails
 function getFallbackHospitalData() {
-  return [
-    {
-      name: "University of Gondar Comprehensive Specialized Hospital",
-      type: "Hospital",
-      address: "Maraki Street, Near Atse Tewodros Square, Gondar",
-      phone: "+251 58 114 1232",
-      hours: "24/7",
-      specialties: "Emergency, Surgery, Internal Medicine, Pediatrics",
-      note: "Largest referral hospital in the region"
-    },
-    {
-      name: "Felege Hiwot Referral Hospital",
-      type: "Hospital",
-      address: "City Center, Gondar",
-      phone: "+251 581 114 000",
-      hours: "24/7",
-      specialties: "General Medicine, Maternity, Lab, Surgery",
-      note: "Well-equipped emergency department"
-    },
-    {
-      name: "Azezo Hospital",
-      type: "Hospital",
-      address: "Azezo area, ~10km from Gondar",
-      phone: "+251 581 111 111",
-      hours: "24/7",
-      specialties: "Emergency, Surgery, General Medicine",
-      note: "Secondary referral center"
-    },
-    {
-      name: "St. Mary's Catholic Hospital",
-      type: "Hospital",
-      address: "Near Kidus Giorgis Church, Gondar",
-      phone: "+251 581 141 292",
-      hours: "24/7",
-      specialties: "General Medicine, Surgery, Maternity",
-      note: "Faith-based hospital with good reputation"
-    },
-    {
-      name: "Ibex Hospital",
-      type: "Hospital",
-      address: "Yohannis Church area, Gondar",
-      phone: "+251 58 111 8273",
-      hours: "24/7",
-      specialties: "Emergency, General Medicine, Surgery",
-      note: "Private hospital with modern facilities"
-    }
-  ];
+  // Derive fallback data from the canonical SOS_HOSPITALS source
+  // to avoid maintaining two copies of the same hospital data.
+  if (typeof SOS_HOSPITALS !== 'undefined') {
+    return SOS_HOSPITALS.map(h => ({
+      name: h.name,
+      type: h.type.charAt(0).toUpperCase() + h.type.slice(1),
+      address: h.address,
+      phone: h.phone,
+      hours: h.hours,
+      specialties: (h.services || []).slice(0, 4).join(', '),
+      note: h.note || '',
+      verified: h.verified
+    }));
+  }
+  // Should not reach here if script order is correct,
+  // but keeps the function safe if called before SOS_HOSPITALS loads.
+  return [];
 }
 
 // Render hospitals in modal
@@ -5031,7 +5012,21 @@ function processFile(f) {
         saveFormState();
       });
     };
+    // Browsers other than Safari cannot decode HEIC/HEIF from iPhone uploads —
+    // img.onload never fires and the user gets no feedback. Catch the decode
+    // failure and tell them how to switch their iPhone camera format.
+    img.onerror = () => {
+      showToast('This image format is not supported. iPhone users: Settings > Camera > Formats > Most Compatible.', 'warning', 6000);
+      imageBase64 = null;
+      const preview = document.getElementById('preview-container');
+      if (preview) preview.style.display = 'none';
+      if (fileInput) fileInput.value = '';
+    };
     img.src = ev.target.result;
+  };
+  r.onerror = () => {
+    showToast('Could not read that file. Please try a different image.', 'error');
+    imageBase64 = null;
   };
   r.readAsDataURL(f);
 }
@@ -5154,7 +5149,6 @@ async function initBodyHeatmap() {
     showToast('Body heatmap loaded successfully', 'success', 2000);
 
   } catch (error) {
-    console.error('initBodyHeatmap failed:', error);
     // Silent fallback: switch to legacy body grid. On slow networks the
     // heatmap modules can take a few seconds to download, and showing an
     // error toast here just frustrates users — the legacy grid works fine.
@@ -5237,7 +5231,7 @@ function wireHeatmapModeToggle() {
           await window.mediscanBodyHeatmap.setMode(mode);
         }
       } catch (err) {
-        console.error('Mode switch failed:', err);
+        // Mode switch failure is non-critical; user can retry
         showToast('Failed to switch heatmap mode', 'error', 2500);
       }
     });
@@ -5359,8 +5353,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function analyze() {
+  if (analyzeInFlight) return;
+  const analyzeBtn = document.getElementById('analyze-btn');
   const symptoms = document.getElementById('symptoms-text').value.trim();
   if (!symptoms && !imageBase64) { showToast('Please upload a photo or describe your symptoms first.', 'info'); return; }
+
+  analyzeInFlight = true;
+  if (analyzeBtn) analyzeBtn.disabled = true;
+  try {
 
   document.getElementById('form-section').style.display = 'none';
   document.getElementById('results').style.display = 'none';
@@ -5395,15 +5395,29 @@ async function analyze() {
   }
 
   // Normal AI analysis (skip API status check in demo mode)
+  // Cache /api/status response for API_STATUS_TTL_MS — without this every
+  // analyze re-probed the status endpoint and added 3-5s on a Vercel cold
+  // start. Any fetch error falls through to a neutral "Processing..." label;
+  // status is never blocking.
   try {
-    const statusRes = await fetch('/api/status');
-    const status = await statusRes.json();
+    let status = null;
+    const fresh = apiStatusCache && (Date.now() - apiStatusCacheAt) < API_STATUS_TTL_MS;
+    if (fresh) {
+      status = apiStatusCache;
+    } else {
+      const statusRes = await fetch('/api/status');
+      status = await statusRes.json();
+      apiStatusCache = status;
+      apiStatusCacheAt = Date.now();
+    }
     let modelName = 'AI';
-    if (status.models.gemini.available) modelName = 'Gemini AI';
-    else if (status.models.ollama.available) modelName = 'Ollama AI (local)';
-    else if (status.models.claude.available) modelName = 'Claude AI';
-    else if (status.models.openai.available) modelName = 'OpenAI';
-    else modelName = 'Demo mode';
+    if (status && status.models) {
+      if (status.models.gemini && status.models.gemini.available) modelName = 'Gemini AI';
+      else if (status.models.ollama && status.models.ollama.available) modelName = 'Ollama AI (local)';
+      else if (status.models.claude && status.models.claude.available) modelName = 'Claude AI';
+      else if (status.models.openai && status.models.openai.available) modelName = 'OpenAI';
+      else modelName = 'Demo mode';
+    }
     document.getElementById('loading-status').textContent = `Processing with ${modelName}...`;
   } catch {
     document.getElementById('loading-status').textContent = 'Processing...';
@@ -5522,6 +5536,11 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
     document.getElementById('form-section').style.display = 'block';
     showToast('Analysis failed: ' + err.message, 'error', 6000);
   }
+
+  } finally {
+    analyzeInFlight = false;
+    if (analyzeBtn) analyzeBtn.disabled = false;
+  }
 }
 
 // ── HEATMAP SYNC AFTER ANALYSIS ──
@@ -5535,12 +5554,9 @@ async function syncHeatmapAfterAnalysis() {
       const heatmapData = window.mediscanBodyHeatmap.getEnhancedFormat();
       if (heatmapData && heatmapData.regions && heatmapData.regions.length > 0) {
         // POST to /api/heatmap
-        const response = await fetch('/api/heatmap', {
+        const response = await authedFetch('/api/heatmap', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + window.authToken
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(heatmapData)
         });
 
@@ -5601,8 +5617,24 @@ function animateLoadingSteps() {
 // ── SHOW RESULTS ──
 function showResults(r) {
   document.getElementById('loading').style.display = 'none';
+  const resultsEl = document.getElementById('results');
   // Remove any previous demo mode styling
-  document.getElementById('results').classList.remove('demo-mode');
+  resultsEl.classList.remove('demo-mode');
+  const existingBanner = document.getElementById('demo-mode-banner');
+  if (existingBanner) existingBanner.remove();
+  // Server returns demoMode:true when every real AI model fails; the response
+  // is a static fallback, not a diagnosis. Make that obvious to the user so
+  // they don't act on a mock result as if it were medical advice.
+  if (r && r.demoMode === true) {
+    resultsEl.classList.add('demo-mode');
+    const banner = document.createElement('div');
+    banner.id = 'demo-mode-banner';
+    banner.className = 'demo-mode-banner';
+    banner.setAttribute('role', 'alert');
+    banner.style.cssText = 'background:#fff8e1;border:2px solid #f59e0b;color:#7a4a00;padding:12px 16px;border-radius:12px;margin:0 0 1rem;font-weight:600;line-height:1.4;';
+    banner.textContent = 'This is a demo result, not a diagnosis. All AI services are currently unavailable. Please try again later.';
+    resultsEl.insertBefore(banner, resultsEl.firstChild);
+  }
   const sMap = { low:['severity-low','Low'], medium:['severity-med','Medium'], high:['severity-high','High'] };
   const [cls, label] = sMap[r.severity] || sMap['medium'];
   const pill = document.getElementById('severity-pill');
@@ -5769,11 +5801,14 @@ function sendSug(btn) { document.getElementById('chat-input').value = btn.textCo
 document.getElementById('chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
 
 async function sendChat() {
+  if (chatInFlight) return;
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  document.getElementById('chat-send').disabled = true;
+  const sendBtn = document.getElementById('chat-send');
+  chatInFlight = true;
+  if (sendBtn) sendBtn.disabled = true;
 
   const el = document.getElementById('chat-messages');
   const userMsg = document.createElement('div'); userMsg.className = 'chat-msg user'; userMsg.textContent = text; el.appendChild(userMsg);
@@ -5793,9 +5828,29 @@ async function sendChat() {
   const fullPrompt = chatHistory.map(m => `${m.role === 'user' ? 'Patient' : 'Doctor'}: ${m.content}`).join('\n\n') + '\n\nDoctor:';
 
   try {
-    const res = await fetch(CHAT_URL, { method:'POST', headers:{'Content-Type':'application/json', ...window.getAuthHeaders()}, body:JSON.stringify({ prompt: fullPrompt }) });
+    const res = await authedFetch(CHAT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt: fullPrompt }) });
+    if (res.status === 401) {
+      typing.remove();
+      openAuthModal();
+      return;
+    }
+    if (!res.ok) {
+      let body = null;
+      try { body = await res.clone().json(); } catch (_) { body = null; }
+      if (res.status === 403 && body && body.code === 'EMAIL_NOT_VERIFIED') {
+        typing.remove();
+        openAuthModal();
+        if (typeof showVerificationPending === 'function') {
+          showVerificationPending('Please verify your email to continue chatting.');
+        }
+        return;
+      }
+      typing.classList.remove('typing');
+      typing.textContent = 'Sorry, I could not process that. Please try again.';
+      return;
+    }
     const data = await res.json();
-    const reply = data.reply || data.error || 'Could not process that.';
+    const reply = (data && data.reply) ? data.reply : 'Could not process that.';
     chatHistory.push({ role:'model', content:reply });
 
     // Bound history again after adding model response
@@ -5804,11 +5859,15 @@ async function sendChat() {
     }
 
     typing.classList.remove('typing'); typing.textContent = reply;
-  } catch (err) { typing.textContent = 'Error: ' + err.message; }
-
-  el.scrollTop = el.scrollHeight;
-  document.getElementById('chat-send').disabled = false;
-  input.focus();
+  } catch (err) {
+    typing.classList.remove('typing');
+    typing.textContent = 'Sorry, I could not reach the server. Please try again.';
+  } finally {
+    chatInFlight = false;
+    if (sendBtn) sendBtn.disabled = false;
+    el.scrollTop = el.scrollHeight;
+    if (input) input.focus();
+  }
 }
 
 // ── HISTORY ──
@@ -6231,7 +6290,7 @@ window.submitBooking = async function() {
   btn.textContent = 'Booking...';
 
   try {
-    const res = await fetch('/api/appointments', {
+    const res = await authedFetch('/api/appointments', {
       method: 'POST',
       headers: window.getAuthHeaders(),
       body: JSON.stringify({
@@ -7878,6 +7937,56 @@ window.currentUser = null;
 let authMode = 'login';
 let lastFocusedElement = null;
 
+// Wraps fetch with one silent refresh-and-retry on 401, so the HttpOnly
+// refresh cookie keeps the session alive after the 1-hour access token
+// expires. 403 (EMAIL_NOT_VERIFIED, etc.) is a permanent block and is
+// NOT retried. Falls through to the original 401 if refresh fails, so
+// existing openAuthModal() paths still run for genuinely-dead sessions.
+window.authedFetch = async function(url, options) {
+  options = options || {};
+  options.headers = options.headers || {};
+  if (window.authToken) options.headers['Authorization'] = 'Bearer ' + window.authToken;
+  let res = await fetch(url, options);
+  if (res.status !== 401) {
+    // 403 with code:'EMAIL_NOT_VERIFIED' is a permanent block — a refresh
+    // won't help. Peek at the body via res.clone() so the caller can still
+    // read it, then surface a single toast + open the verify-email panel.
+    if (res.status === 403) {
+      let body = null;
+      try { body = await res.clone().json(); } catch (_) { body = null; }
+      if (body && body.code === 'EMAIL_NOT_VERIFIED' && !window.__emailVerifyToastShown) {
+        window.__emailVerifyToastShown = true;
+        setTimeout(() => { window.__emailVerifyToastShown = false; }, 5000);
+        if (typeof showToast === 'function') {
+          showToast('Please verify your email to continue.', 'warning', 5000);
+        }
+        if (typeof openAuthModal === 'function') openAuthModal();
+        if (typeof showVerificationPending === 'function') {
+          showVerificationPending('Please verify your email to continue.');
+        }
+      }
+    }
+    return res;
+  }
+  const refreshed = await window.tryRefreshToken();
+  if (!refreshed) return res;
+  options.headers['Authorization'] = 'Bearer ' + window.authToken;
+  return fetch(url, options);
+};
+
+window.tryRefreshToken = async function() {
+  try {
+    const r = await fetch('/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+    if (!r.ok) return false;
+    const data = await r.json();
+    if (!data || !data.token) return false;
+    window.authToken = data.token;
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 function authKeydownHandler(e) {
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -8193,6 +8302,22 @@ function showVerificationPending(message) {
           statusEl.classList.remove('success', 'error');
           statusEl.textContent = 'Sending…';
         }
+        const resendOriginalLabel = resendBtn.textContent;
+        const startCooldown = (seconds) => {
+          let remaining = seconds;
+          resendBtn.disabled = true;
+          resendBtn.textContent = `Resend in ${remaining}s...`;
+          const timerId = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+              clearInterval(timerId);
+              resendBtn.disabled = false;
+              resendBtn.textContent = resendOriginalLabel;
+            } else {
+              resendBtn.textContent = `Resend in ${remaining}s...`;
+            }
+          }, 1000);
+        };
         try {
           const res = await fetch('/auth/resend-verification', {
             method: 'POST',
@@ -8205,6 +8330,7 @@ function showVerificationPending(message) {
               statusEl.classList.add('success');
               statusEl.textContent = data.message || 'Verification email sent. Check your inbox.';
             }
+            startCooldown(30);
           } else {
             if (statusEl) {
               statusEl.classList.add('error');
@@ -8282,8 +8408,8 @@ async function loadProfile() {
   }
 
   try {
-    const response = await fetch('/api/profile', {
-      headers: { 'Authorization': 'Bearer ' + window.authToken }
+    const response = await authedFetch('/api/profile', {
+      headers: {}
     });
 
     if (profileLoading) profileLoading.style.display = 'none';
@@ -8357,7 +8483,7 @@ async function loadReminders() {
   }
 
   try {
-    const response = await fetch('/api/medicine-reminders', {
+    const response = await authedFetch('/api/medicine-reminders', {
       headers: window.getAuthHeaders()
     });
 
@@ -8532,7 +8658,7 @@ function openAddReminderModal() {
 
 function openEditReminderModal(id) {
   // Find the reminder data from the rendered cards
-  fetch(`/api/medicine-reminders/${id}`, {
+  authedFetch(`/api/medicine-reminders/${id}`, {
     headers: window.getAuthHeaders()
   })
     .then(res => res.json())
@@ -8588,7 +8714,7 @@ async function confirmDeleteReminder() {
   deleteBtn.textContent = 'Deleting...';
 
   try {
-    const response = await fetch(`/api/medicine-reminders/${pendingDeleteId}`, {
+    const response = await authedFetch(`/api/medicine-reminders/${pendingDeleteId}`, {
       method: 'DELETE',
       headers: window.getAuthHeaders()
     });
@@ -8671,7 +8797,7 @@ document.getElementById('reminder-form').addEventListener('submit', async functi
     const url = isEdit ? `/api/medicine-reminders/${reminderId}` : '/api/medicine-reminders';
     const method = isEdit ? 'PUT' : 'POST';
 
-    const response = await fetch(url, {
+    const response = await authedFetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
@@ -8723,12 +8849,9 @@ async function saveProfile() {
       notification_enabled: document.getElementById('profile-notification-enabled').checked
     };
 
-    const response = await fetch('/api/profile', {
+    const response = await authedFetch('/api/profile', {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + window.authToken
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData)
     });
 
@@ -8771,7 +8894,7 @@ async function loadAppointments() {
   }
 
   try {
-    const response = await fetch('/api/appointments', {
+    const response = await authedFetch('/api/appointments', {
       headers: window.getAuthHeaders()
     });
 
@@ -8909,7 +9032,7 @@ async function cancelAppointment(id) {
   }
 
   try {
-    const response = await fetch(`/api/appointments/${id}`, {
+    const response = await authedFetch(`/api/appointments/${id}`, {
       method: 'DELETE',
       headers: window.getAuthHeaders()
     });
