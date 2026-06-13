@@ -1,4 +1,7 @@
-const { supabase } = require('./supabase');
+// db/supabase.js exports the client directly (module.exports = supabase), NOT
+// as { supabase }. Destructuring here yields undefined and every query throws
+// "Cannot read properties of undefined" → 500. Import the default export.
+const supabase = require('./supabase');
 
 // Ownership verification helper
 function verifyOwnership(reqUserId, paramUserId) {
