@@ -29,9 +29,11 @@ if (process.env.NODE_ENV === 'test') {
 
       obj.select = function() { chain.push(['select']); return obj; };
       obj.insert = function(payload) { chain.push(['insert', payload]); return obj; };
+      obj.upsert = function(payload) { chain.push(['upsert', payload]); return obj; };
       obj.update = function(payload) { chain.push(['update', payload]); return obj; };
       obj.delete = function() { chain.push(['delete']); return obj; };
       obj.eq = function(col, val) { chain.push(['eq', col, val]); return obj; };
+      obj.order = function() { chain.push(['order']); return obj; };
 
       obj.single = async function() {
         const hasInsert = chain.some(c => c[0] === 'insert');
@@ -53,6 +55,9 @@ if (process.env.NODE_ENV === 'test') {
         }
         return { data: testStore[table] || [], error: null };
       };
+
+      // maybeSingle behaves like single but never errors on no-rows
+      obj.maybeSingle = obj.single;
 
       // also expose .then() for plain promise consumers
       obj.then = function(resolve) { return Promise.resolve({ data: testStore[table] || [], error: null }).then(resolve); };
