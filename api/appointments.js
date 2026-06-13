@@ -12,8 +12,8 @@ function validateUUID(id) {
   return true;
 }
 
-// GET /api/appointments/doctors - list all doctors
-router.get('/doctors', async (req, res) => {
+// GET /api/appointments/doctors - list all doctors (requires auth to prevent enumeration)
+router.get('/doctors', verifyToken, async (req, res) => {
   try {
     const doctors = await getDoctors();
     res.json(doctors);

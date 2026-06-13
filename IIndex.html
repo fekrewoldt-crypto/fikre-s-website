@@ -5085,7 +5085,7 @@ function processFile(f) {
     img.src = ev.target.result;
   };
   r.onerror = () => {
-    showToast(tr('toast_image_unsupported', 'Could not read that file. Please try a different image.'), 'error');
+    showToast(tr('toast_image_unreadable', 'Could not read this image. Please try a different one.'), 'error');
     imageBase64 = null;
   };
   r.readAsDataURL(f);
@@ -5420,7 +5420,7 @@ async function analyze() {
   }
   const analyzeBtn = document.getElementById('analyze-btn');
   const symptoms = document.getElementById('symptoms-text').value.trim();
-  if (!symptoms && !imageBase64) { showToast(tr('toast_generic_error', 'Please upload a photo or describe your symptoms first.'), 'info'); return; }
+  if (!symptoms && !imageBase64) { showToast(tr('toast_no_input', 'Please describe your symptoms or upload a photo first.'), 'warning'); return; }
 
   analyzeInFlight = true;
   if (analyzeBtn) analyzeBtn.disabled = true;
@@ -5598,7 +5598,7 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form-section').style.display = 'block';
-    showToast(tr('toast_generic_error', 'Analysis failed: ' + err.message), 'error', 6000);
+    showToast(tr('toast_analysis_failed', 'Analysis failed') + ': ' + (err && err.message ? err.message : 'unknown error'), 'error', 6000);
   }
 
   } finally {
@@ -6566,6 +6566,9 @@ const TRANSLATIONS = {
     toast_demo_mode: "Demo Mode: Showing sample result",
     toast_copied: "Copied to clipboard",
     toast_generic_error: "Something went wrong. Please try again.",
+    toast_no_input: "Please describe your symptoms or upload a photo first.",
+    toast_analysis_failed: "Analysis failed",
+    toast_image_unreadable: "Could not read this image. Please try a different one.",
     offline_warning: "You are offline. Some features will not work.",
   },
   am: {
@@ -6720,6 +6723,9 @@ const TRANSLATIONS = {
     toast_demo_mode: "የማሳያ ሁነታ: የናሙና ውጤት",
     toast_copied: "ወደ ቅንጥብ ሰሌዳ ተቀድቷል",
     toast_generic_error: "የሆነ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+    toast_no_input: "እባክዎ ምልክቶችዎን ይግለጹ ወይም ፎቶ ይስቀሉ።",
+    toast_analysis_failed: "ትንታኔ አልተሳካም",
+    toast_image_unreadable: "ይህን ምስል ማንበብ አልተቻለም። እባክዎ ሌላ ይሞክሩ።",
     offline_warning: "ከበይነመረብ ውጪ ነዎት። አንዳንድ ባህሪያት አይሰሩም።",
   },
   om: {
@@ -6874,6 +6880,9 @@ const TRANSLATIONS = {
     toast_demo_mode: "Demo: bu'aa fakkeenyaa",
     toast_copied: "Ergaa baasame",
     toast_generic_error: "Wanti tokko hin hojjenne. Irra deebi'i yaali.",
+    toast_no_input: "Maaloo mallattoolee kee ibsi yookiin suuraa ol kaa'i.",
+    toast_analysis_failed: "Xinxalli hin milkoofne",
+    toast_image_unreadable: "Suuraa kana dubbisuun hin danda'amne. Maaloo kan biraa yaali.",
     offline_warning: "Online miti. Tajaajiloota muraasni hin hojjetan.",
   },
   ti: {
@@ -7028,6 +7037,9 @@ const TRANSLATIONS = {
     toast_demo_mode: "ናይ ሞዴል ሁነታ: ናይ ናሙና ውጽኢት",
     toast_copied: "ናብ ክሊፕቦርድ ተቐዲሑ",
     toast_generic_error: "ጌጋ ተፈጢሩ። እባኻ ደጊምካ ፈትን።",
+    toast_no_input: "እባኻ ምልክታትካ ግለጽ ወይ ስእሊ ኣእቱ።",
+    toast_analysis_failed: "ትንታነ ኣይተዓወተን",
+    toast_image_unreadable: "እዚ ስእሊ ምንባብ ኣይተኻእለን። እባኻ ካልእ ፈትን።",
     offline_warning: "ካብ ኢንተርነት ወጻኢ ኢኻ። ገለ ባህርያት ኣይሰርሑን።",
   }
 };

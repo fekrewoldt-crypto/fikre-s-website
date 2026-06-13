@@ -39,12 +39,33 @@ async function verifyToken(req, res, next) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
     const user = data.user;
-    // user.id is the Supabase UUID, role lives in user.user_metadata.role (if set)
+
+    // user.id is the Supabase UUID.
+    // Role is read from the server-side user_profiles table, NOT from user_metadata.
+    // user_metadata is client-writable via supabase.auth.updateUser(), so reading
+    // role from there would allow privilege escalation. user_profiles.role is set
+    // by the server at registration and protected by a DB trigger that blocks
+    // authenticated users from updating the role column.
+    let role = 'student';
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (!profileError && profileData) {
+        role = profileData.role || 'student';
+      }
+    } catch (err) {
+      // user_profiles row may not exist for very old users — default to student
+      console.warn('Role lookup from user_profiles failed, defaulting to student:', err.message);
+    }
+
     // Check if email is verified
     const verified = user.email_confirmed_at !== null;
     req.user = {
       id: user.id,
-      role: (user.user_metadata && user.user_metadata.role) || 'student',
+      role: role,
       verified: verified,
       email: user.email
     };

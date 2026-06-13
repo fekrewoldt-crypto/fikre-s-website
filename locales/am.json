@@ -119,5 +119,8 @@
   "toast_demo_mode": "የማሳያ ሁነታ: የናሙና ውጤት",
   "toast_copied": "ወደ ቅንጥብ ሰሌዳ ተቀድቷል",
   "toast_generic_error": "የሆነ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+  "toast_no_input": "እባክዎ ምልክቶችዎን ይግለጹ ወይም ፎቶ ይስቀሉ።",
+  "toast_analysis_failed": "ትንታኔ አልተሳካም",
+  "toast_image_unreadable": "ይህን ምስል ማንበብ አልተቻለም። እባክዎ ሌላ ይሞክሩ።",
   "offline_warning": "ከበይነመረብ ውጪ ነዎት። አንዳንድ ባህሪያት አይሰሩም።"
 }
