@@ -99,14 +99,23 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,ht
   .split(',')
   .map(o => o.trim())
   .filter(o => o && o !== '*');
+// Vercel injects VERCEL_URL (per-deploy) and VERCEL_PROJECT_PRODUCTION_URL (stable alias).
+// Auto-allowing them means a missing ALLOWED_ORIGINS cannot 500 the whole site,
+// which is exactly how prod broke once already.
+const vercelOrigins = [
+  process.env.VERCEL_URL,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+].filter(Boolean).map(u => `https://${u}`);
+const effectiveOrigins = Array.from(new Set([...allowedOrigins, ...vercelOrigins]));
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     // Explicit wildcard — accept any origin
     if (ALLOW_ALL_ORIGINS) return callback(null, true);
-    // Exact match against allowlist
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Exact match against allowlist (configured + auto-detected Vercel URLs)
+    if (effectiveOrigins.includes(origin)) return callback(null, true);
     // Localhost on any port in non-production
     if (process.env.NODE_ENV !== 'production' && origin.includes('localhost:')) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
