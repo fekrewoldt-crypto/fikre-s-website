@@ -2683,6 +2683,11 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 }
 .auth-form-input {
   width: 100%;
+  /* Without border-box, width:100% + padding + 2px border overflows the
+     container — the inputs spilled past the right edge of the auth modal and
+     the profile grid cells. This app has no global box-sizing reset, so set it
+     on the form control itself. */
+  box-sizing: border-box;
   border: 2px solid var(--border);
   border-radius: 12px;
   padding: 0.875rem 1rem;
