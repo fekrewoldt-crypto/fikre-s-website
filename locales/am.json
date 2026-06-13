@@ -107,5 +107,17 @@
   "error_network": "የንጊዜ ጥገና ነበር. እባክዎ ያረጋግጡ",
   "error_server": "የሰርቨ ምላሽ ላይ ስህተት",
   "error_timeout": "ጊዜ ያለፈበት። እባክዎ እንደገና ይሞክሩ",
-  "error_generic": "ስህተት ተከስቷል. እባክዎ እንደገና ይሞክሩ"
+  "error_generic": "ስህተት ተከስቷል. እባክዎ እንደገና ይሞክሩ",
+
+  "toast_network_error": "የኔትዎርክ ስህተት። እባክዎ ግንኙነትዎን ይፈትሹ።",
+  "toast_server_error": "የሰርቨር ስህተት። እባክዎ እንደገና ይሞክሩ።",
+  "toast_session_expired": "ክፍለ ጊዜዎ አልፏል። እባክዎ እንደገና ይግቡ።",
+  "toast_please_sign_in": "ለመቀጠል እባክዎ ይግቡ።",
+  "toast_email_not_verified": "ለመቀጠል እባክዎ ኢሜይልዎን ያረጋግጡ።",
+  "toast_request_too_large": "ምስሉ በጣም ትልቅ ነው። እባክዎ ትንሽ ፎቶ ይጠቀሙ።",
+  "toast_image_unsupported": "ይህ የምስል ቅርጸት አይደገፍም። የiPhone ተጠቃሚዎች: Settings > Camera > Formats > Most Compatible።",
+  "toast_demo_mode": "የማሳያ ሁነታ: የናሙና ውጤት",
+  "toast_copied": "ወደ ቅንጥብ ሰሌዳ ተቀድቷል",
+  "toast_generic_error": "የሆነ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+  "offline_warning": "ከበይነመረብ ውጪ ነዎት። አንዳንድ ባህሪያት አይሰሩም።"
 }

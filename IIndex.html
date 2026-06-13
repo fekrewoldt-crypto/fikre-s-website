@@ -3414,6 +3414,22 @@ body[lang="am"] .card-title, body[lang="ti"] .card-title { direction: ltr; }
 }
 #results .disclaimer { display: none; }
 
+/* iOS Safari auto-zooms on focus when an input's font-size is below 16px.
+   Force 16px on the smallest viewports so the page never jumps. */
+@media (max-width: 480px) {
+  input, textarea, select, .chat-input { font-size: 16px !important; }
+}
+
+/* Offline detection banner — shown when navigator.onLine flips false. */
+.offline-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2000;
+  background: #fff8e1; color: #7a4a00; border-bottom: 2px solid #f59e0b;
+  padding: 10px 16px; text-align: center; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  display: none;
+}
+.offline-banner.visible { display: block; }
+
 </style>
 </head>
 <body>
@@ -4592,8 +4608,28 @@ let bodyHeatmapSwitcher = null; // Alias for compatibility
 let bodySelections = []; // Array of {area, intensity, name}
 
 // Toast notification system
+// Tiny i18n lookup for showToast strings. The TRANSLATIONS object lives
+// further down (line ~6336) but is hoisted onto the module scope by the
+// time any toast fires, so this lookup is safe.
+function tr(key, fallback) {
+  try {
+    return (typeof TRANSLATIONS !== 'undefined' && TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) || fallback;
+  } catch (_) { return fallback; }
+}
+
+const _recentToasts = new Map();
 function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toast-container');
+  if (!container) return;
+  // Dedup: identical text within 2s suppresses the duplicate.
+  const now = Date.now();
+  const last = _recentToasts.get(message);
+  if (last && (now - last) < 2000) return;
+  _recentToasts.set(message, now);
+  // Cap: keep at most 4 toasts on screen; drop the oldest first.
+  while (container.children.length >= 4) {
+    container.firstElementChild?.remove();
+  }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icons = { success: '✓', error: '✕', info: 'ℹ' };
@@ -4605,6 +4641,30 @@ function showToast(message, type = 'info', duration = 4000) {
 let imageBase64 = null, imageMimeType = 'image/jpeg';
 let selectedBody = '', selectedDuration = '';
 let currentResult = null, chatHistory = [];
+// Diagnostic-result context that prefixes each /api/chat call. Stored as
+// a single short string so it never gets evicted by the MAX_CHAT_HISTORY
+// trim. Persisted alongside chatHistory in sessionStorage.
+let chatContext = '';
+const CHAT_STORAGE_KEY = 'mediscan_chat_history';
+const CHAT_CONTEXT_KEY = 'mediscan_chat_context';
+function persistChatHistory() {
+  try {
+    const capped = chatHistory.slice(-20);
+    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(capped));
+    sessionStorage.setItem(CHAT_CONTEXT_KEY, chatContext || '');
+  } catch (_) {}
+}
+function restoreChatHistory() {
+  try {
+    const raw = sessionStorage.getItem(CHAT_STORAGE_KEY);
+    const ctx = sessionStorage.getItem(CHAT_CONTEXT_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) chatHistory = parsed.slice(-20);
+    }
+    if (ctx) chatContext = ctx;
+  } catch (_) {}
+}
 let altsChart = null, sevChart = null, timeChart = null;
 
 // Hard cap for the base64 portion of any uploaded image. The Vercel serverless
@@ -5002,7 +5062,7 @@ function processFile(f) {
       // 4.5 MB limit on production deploys.
       compressImageToLimit(img, 1024, 0.8).then(compressed => {
         if (!compressed) {
-          showToast('Could not process the image. Please try a different one.', 'error');
+          showToast(tr('toast_request_too_large', 'Could not process the image. Please try a different one.'), 'error');
           return;
         }
         imageBase64 = compressed.split(',')[1];
@@ -5016,7 +5076,7 @@ function processFile(f) {
     // img.onload never fires and the user gets no feedback. Catch the decode
     // failure and tell them how to switch their iPhone camera format.
     img.onerror = () => {
-      showToast('This image format is not supported. iPhone users: Settings > Camera > Formats > Most Compatible.', 'warning', 6000);
+      showToast(tr('toast_image_unsupported', 'This image format is not supported. iPhone users: Settings > Camera > Formats > Most Compatible.'), 'warning', 6000);
       imageBase64 = null;
       const preview = document.getElementById('preview-container');
       if (preview) preview.style.display = 'none';
@@ -5025,7 +5085,7 @@ function processFile(f) {
     img.src = ev.target.result;
   };
   r.onerror = () => {
-    showToast('Could not read that file. Please try a different image.', 'error');
+    showToast(tr('toast_image_unsupported', 'Could not read that file. Please try a different image.'), 'error');
     imageBase64 = null;
   };
   r.readAsDataURL(f);
@@ -5354,9 +5414,13 @@ document.addEventListener('keydown', (e) => {
 
 async function analyze() {
   if (analyzeInFlight) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    showToast(tr('offline_warning', 'You are offline. Some features will not work.'), 'warning', 4000);
+    return;
+  }
   const analyzeBtn = document.getElementById('analyze-btn');
   const symptoms = document.getElementById('symptoms-text').value.trim();
-  if (!symptoms && !imageBase64) { showToast('Please upload a photo or describe your symptoms first.', 'info'); return; }
+  if (!symptoms && !imageBase64) { showToast(tr('toast_generic_error', 'Please upload a photo or describe your symptoms first.'), 'info'); return; }
 
   analyzeInFlight = true;
   if (analyzeBtn) analyzeBtn.disabled = true;
@@ -5387,7 +5451,7 @@ async function analyze() {
     await new Promise(r => setTimeout(r, 300));
     document.getElementById('loading').style.display = 'none';
 
-    showToast('Demo Mode: Showing sample result', 'info', 3000);
+    showToast(tr('toast_demo_mode', 'Demo Mode: Showing sample result'), 'info', 3000);
     showResults(currentResult);
     initChat(currentResult);
     document.getElementById('results').classList.add('demo-mode');
@@ -5534,7 +5598,7 @@ severity must be exactly: low, medium, or high. confidence is a number 55-92.`;
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form-section').style.display = 'block';
-    showToast('Analysis failed: ' + err.message, 'error', 6000);
+    showToast(tr('toast_generic_error', 'Analysis failed: ' + err.message), 'error', 6000);
   }
 
   } finally {
@@ -5774,7 +5838,7 @@ document.getElementById('restart-btn').addEventListener('click', () => {
   document.getElementById('symptoms-text').value = '';
   imageBase64 = null; document.getElementById('preview-container').style.display = 'none'; fileInput.value = '';
   document.querySelectorAll('.body-btn,.dur-btn').forEach(b => b.classList.remove('selected'));
-  selectedBody = ''; selectedDuration = ''; currentResult = null; chatHistory = [];
+  selectedBody = ''; selectedDuration = ''; currentResult = null; chatHistory = []; chatContext = ''; persistChatHistory();
 
   // Clear body heatmap if available
   if (window.mediscanBodyHeatmap) {
@@ -5787,7 +5851,14 @@ document.getElementById('restart-btn').addEventListener('click', () => {
 
 // ── CHAT ──
 function initChat(result) {
-  chatHistory = [{ role:'user', content:`I was diagnosed by an AI with "${result.primaryCondition}". Analysis: ${JSON.stringify(result)}. Answer my follow-up questions in plain language, under 4 sentences unless I ask for more.` }];
+  // Store the diagnosis as a one-line context that is prefixed to each
+  // /api/chat request — NOT pushed into chatHistory, where it would get
+  // evicted by the MAX_CHAT_HISTORY trim.
+  chatContext = result && result.primaryCondition
+    ? `Earlier diagnosis context: ${result.primaryCondition} at ${result.confidence || 70}% confidence.`
+    : '';
+  chatHistory = [];
+  persistChatHistory();
   const el = document.getElementById('chat-messages');
   el.innerHTML = '';
   const msg = document.createElement('div'); msg.className = 'chat-msg ai';
@@ -5802,6 +5873,10 @@ document.getElementById('chat-input').addEventListener('keydown', e => { if (e.k
 
 async function sendChat() {
   if (chatInFlight) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    showToast(tr('offline_warning', 'You are offline. Some features will not work.'), 'warning', 4000);
+    return;
+  }
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
@@ -5824,8 +5899,12 @@ async function sendChat() {
   if (chatHistory.length > MAX_CHAT_HISTORY) {
     chatHistory.splice(0, chatHistory.length - MAX_CHAT_HISTORY);
   }
+  persistChatHistory();
 
-  const fullPrompt = chatHistory.map(m => `${m.role === 'user' ? 'Patient' : 'Doctor'}: ${m.content}`).join('\n\n') + '\n\nDoctor:';
+  // chatContext (one-line diagnosis summary) is prepended ONCE per
+  // request, never stored in chatHistory, so it never gets evicted.
+  const historyBody = chatHistory.map(m => `${m.role === 'user' ? 'Patient' : 'Doctor'}: ${m.content}`).join('\n\n');
+  const fullPrompt = (chatContext ? chatContext + '\n\n' : '') + historyBody + '\n\nDoctor:';
 
   try {
     const res = await authedFetch(CHAT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ prompt: fullPrompt }) });
@@ -5857,6 +5936,7 @@ async function sendChat() {
     if (chatHistory.length > MAX_CHAT_HISTORY) {
       chatHistory.splice(0, chatHistory.length - MAX_CHAT_HISTORY);
     }
+    persistChatHistory();
 
     typing.classList.remove('typing'); typing.textContent = reply;
   } catch (err) {
@@ -6282,7 +6362,7 @@ window.submitBooking = async function() {
     return;
   }
   if (!window.authToken) {
-    showToast('Please login to book an appointment.', 'info');
+    showToast(tr('toast_please_sign_in', 'Please login to book an appointment.'), 'info');
     return;
   }
 
@@ -6308,7 +6388,7 @@ window.submitBooking = async function() {
       showToast(err.error || 'Booking failed. Please try again.', 'error');
     }
   } catch (err) {
-    showToast('Booking failed. Please check your connection.', 'error');
+    showToast(tr('toast_network_error', 'Booking failed. Please check your connection.'), 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirm booking';
@@ -6476,6 +6556,17 @@ const TRANSLATIONS = {
     weeks: "weeks",
     months: "months",
     years: "years",
+    toast_network_error: "Network error. Please check your connection.",
+    toast_server_error: "Server error. Please try again.",
+    toast_session_expired: "Your session has expired. Please log in again.",
+    toast_please_sign_in: "Please sign in to continue.",
+    toast_email_not_verified: "Please verify your email to continue.",
+    toast_request_too_large: "Image is too large. Please use a smaller photo.",
+    toast_image_unsupported: "This image format is not supported. iPhone users: Settings > Camera > Formats > Most Compatible.",
+    toast_demo_mode: "Demo Mode: Showing sample result",
+    toast_copied: "Copied to clipboard",
+    toast_generic_error: "Something went wrong. Please try again.",
+    offline_warning: "You are offline. Some features will not work.",
   },
   am: {
     // Navigation
@@ -6619,6 +6710,17 @@ const TRANSLATIONS = {
     weeks: "ሳምንታት",
     months: "ወራት",
     years: "ዓመታት",
+    toast_network_error: "የኔትዎርክ ስህተት። እባክዎ ግንኙነትዎን ይፈትሹ።",
+    toast_server_error: "የሰርቨር ስህተት። እባክዎ እንደገና ይሞክሩ።",
+    toast_session_expired: "ክፍለ ጊዜዎ አልፏል። እባክዎ እንደገና ይግቡ።",
+    toast_please_sign_in: "ለመቀጠል እባክዎ ይግቡ።",
+    toast_email_not_verified: "ለመቀጠል እባክዎ ኢሜይልዎን ያረጋግጡ።",
+    toast_request_too_large: "ምስሉ በጣም ትልቅ ነው። እባክዎ ትንሽ ፎቶ ይጠቀሙ።",
+    toast_image_unsupported: "ይህ የምስል ቅርጸት አይደገፍም። የiPhone ተጠቃሚዎች: Settings > Camera > Formats > Most Compatible።",
+    toast_demo_mode: "የማሳያ ሁነታ: የናሙና ውጤት",
+    toast_copied: "ወደ ቅንጥብ ሰሌዳ ተቀድቷል",
+    toast_generic_error: "የሆነ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+    offline_warning: "ከበይነመረብ ውጪ ነዎት። አንዳንድ ባህሪያት አይሰሩም።",
   },
   om: {
     // Navigation
@@ -6762,6 +6864,17 @@ const TRANSLATIONS = {
     weeks: "torbanoota",
     months: "ji'oota",
     years: "waggoota",
+    toast_network_error: "Dogoggora netwoorkii. Maaloo qunnamtii kee mirkaneessi.",
+    toast_server_error: "Dogoggora sarvarii. Maaloo irra deebi'i yaali.",
+    toast_session_expired: "Yeroon kee dhumeera. Maaloo deebi'ii seeni.",
+    toast_please_sign_in: "Itti fufuuf maaloo seeni.",
+    toast_email_not_verified: "Itti fufuuf maaloo imeelii kee mirkaneessi.",
+    toast_request_too_large: "Suuraan baay'ee guddaa dha. Maaloo suuraa xiqqaa fayyadami.",
+    toast_image_unsupported: "Fakkii kun hin deeggaramu. iPhone fayyadamtoota: Settings > Camera > Formats > Most Compatible.",
+    toast_demo_mode: "Demo: bu'aa fakkeenyaa",
+    toast_copied: "Ergaa baasame",
+    toast_generic_error: "Wanti tokko hin hojjenne. Irra deebi'i yaali.",
+    offline_warning: "Online miti. Tajaajiloota muraasni hin hojjetan.",
   },
   ti: {
     // Navigation
@@ -6905,6 +7018,17 @@ const TRANSLATIONS = {
     weeks: "ሰሙናት",
     months: "ወርታት",
     years: "ዓመታት",
+    toast_network_error: "ጌጋ ኔትዎርክ። እባኻ ምትእስስርካ ኣረጋግጽ።",
+    toast_server_error: "ጌጋ ሰርቨር። እባኻ ደጊምካ ፈትን።",
+    toast_session_expired: "ግዜኻ ኣኪሉ። እባኻ ደጊምካ ኣቱ።",
+    toast_please_sign_in: "ንምቕጻል እባኻ ኣቱ።",
+    toast_email_not_verified: "ንምቕጻል እባኻ ኢሜይልካ ኣረጋግጽ።",
+    toast_request_too_large: "ስእሊ ኣዝዩ ዓብዪ እዩ። እባኻ ንእሽቶ ስእሊ ተጠቐም።",
+    toast_image_unsupported: "እዚ ቅርጺ ስእሊ ኣይተደገፈን። ናይ iPhone ተጠቀምቲ: Settings > Camera > Formats > Most Compatible።",
+    toast_demo_mode: "ናይ ሞዴል ሁነታ: ናይ ናሙና ውጽኢት",
+    toast_copied: "ናብ ክሊፕቦርድ ተቐዲሑ",
+    toast_generic_error: "ጌጋ ተፈጢሩ። እባኻ ደጊምካ ፈትን።",
+    offline_warning: "ካብ ኢንተርነት ወጻኢ ኢኻ። ገለ ባህርያት ኣይሰርሑን።",
   }
 };
 
@@ -7193,6 +7317,9 @@ window.addEventListener('DOMContentLoaded', () => {
   restoreFormState();
   renderHealthNews();
   handleGoogleLoginRedirect();
+  initOfflineDetection();
+  initChatViewportFix();
+  restoreChatHistory();
   // Restore the session from the HttpOnly refresh cookie (works for
   // both email/password and Google logins). updateAuthUI is called
   // after, so the nav button reflects the restored auth state.
@@ -7201,6 +7328,44 @@ window.addEventListener('DOMContentLoaded', () => {
     initNearMeButton();
   });
 });
+
+// Show a persistent banner when navigator.onLine flips false; hide it
+// when the connection returns. The banner sits at the very top of the
+// document so it's visible no matter which page tab is active.
+function initOfflineDetection() {
+  let banner = document.getElementById('offline-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'offline-banner';
+    banner.className = 'offline-banner';
+    banner.setAttribute('role', 'alert');
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
+  const sync = () => {
+    banner.textContent = tr('offline_warning', 'You are offline. Some features will not work.');
+    if (navigator.onLine === false) banner.classList.add('visible');
+    else banner.classList.remove('visible');
+  };
+  sync();
+  window.addEventListener('offline', sync);
+  window.addEventListener('online', sync);
+}
+
+// On mobile, when the soft keyboard opens the visualViewport shrinks but
+// the chat input stays anchored to the document. Scroll it back into
+// view so the user can see what they're typing.
+function initChatViewportFix() {
+  if (typeof window === 'undefined' || !window.visualViewport) return;
+  window.visualViewport.addEventListener('resize', () => {
+    const viewport = window.visualViewport;
+    const keyboardOpen = viewport.height < window.innerHeight - 100;
+    if (!keyboardOpen) return;
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput && document.activeElement === chatInput) {
+      chatInput.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }
+  });
+}
 
 // Calls /auth/refresh to exchange the HttpOnly refresh cookie for a
 // fresh access token, then stashes the token in memory. Silently no-ops
@@ -7958,7 +8123,7 @@ window.authedFetch = async function(url, options) {
         window.__emailVerifyToastShown = true;
         setTimeout(() => { window.__emailVerifyToastShown = false; }, 5000);
         if (typeof showToast === 'function') {
-          showToast('Please verify your email to continue.', 'warning', 5000);
+          showToast(tr('toast_email_not_verified', 'Please verify your email to continue.'), 'warning', 5000);
         }
         if (typeof openAuthModal === 'function') openAuthModal();
         if (typeof showVerificationPending === 'function') {
@@ -8418,7 +8583,7 @@ async function loadProfile() {
 
     // Handle 401 - token expired
     if (response.status === 401) {
-      showToast('Your session has expired. Please log in again.', 'info');
+      showToast(tr('toast_session_expired', 'Your session has expired. Please log in again.'), 'info');
       openAuthModal();
       if (profileNotLoggedIn) {
         profileNotLoggedIn.style.display = 'block';
@@ -8491,7 +8656,7 @@ async function loadReminders() {
 
     // Handle 401 - token expired
     if (response.status === 401) {
-      showToast('Your session has expired. Please log in again.', 'info');
+      showToast(tr('toast_session_expired', 'Your session has expired. Please log in again.'), 'info');
       openAuthModal();
       notLoggedIn.style.display = 'block';
       return;
@@ -8900,7 +9065,7 @@ async function loadAppointments() {
 
     // Handle 401 - token expired
     if (response.status === 401) {
-      showToast('Your session has expired. Please log in again.', 'info');
+      showToast(tr('toast_session_expired', 'Your session has expired. Please log in again.'), 'info');
       openAuthModal();
       container.innerHTML = `
         <div class="appointments-not-logged-in">

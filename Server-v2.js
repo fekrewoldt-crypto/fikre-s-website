@@ -113,6 +113,7 @@ app.use(cors({
   },
   credentials: true
 }));
+app.use((req, res, next) => { res.vary('Origin'); next(); });
 
 // 3. Security headers
 // NOTE: 'unsafe-inline' required for single-file app with inline styles/scripts + CDN deps
@@ -1120,6 +1121,9 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
 
   const usedModels = [];
   let lastError = null;
+  const sanitizeUsedModels = (arr) => process.env.NODE_ENV === 'production'
+    ? arr.map(m => (m && m.model) ? m.model : String(m))
+    : arr;
 
   // Test mode shortcut: skip real AI calls, return fast mock so the
   // rate-limit test doesn't burn quota waiting for 11 sequential calls.
@@ -1129,7 +1133,7 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
     const response = normalizeAIResponse({
       ...result,
       modelUsed: 'demo',
-      modelsAttempted: usedModels,
+      modelsAttempted: sanitizeUsedModels(usedModels),
       responseTimeMs: 0,
       demoMode: true,
       recommendedFacilities
@@ -1244,7 +1248,7 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
       const response = normalizeAIResponse({
         ...result,
         modelUsed: modelName,
-        modelsAttempted: usedModels,
+        modelsAttempted: sanitizeUsedModels(usedModels),
         responseTimeMs: duration,
         demoMode: modelName === 'demo',
         recommendedFacilities: recommendedFacilities
@@ -1279,7 +1283,7 @@ app.post('/api/analyze', aiLimiter, async (req, res) => {
   const fallbackResponse = normalizeAIResponse({
     ...demoResult,
     modelUsed: 'demo',
-    modelsAttempted: usedModels,
+    modelsAttempted: sanitizeUsedModels(usedModels),
     responseTimeMs: 0,
     demoMode: true,
     fallbackReason: 'All AI models unavailable, using demo data',
@@ -1621,11 +1625,16 @@ app.get('/', (req, res) => {
   // Global error handler catches unhandled promise rejections and returns
   // clean JSON instead of raw stack traces or unhelpful 500s.
   app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-    const message = process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message;
-    res.status(err.status || 500).json({ error: message });
+    const requestId = require('crypto').randomBytes(4).toString('hex');
+    const status = err.status || 500;
+    if (process.env.NODE_ENV === 'production') {
+      // PHI may sit in req.body / err.stack; scrub both in prod logs.
+      console.error('Unhandled error:', { requestId, status, code: err.code, message: err.message });
+      res.status(status).json({ error: 'Internal server error', requestId });
+    } else {
+      console.error('Unhandled error:', err);
+      res.status(status).json({ error: err.message, requestId });
+    }
   });
 
   app.__normalizeAIResponse = normalizeAIResponse;

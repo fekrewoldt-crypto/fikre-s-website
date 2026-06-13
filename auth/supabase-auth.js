@@ -282,7 +282,12 @@ router.post('/logout', async (req, res) => {
   try {
     // Supabase does not have a direct logout endpoint; we simply clear the cookie.
     // Optionally you can revoke the refresh token via the admin API.
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
     return res.json({ message: 'logout' });
   } catch (err) {
     console.error('Logout error:', err);
@@ -498,6 +503,13 @@ router.get('/oauth-callback', (req, res) => {
         }
       }
       try {
+        var qParams = new URLSearchParams(window.location.search || '');
+        var qError = qParams.get('error');
+        var qDesc = (qParams.get('error_description') || '').toLowerCase();
+        if (qError === 'access_denied' || qDesc.indexOf('cancelled') !== -1 || qDesc.indexOf('denied') !== -1) {
+          window.location.replace('/?google_login=cancelled');
+          return;
+        }
         var hash = window.location.hash || '';
         if (hash.charAt(0) === '#') hash = hash.substring(1);
         var params = new URLSearchParams(hash);
@@ -590,12 +602,16 @@ router.post('/oauth-session', async (req, res) => {
     if (!access_token.startsWith('test-')) {
       return res.status(401).json({ error: 'Invalid token' });
     }
-    res.cookie('refreshToken', refresh_token || 'test-google-refresh', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
-    return res.json({ token: access_token, email: 'test-google@example.com' });
+    if (refresh_token) {
+      res.cookie('refreshToken', refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+      return res.json({ token: access_token, email: 'test-google@example.com', sessionPersistent: true });
+    }
+    console.warn('OAuth session got access_token without refresh_token — session will not persist past access token expiry');
+    return res.json({ token: access_token, email: 'test-google@example.com', sessionPersistent: false });
   }
 
   // Declare user outside try so it's accessible after
@@ -616,6 +632,8 @@ router.post('/oauth-session', async (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
       });
+    } else {
+      console.warn('OAuth session got access_token without refresh_token — session will not persist past access token expiry');
     }
   } catch (err) {
     console.error('OAuth session error:', err);
@@ -644,7 +662,7 @@ router.post('/oauth-session', async (req, res) => {
     console.warn('user_profiles insert failed for OAuth user (non-fatal):', err.message);
   }
 
-  return res.json({ token: access_token, email: user.email });
+  return res.json({ token: access_token, email: user.email, sessionPersistent: Boolean(refresh_token) });
 });
 
 // ------------------------------------------------------------------
