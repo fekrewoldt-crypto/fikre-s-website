@@ -12,6 +12,19 @@ const auditDAO = require('../db/audit-supabase');
 // Simple in-memory user store for test mode
 const testUsers = {};
 
+// Race a promise against a timeout so a slow/hung Supabase call on a cold
+// Vercel function cannot leave a request awaiting forever. Rejects with a
+// labelled error after `ms` if the original promise has not settled. The
+// timer is cleared either way so it never keeps the event loop (or a test
+// process) alive.
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error((label || 'operation') + ' timed out')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // Helper: build the absolute OAuth callback URL for the current request.
 // Used by the Google OAuth flow so Supabase can redirect back to the same
 // origin (and port) the request came from.
@@ -523,11 +536,26 @@ router.get('/oauth-callback', (req, res) => {
           );
           return;
         }
-        // 10s timeout: Vercel serverless functions can hang past the user
-        // patience window if Supabase verify is slow. Aborting lets us
-        // show a clear error instead of a frozen spinner.
+        // Hard timeout that fires even when AbortController is unavailable.
+        // Some in-app/WebView browsers (links opened from the Gmail or Google
+        // app on mobile) lack AbortController, and a stalled fetch on a cold
+        // Vercel function would then never resolve OR reject — neither .then
+        // nor .catch runs and the spinner spins forever. The plain setTimeout
+        // below guarantees the user always sees an error instead of a frozen
+        // page. The settled flag stops the timeout and the fetch handlers
+        // from double-firing finish()/showError().
+        var settled = false;
         var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-        var timeoutId = controller ? setTimeout(function() { controller.abort(); }, 10000) : null;
+        var timeoutId = setTimeout(function() {
+          if (settled) return;
+          settled = true;
+          if (controller) { try { controller.abort(); } catch (e) {} }
+          showError(
+            'Sign in timed out',
+            'The MediScan server took too long to respond. This is usually transient — please try again.'
+          );
+          finish('error');
+        }, 10000);
 
         var fetchOpts = {
           method: 'POST',
@@ -539,6 +567,7 @@ router.get('/oauth-callback', (req, res) => {
 
         fetch('/auth/oauth-session', fetchOpts).then(function(r) {
           if (timeoutId) clearTimeout(timeoutId);
+          if (settled) return;
           if (!r.ok) {
             return r.text().then(function(text) {
               var errData;
@@ -548,16 +577,21 @@ router.get('/oauth-callback', (req, res) => {
           }
           return r.json();
         }).then(function(data) {
+          if (settled) return;
           if (data && data.token) {
+            settled = true;
             try { sessionStorage.setItem('mediscan_google_token', data.token); } catch (e) {}
             if (data.email) try { sessionStorage.setItem('mediscan_google_email', data.email); } catch (e) {}
             finish('success');
           } else {
+            settled = true;
             showError('Server returned no token', 'The MediScan server response was missing a token. Please try again.');
-            finish('invalid');
+            finish('error');
           }
         }).catch(function(err) {
           if (timeoutId) clearTimeout(timeoutId);
+          if (settled) return;
+          settled = true;
           console.error('OAuth session error:', err);
           var msg = (err && err.name === 'AbortError')
             ? 'The MediScan server took longer than 10 seconds to respond. This is usually transient — please try again.'
@@ -619,8 +653,12 @@ router.post('/oauth-session', async (req, res) => {
   try {
     // Verify the access token by calling getUser; this also fetches the
     // canonical user object so we can record the audit entry and return
-    // the email to the frontend.
-    const { data, error } = await supabase.auth.getUser(access_token);
+    // the email to the frontend. Wrapped in a timeout: a cold/slow Supabase
+    // round-trip must not hang the bridge page's fetch (which the user sees
+    // as a frozen "Signing you in…" spinner).
+    const { data, error } = await withTimeout(
+      supabase.auth.getUser(access_token), 8000, 'Supabase getUser'
+    );
     if (error || !data?.user) {
       console.error('OAuth session verify error:', error?.message || 'no user');
       return res.status(401).json({ error: 'Invalid or expired session' });
@@ -640,29 +678,29 @@ router.post('/oauth-session', async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 
-  // Run audit logging separately — failures here must NOT block the auth response
-  try {
-    await auditDAO.logAction({ userId: user.id, action: 'login_google' });
-  } catch (auditErr) {
-    // Log but do not block — audit is non-critical for auth flow
-    console.error('Audit log failed (non-fatal):', auditErr.message);
-  }
+  // Respond IMMEDIATELY. The token is verified and the cookie is set — that is
+  // everything the client needs. The audit log and the user_profiles backfill
+  // are non-critical bookkeeping; awaiting them before res.json() added cold-DB
+  // latency to every Google sign-in (the "takes so much time" symptom). Run
+  // them as fire-and-forget AFTER the response.
+  res.json({ token: access_token, email: user.email, sessionPersistent: Boolean(refresh_token) });
 
-  // Create user_profiles row for OAuth users (not created at registration like email/password users)
-  try {
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .insert({ id: user.id, role: 'student', email: user.email });
-    if (profileError && profileError.code !== '23505') {
-      // 23505 = unique constraint violation (row already exists — e.g., manual backfill)
-      console.warn('Could not create user_profiles row for OAuth user:', profileError.message);
-    }
-  } catch (err) {
-    // Non-fatal: the user is authenticated, profile may be backfilled later
-    console.warn('user_profiles insert failed for OAuth user (non-fatal):', err.message);
-  }
+  // --- fire-and-forget bookkeeping (does not block or affect the response) ---
+  Promise.resolve()
+    .then(() => auditDAO.logAction({ userId: user.id, action: 'login_google' }))
+    .catch((auditErr) => console.error('Audit log failed (non-fatal):', auditErr.message));
 
-  return res.json({ token: access_token, email: user.email, sessionPersistent: Boolean(refresh_token) });
+  // Create user_profiles row for OAuth users (not created at registration like
+  // email/password users). 23505 = unique constraint violation (row already
+  // exists — e.g., manual backfill), which is expected and ignored.
+  Promise.resolve()
+    .then(() => supabase.from('user_profiles').insert({ id: user.id, role: 'student', email: user.email }))
+    .then(({ error: profileError } = {}) => {
+      if (profileError && profileError.code !== '23505') {
+        console.warn('Could not create user_profiles row for OAuth user:', profileError.message);
+      }
+    })
+    .catch((err) => console.warn('user_profiles insert failed for OAuth user (non-fatal):', err.message));
 });
 
 // ------------------------------------------------------------------

@@ -9395,8 +9395,18 @@ async function signInWithGoogle() {
   const btn = document.getElementById('auth-google-btn');
   if (btn) btn.disabled = true;
   hideAuthError();
+  // Timeout so a cold/hung Vercel function never leaves the button frozen
+  // with no feedback. AbortController fallback to plain timeout for old
+  // in-app browsers.
+  const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timeoutId = setTimeout(function () {
+    if (controller) { try { controller.abort(); } catch (e) {} }
+  }, 12000);
   try {
-    const res = await fetch('/auth/google', { credentials: 'same-origin' });
+    const opts = { credentials: 'same-origin' };
+    if (controller) opts.signal = controller.signal;
+    const res = await fetch('/auth/google', opts);
+    clearTimeout(timeoutId);
     const data = await res.json();
     if (!res.ok || !data.url) {
       showAuthError(data.error || 'Could not start Google sign in.');
@@ -9407,7 +9417,11 @@ async function signInWithGoogle() {
     // then bounces the user through Supabase and Google.
     window.location.href = data.url;
   } catch (e) {
-    showAuthError('Cannot reach the server. Please try again.');
+    clearTimeout(timeoutId);
+    const msg = (e && e.name === 'AbortError')
+      ? 'The server took too long to respond. Please try again.'
+      : 'Cannot reach the server. Please try again.';
+    showAuthError(msg);
     if (btn) btn.disabled = false;
   }
 }
@@ -9437,11 +9451,26 @@ async function handleGoogleLoginRedirect() {
         sessionStorage.removeItem('mediscan_google_token');
         sessionStorage.removeItem('mediscan_google_email');
       } catch (e) {}
+      updateAuthUI();
+      loadProfile();
+      renderDashboard();
+      showToast('Welcome! You are now signed in with Google.', 'success');
+    } else {
+      // No token in sessionStorage (private mode, cross-context webview, or
+      // the storage write failed on the callback page). The HttpOnly refresh
+      // cookie was still set, so try to restore the session from it before
+      // claiming success — never show "signed in" if we are not.
+      await restoreSession();
+      if (window.authToken) {
+        if (email) window.currentUser = { email: email };
+        updateAuthUI();
+        loadProfile();
+        renderDashboard();
+        showToast('Welcome! You are now signed in with Google.', 'success');
+      } else {
+        showToast('Google sign in did not complete. Please try again.', 'error');
+      }
     }
-    updateAuthUI();
-    loadProfile();
-    renderDashboard();
-    showToast('Welcome! You are now signed in with Google.', 'success');
   } else if (status === 'missing_token' || status === 'invalid') {
     showToast('Google sign in was cancelled.', 'warning');
   } else if (status === 'error') {

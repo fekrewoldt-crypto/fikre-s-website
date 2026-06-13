@@ -169,8 +169,16 @@ const csrfProtection = (req, res, next) => {
     return next();
   }
 
-  // Check if origin is in allowed list
-  const isAllowed = ALLOW_ALL_ORIGINS || allowedOrigins.includes(origin);
+  // Check if origin is in allowed list.
+  // Use effectiveOrigins (configured + auto-detected Vercel URLs), the SAME
+  // set the CORS layer uses at line ~118. They MUST stay in sync: if CORS
+  // accepts an origin but CSRF rejects it, every state-changing POST 403s
+  // while reads succeed — which is exactly how Google sign-in and email login
+  // broke on production after the CORS-only fix in 6bbb040.
+  const isAllowed = ALLOW_ALL_ORIGINS
+    || effectiveOrigins.includes(origin)
+    // Localhost on any port in non-production, mirroring the CORS callback.
+    || (process.env.NODE_ENV !== 'production' && origin.includes('localhost:'));
 
   if (!isAllowed) {
     console.warn(`CSRF rejection: Origin ${origin} not in allowed list`);
