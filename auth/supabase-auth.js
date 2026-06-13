@@ -607,7 +607,7 @@ router.get('/oauth-callback', (req, res) => {
             : (err && err.message) ? String(err.message) : 'Unknown error';
           var stackPreview = null;
           if (err && err.stack) {
-            try { stackPreview = String(err.stack).split('\n').slice(0, 3).join(' | '); } catch (e) {}
+            try { stackPreview = String(err.stack).split('\\n').slice(0, 3).join(' | '); } catch (e) {}
           }
           showError('Could not complete sign in', msg, stackPreview);
           finish('error');
@@ -617,7 +617,7 @@ router.get('/oauth-callback', (req, res) => {
         var errMsg = (e && e.message) ? String(e.message) : 'Unknown error';
         var errStack = null;
         if (e && e.stack) {
-          try { errStack = String(e.stack).split('\n').slice(0, 3).join(' | '); } catch (ex) {}
+          try { errStack = String(e.stack).split('\\n').slice(0, 3).join(' | '); } catch (ex) {}
         }
         showError('Unexpected error', errMsg, errStack);
         finish('error');
