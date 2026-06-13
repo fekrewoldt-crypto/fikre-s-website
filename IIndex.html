@@ -7333,8 +7333,10 @@ window.addEventListener('DOMContentLoaded', () => {
   initChatViewportFix();
   restoreChatHistory();
   // Restore the session from the HttpOnly refresh cookie (works for
-  // both email/password and Google logins). updateAuthUI is called
-  // after, so the nav button reflects the restored auth state.
+  // both email/password and Google logins). updateAuthUI runs immediately so
+  // the (logged-out) nav paints at once, then again once the refresh settles —
+  // the nav never waits on a slow/hung /auth/refresh.
+  updateAuthUI();
   restoreSession().finally(() => {
     updateAuthUI();
     initNearMeButton();
@@ -7384,14 +7386,27 @@ function initChatViewportFix() {
 // if the user is not logged in or the cookie has expired.
 async function restoreSession() {
   try {
-    const res = await fetch('/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+    // Timeout so a cold/hung /auth/refresh on Vercel can't leave the OAuth
+    // no-token branch awaiting forever (it does `await restoreSession()`).
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const timeoutId = setTimeout(function () {
+      if (controller) { try { controller.abort(); } catch (e) {} }
+    }, 8000);
+    const opts = { method: 'POST', credentials: 'same-origin' };
+    if (controller) opts.signal = controller.signal;
+    let res;
+    try {
+      res = await fetch('/auth/refresh', opts);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.token) {
       window.authToken = data.token;
     }
   } catch (e) {
-    // Internal error - user remains logged out
+    // Aborted (timeout) or network error - user remains logged out
   }
 }
 </script>
@@ -9434,7 +9449,27 @@ async function signInWithGoogle() {
 async function handleGoogleLoginRedirect() {
   const params = new URLSearchParams(window.location.search);
   const status = params.get('google_login');
-  if (!status) return;
+
+  // Supabase appends its OWN error params to the Site URL when an OAuth attempt
+  // fails before reaching our bridge (e.g. redirect URL not allow-listed, or
+  // the user denied access): /?error=...&error_code=...&error_description=...
+  // Without this, the user lands on a silent logged-out homepage — which reads
+  // as "nothing happened / still not signed in". Surface it as a clear toast.
+  if (!status) {
+    const oauthError = params.get('error') || params.get('error_code');
+    if (oauthError) {
+      const rawDesc = params.get('error_description') || '';
+      const desc = decodeURIComponent(rawDesc.replace(/\+/g, ' ')).trim();
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const cancelled = /access_denied|cancel|denied/i.test(oauthError + ' ' + desc);
+      if (cancelled) {
+        showToast('Google sign in was cancelled.', 'warning');
+      } else {
+        showToast('Google sign in could not complete: ' + (desc || oauthError) + '. Please try again.', 'error');
+      }
+    }
+    return;
+  }
 
   // Clean the URL regardless of outcome.
   const cleanUrl = window.location.pathname + (window.location.hash || '');

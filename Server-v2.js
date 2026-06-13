@@ -26,6 +26,14 @@ const path = require('path');
 function createApp(options = {}) {
   const app = express();
 
+  // Trust the first proxy hop (Vercel's edge) so req.ip resolves to the real
+  // client via x-forwarded-for. Without this, express-rate-limit keys every
+  // request behind a given Vercel edge node to the SAME bucket, so many real
+  // users (e.g. students on shared networks in Gondar) collide into one
+  // 20/min counter and lock each other out of sign-in. One hop only — trusting
+  // the whole chain would let a client spoof x-forwarded-for to dodge limits.
+  app.set('trust proxy', 1);
+
   // Rate limiters are created fresh per app so tests can override limits per-instance
   const maxAi = process.env.AI_RATE_LIMIT_MAX
     ? parseInt(process.env.AI_RATE_LIMIT_MAX)
@@ -48,13 +56,28 @@ function createApp(options = {}) {
     // /auth/register has its own registerLimiter with a higher allowance.
     // Don't count registration traffic against the global apiLimiter
     // budget, or a fresh user trying to sign up gets blocked by login noise.
+    //
+    // ALSO exempt the two Google OAuth COMPLETION routes:
+    //   GET  /auth/oauth-callback  — the spinner bridge page
+    //   POST /auth/oauth-session   — the session handoff
+    // These run AFTER the user has already authenticated with Google, so they
+    // are not an abuse surface. They were the cause of "Google sign-in loads
+    // forever": a user retrying a few times burned the 20/min budget, after
+    // which the callback page itself returned plain-text "Too many requests"
+    // instead of the spinner HTML — no JS ran, the #access_token sat unused,
+    // and the page hung. /auth/google (which mints the OAuth URL) stays limited.
     // Check both relative (req.path) and original (req.originalUrl) paths
     // since express strips the mount prefix before middlewares see req.path.
     skip: (req) => {
       const p = req.path || '';
       const u = req.originalUrl || '';
-      return p === '/register' || p === '/auth/register' ||
+      const isRegister = p === '/register' || p === '/auth/register' ||
              u === '/auth/register' || u.startsWith('/auth/register?');
+      const isOAuthCallback = p === '/oauth-callback' || p === '/auth/oauth-callback' ||
+             u === '/auth/oauth-callback' || u.startsWith('/auth/oauth-callback?');
+      const isOAuthSession = p === '/oauth-session' || p === '/auth/oauth-session' ||
+             u === '/auth/oauth-session' || u.startsWith('/auth/oauth-session?');
+      return isRegister || isOAuthCallback || isOAuthSession;
     },
     message: 'Too many requests, please try again later.'
   });

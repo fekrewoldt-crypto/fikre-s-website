@@ -429,9 +429,18 @@ router.get('/google', async (req, res) => {
 
   try {
     const { createClient } = require('@supabase/supabase-js');
+    // Pin the implicit flow explicitly. This server-side route only mints the
+    // OAuth URL; the session comes back to the bridge page as a URL #hash
+    // (#access_token=...), which is exactly what /oauth-callback parses. If a
+    // future supabase-js release flipped the default to PKCE, the authorize URL
+    // would gain a code_challenge and Supabase would return ?code= instead —
+    // which our hash-only bridge cannot read, silently breaking sign-in. The
+    // other flags are correct for a one-shot server-side URL generator (no
+    // session storage, no auto-refresh, no URL session detection).
     const anonClient = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY
+      process.env.SUPABASE_ANON_KEY,
+      { auth: { flowType: 'implicit', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
     );
     const { data, error } = await anonClient.auth.signInWithOAuth({
       provider: 'google',
